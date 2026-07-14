@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     
     // --- НАСТРОЙКИ ---
-    const BOT_LINK = "https://t.me/VashBotName"; // Ссылка на вашего бота
+    const BOT_LINK = "https://t.me/Djamiliakha_bot"; // Ваша актуальная ссылка на бота
     const TOTAL_CARDS = 71; 
 
     // Полная база аудиопосланий
@@ -198,7 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ВАРИАНТ 1: Отправить подруге (Личные сообщения)
     shareToFriendBtn.addEventListener('click', () => {
-        const text = "✨ Я вытянула карту дня! Узнай, какое послание от Вселенной ждет тебя в боте:";
+        // Упрощенный текст для шеринга
+        const text = "Привет Нашла классное приложение по натальным картам.";
         const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
         
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
