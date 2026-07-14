@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- НАСТРОЙКИ ---
     const BOT_LINK = "https://t.me/Djamiliakha_bot"; // Ваша актуальная ссылка на бота
     const TOTAL_CARDS = 71; 
+    const STORAGE_KEY = "mystic_collection"; // Ключ для локального хранилища коллекции
 
     // Полная база аудиопосланий
     const audioData = [
@@ -76,6 +77,11 @@ document.addEventListener('DOMContentLoaded', () => {
             tabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
             document.getElementById(btn.dataset.tab).classList.add('active');
+            
+            // Если открыли коллекцию, перерисовываем ее (чтобы показать новые карты)
+            if(btn.dataset.tab === 'collection') {
+                renderCollection();
+            }
         });
     });
 
@@ -93,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // ЛОГИКА ПОТОКА: КАРТА -> АУДИО -> ЗАГЛУШКА ВИДЕО
+    // ЛОГИКА ПОТОКА И СОХРАНЕНИЯ В КОЛЛЕКЦИЮ
     // ==========================================
 
     const step1Card = document.getElementById('step1-card');
@@ -111,8 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isFlipped = false;
     let currentCardPath = ""; 
 
-    // === НОВОЕ: Логика таймера (1 минута) ===
-    const COOLDOWN_MS = 60 * 1000; // 60 000 мс = 1 минута
+    // Логика таймера (1 минута)
+    const COOLDOWN_MS = 60 * 1000; 
 
     function checkTimer() {
         const lastDraw = localStorage.getItem('lastDrawTime');
@@ -122,10 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawBtn.disabled = true;
                 const remaining = COOLDOWN_MS - elapsed;
                 startCountdown(remaining);
-                return false; // Таймер еще идет
+                return false; 
             }
         }
-        return true; // Можно тянуть карту
+        return true; 
     }
 
     function startCountdown(duration) {
@@ -141,17 +147,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawBtn.innerText = `Ожидайте ${secs} сек.`;
             }
         }, 1000);
-        // Сразу отображаем первую секунду
         drawBtn.innerText = `Ожидайте ${Math.ceil(remain / 1000)} сек.`;
     }
 
-    // Проверяем таймер при загрузке приложения
     checkTimer();
-    // =========================================
+
+    // Функция сохранения карты в LocalStorage
+    function saveCardToCollection(cardNum) {
+        let collection = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        const existingIndex = collection.findIndex(c => c.id === cardNum);
+        const now = new Date().toISOString();
+
+        if (existingIndex !== -1) {
+            collection[existingIndex].count += 1;
+            collection[existingIndex].date = now;
+        } else {
+            collection.push({ id: cardNum, date: now, count: 1 });
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
+    }
 
     function drawRandomCard() {
         if (!isFlipped && checkTimer()) {
-            localStorage.setItem('lastDrawTime', Date.now()); // Записываем время вытягивания
+            localStorage.setItem('lastDrawTime', Date.now()); 
             setNewCard();
         }
     }
@@ -164,10 +182,11 @@ document.addEventListener('DOMContentLoaded', () => {
             card.classList.add('flipped');
             isFlipped = true;
             
-            // Скрываем кнопку вытягивания карты
+            // Сохраняем в коллекцию сразу при открытии
+            saveCardToCollection(randomNum);
+            
             drawBtn.style.display = 'none';
 
-            // Показываем кнопки шага вперед и шеринга карты
             setTimeout(() => { 
                 nextToAudioBtn.style.display = 'block';
                 shareCardBtn.style.display = 'block'; 
@@ -179,26 +198,22 @@ document.addEventListener('DOMContentLoaded', () => {
     card.addEventListener('click', drawRandomCard);
 
     // ==========================================
-    // НОВАЯ ЛОГИКА: ВЫБОР ВАРИАНТА ШЕРИНГА КАРТЫ
+    // ЛОГИКА ШЕРИНГА: Выбор варианта (Для главного экрана)
     // ==========================================
     const shareOptionsModal = document.getElementById('shareOptionsModal');
     const closeShareModal = document.getElementById('closeShareModal');
     const shareToFriendBtn = document.getElementById('shareToFriendBtn');
     const shareToUniverseBtn = document.getElementById('shareToUniverseBtn');
 
-    // Открываем меню выбора
     shareCardBtn.addEventListener('click', () => {
         shareOptionsModal.classList.add('active');
     });
 
-    // Закрываем меню выбора
     closeShareModal.addEventListener('click', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    // ВАРИАНТ 1: Отправить подруге (Личные сообщения)
     shareToFriendBtn.addEventListener('click', () => {
-        // Упрощенный текст для шеринга
         const text = "Привет Нашла классное приложение по натальным картам.";
         const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
         
@@ -210,8 +225,13 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-  // ВАРИАНТ 2: Запрос во Вселенную (Stories)
     shareToUniverseBtn.addEventListener('click', () => {
+        shareToStories(currentCardPath); // Вызываем общую функцию
+        shareOptionsModal.classList.remove('active');
+    });
+
+    // Универсальная функция шеринга в Сторис (используется и тут, и в коллекции)
+    function shareToStories(imagePath) {
         if (!window.Telegram || !window.Telegram.WebApp) {
             console.error("Telegram WebApp API не найдено");
             return;
@@ -224,12 +244,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const absoluteMediaUrl = new URL(currentCardPath, window.location.href).toString();
+            const absoluteMediaUrl = new URL(imagePath, window.location.href).toString();
             const params = {
-                text: "Получи своё послание от Вселенной! ✨", // Убрали слово "в боте"
+                text: "Получи своё послание от Вселенной! ✨", 
                 widget_link: { 
                     url: BOT_LINK, 
-                    name: "Получить послание 💫" // Заменили "Открыть бота"
+                    name: "Получить послание 💫" 
                 }
             };
             webApp.shareToStory(absoluteMediaUrl, params);
@@ -237,9 +257,122 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("Ошибка при вызове сторис:", error);
             webApp.showAlert("Не удалось открыть редактор сторис.");
         }
-        shareOptionsModal.classList.remove('active');
-    });
+    }
+
     // ==========================================
+    // ЛОГИКА ОТРИСОВКИ КОЛЛЕКЦИИ (СВАЙПЕР)
+    // ==========================================
+    let collectionSwiper = null; 
+
+    function renderCollection() {
+        let collection = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        const wrapper = document.getElementById('collectionWrapper');
+        const emptyMsg = document.getElementById('emptyCollection');
+        const swiperContainer = document.getElementById('collectionSwiperContainer');
+        const timelineNav = document.getElementById('timelineNav');
+
+        // Сортируем от новых к старым
+        collection.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        if (collection.length === 0) {
+            emptyMsg.style.display = 'block';
+            swiperContainer.style.display = 'none';
+            timelineNav.style.display = 'none';
+            return;
+        }
+
+        emptyMsg.style.display = 'none';
+        swiperContainer.style.display = 'block';
+        timelineNav.style.display = 'flex';
+        
+        wrapper.innerHTML = '';
+        timelineNav.innerHTML = '';
+
+        let monthsSet = new Set();
+        let monthSlidesIndex = {}; 
+
+        collection.forEach((item, index) => {
+            const dateObj = new Date(item.date);
+            const dateStr = dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+            const monthStr = dateObj.toLocaleDateString('ru-RU', { month: 'long' });
+            const monthCapitalized = monthStr.charAt(0).toUpperCase() + monthStr.slice(1);
+
+            if (!monthsSet.has(monthCapitalized)) {
+                monthsSet.add(monthCapitalized);
+                monthSlidesIndex[monthCapitalized] = index; 
+            }
+
+            const imgPath = `images/${item.id}.jpeg`;
+            
+            let syncHtml = '';
+            if (item.count > 1) {
+                syncHtml = `<div class="sync-msg">Эта карта возвращалась к вам ${item.count} раза</div>`;
+            }
+
+            const slideHtml = `
+                <div class="swiper-slide">
+                    <div class="collection-date">${dateStr}</div>
+                    <img src="${imgPath}" class="collection-card-img" alt="Карта ${item.id}" loading="lazy">
+                    ${syncHtml}
+                    <button class="action-btn share-btn collection-share-btn" data-path="${imgPath}">В Сторис ✨</button>
+                </div>
+            `;
+            wrapper.insertAdjacentHTML('beforeend', slideHtml);
+        });
+
+        monthsSet.forEach((month, idx) => {
+            const btnHtml = `<button class="month-btn ${idx === 0 ? 'active' : ''}" data-index="${monthSlidesIndex[month]}">${month}</button>`;
+            timelineNav.insertAdjacentHTML('beforeend', btnHtml);
+        });
+
+        // Шеринг прямо из коллекции
+        document.querySelectorAll('.collection-share-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                shareToStories(this.getAttribute('data-path'));
+            });
+        });
+
+        if (collectionSwiper) {
+            collectionSwiper.destroy(true, true);
+        }
+        
+        collectionSwiper = new Swiper(".collectionSwiper", {
+            slidesPerView: 1,
+            spaceBetween: 20,
+            autoHeight: true,
+            on: {
+                slideChange: function () {
+                    updateActiveMonthBtn(this.activeIndex, monthSlidesIndex);
+                }
+            }
+        });
+
+        document.querySelectorAll('.month-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetIndex = parseInt(this.getAttribute('data-index'));
+                collectionSwiper.slideTo(targetIndex, 500); 
+            });
+        });
+    }
+
+    function updateActiveMonthBtn(currentIndex, indexMap) {
+        let activeMonth = "";
+        let maxIndexPassed = -1;
+
+        for (const [month, index] of Object.entries(indexMap)) {
+            if (currentIndex >= index && index > maxIndexPassed) {
+                maxIndexPassed = index;
+                activeMonth = month;
+            }
+        }
+
+        document.querySelectorAll('.month-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.innerText === activeMonth) {
+                btn.classList.add('active');
+            }
+        });
+    }
 
     // --- ШАГ 2: АУДИО (АВТОЗАПУСК) ---
     const audioPlayer = document.getElementById('audioPlayer');
@@ -257,7 +390,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         audioPlayer.src = `audio/${selectedAudio.id}.mp3`;
         
-        // Принудительно запускаем аудиоплеер и видео-аватар
         audioPlayer.play();
         if (avatarVideo) {
             avatarVideo.play().catch(err => console.log("Видео заблокировано системой:", err));
@@ -266,7 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
         shareAudioBtn.style.display = 'block';
     }
 
-    // Переход со скрытием карты и автоматическим стартом аудио
     nextToAudioBtn.addEventListener('click', () => {
         step1Card.style.display = 'none';
         step2Audio.style.display = 'flex'; 
