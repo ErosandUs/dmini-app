@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const BOT_LINK = "https://t.me/VashBotName"; // Ссылка на вашего бота
     const TOTAL_CARDS = 71; 
 
-    // Полная база аудиопосланий (формат файлов строго .mp3)
+    // Полная база аудиопосланий
     const audioData = [
         { id: 1, title: "Доверие или контроль" }, { id: 2, title: "Доверие" }, { id: 3, title: "Драгоценность" },
         { id: 4, title: "Дух и Душа" }, { id: 5, title: "Дух" }, { id: 6, title: "Духовный путь" },
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const step1Card = document.getElementById('step1-card');
     const step2Audio = document.getElementById('step2-audio');
-    const step3Text = document.getElementById('step3-text');
+    const step3Video = document.getElementById('step3-video'); // Изменено на Видео
 
     // --- ШАГ 1: КАРТА ---
     const card = document.getElementById('mysticCard');
@@ -111,8 +111,47 @@ document.addEventListener('DOMContentLoaded', () => {
     let isFlipped = false;
     let currentCardPath = ""; 
 
+    // === НОВОЕ: Логика таймера (1 минута) ===
+    const COOLDOWN_MS = 60 * 1000; // 60 000 мс = 1 минута
+
+    function checkTimer() {
+        const lastDraw = localStorage.getItem('lastDrawTime');
+        if (lastDraw) {
+            const elapsed = Date.now() - parseInt(lastDraw);
+            if (elapsed < COOLDOWN_MS) {
+                drawBtn.disabled = true;
+                const remaining = COOLDOWN_MS - elapsed;
+                startCountdown(remaining);
+                return false; // Таймер еще идет
+            }
+        }
+        return true; // Можно тянуть карту
+    }
+
+    function startCountdown(duration) {
+        let remain = duration;
+        const interval = setInterval(() => {
+            remain -= 1000;
+            if (remain <= 0) {
+                clearInterval(interval);
+                drawBtn.disabled = false;
+                drawBtn.innerText = "Получить послание";
+            } else {
+                const secs = Math.ceil(remain / 1000);
+                drawBtn.innerText = `Ожидайте ${secs} сек.`;
+            }
+        }, 1000);
+        // Сразу отображаем первую секунду
+        drawBtn.innerText = `Ожидайте ${Math.ceil(remain / 1000)} сек.`;
+    }
+
+    // Проверяем таймер при загрузке приложения
+    checkTimer();
+    // =========================================
+
     function drawRandomCard() {
-        if (!isFlipped) {
+        if (!isFlipped && checkTimer()) {
+            localStorage.setItem('lastDrawTime', Date.now()); // Записываем время вытягивания
             setNewCard();
         }
     }
@@ -139,44 +178,62 @@ document.addEventListener('DOMContentLoaded', () => {
     drawBtn.addEventListener('click', drawRandomCard);
     card.addEventListener('click', drawRandomCard);
 
-// ==========================================
-    // НОВАЯ ЛОГИКА: ШЕРИНГ В СТОРИС (ИСПРАВЛЕННАЯ)
     // ==========================================
+    // НОВАЯ ЛОГИКА: ВЫБОР ВАРИАНТА ШЕРИНГА КАРТЫ
+    // ==========================================
+    const shareOptionsModal = document.getElementById('shareOptionsModal');
+    const closeShareModal = document.getElementById('closeShareModal');
+    const shareToFriendBtn = document.getElementById('shareToFriendBtn');
+    const shareToUniverseBtn = document.getElementById('shareToUniverseBtn');
+
+    // Открываем меню выбора
     shareCardBtn.addEventListener('click', () => {
+        shareOptionsModal.classList.add('active');
+    });
+
+    // Закрываем меню выбора
+    closeShareModal.addEventListener('click', () => {
+        shareOptionsModal.classList.remove('active');
+    });
+
+    // ВАРИАНТ 1: Отправить подруге (Личные сообщения)
+    shareToFriendBtn.addEventListener('click', () => {
+        const text = "✨ Я вытянула карту дня! Узнай, какое послание от Вселенной ждет тебя в боте:";
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
+        
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+            window.Telegram.WebApp.openTelegramLink(shareUrl);
+        } else {
+            window.open(shareUrl, '_blank');
+        }
+        shareOptionsModal.classList.remove('active');
+    });
+
+    // ВАРИАНТ 2: Запрос во Вселенную (Stories)
+    shareToUniverseBtn.addEventListener('click', () => {
         if (!window.Telegram || !window.Telegram.WebApp) {
             console.error("Telegram WebApp API не найдено");
             return;
         }
-
         const webApp = window.Telegram.WebApp;
 
-        // 1. Проверяем версию Telegram у пользователя
         if (!webApp.isVersionAtLeast('7.8')) {
-            webApp.showAlert("Извините, ваша версия Telegram не поддерживает шеринг в сторис. Пожалуйста, обновите приложение.");
+            webApp.showAlert("Извините, ваша версия Telegram не поддерживает шеринг в сторис. Воспользуйтесь кнопкой «Отправить подруге».");
             return;
         }
 
         try {
-            // 2. Формируем правильную прямую ссылку на картинку. 
-            // Команда new URL сама склеит адрес вашего сайта и путь к выпавшей карте (например, images/5.jpeg)
             const absoluteMediaUrl = new URL(currentCardPath, window.location.href).toString();
-
-            // 3. Задаем текст и виральную кнопку-виджет
             const params = {
                 text: "Получи свое послание от Вселенной в боте! ✨", 
-                widget_link: {
-                    url: BOT_LINK, 
-                    name: "Открыть бота 💫" 
-                }
+                widget_link: { url: BOT_LINK, name: "Открыть бота 💫" }
             };
-
-            // 4. Вызываем правильный метод API (shareToStory) и передаем ему ссылку
             webApp.shareToStory(absoluteMediaUrl, params);
-
         } catch (error) {
             console.error("Ошибка при вызове сторис:", error);
-            webApp.showAlert("Не удалось открыть редактор сторис. Попробуйте еще раз.");
+            webApp.showAlert("Не удалось открыть редактор сторис.");
         }
+        shareOptionsModal.classList.remove('active');
     });
     // ==========================================
 
@@ -222,10 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Автопереход к третьему шагу (Текст)
+    // Автопереход к третьему шагу (Видео)
+    const finalVideo = document.getElementById('finalVideo');
+
     audioPlayer.addEventListener('ended', () => {
         step2Audio.style.display = 'none';
-        step3Text.style.display = 'block';
+        step3Video.style.display = 'block';
     });
 
     // --- ЛОГИКА ВИДЕОГАЛЕРЕИ (YouTube) ---

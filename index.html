@@ -44,10 +44,17 @@
             </div>
         </div>
 
-        <div id="step3-text" style="display: none;">
+        <div id="step3-video" style="display: none;">
             <div class="text-message-container">
                 <h3>Завершение практики</h3>
-                <p id="finalText">Здесь будет располагаться твое финальное текстовое послание. Как только текст будет готов, мы вставим его сюда вместо этой строчки.</p>
+                
+                <!-- Визуальная заглушка для будущего видео -->
+                <div class="video-stub">
+                    <span>🎥</span>
+                    <p>Скоро здесь появится видеопослание от Джамили...</p>
+                </div>
+
+                <p>Благодарим за прохождение практики ✨</p>
             </div>
         </div>
 
@@ -90,6 +97,16 @@
         <div class="modal-content">
             <span class="close-modal" id="closeModal">&times;</span>
             <div class="video-wrap" id="modalVideoWrap"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно выбора способа шеринга -->
+    <div id="shareOptionsModal" class="modal">
+        <div class="modal-content text-message-container" style="max-width: 90%;">
+            <span class="close-modal" id="closeShareModal">&times;</span>
+            <h3 style="margin-top: 10px;">Куда отправить послание?</h3>
+            <button class="action-btn" id="shareToFriendBtn">Отправить подруге (в ЛС) 💌</button>
+            <button class="action-btn share-btn" id="shareToUniverseBtn">Запрос во Вселенную (Сторис) ✨</button>
         </div>
     </div>
 
