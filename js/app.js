@@ -93,12 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // ЛОГИКА ПОТОКА: КАРТА -> АУДИО -> ТЕКСТ
+    // ЛОГИКА ПОТОКА: КАРТА -> АУДИО -> ЗАГЛУШКА ВИДЕО
     // ==========================================
 
     const step1Card = document.getElementById('step1-card');
     const step2Audio = document.getElementById('step2-audio');
-    const step3Video = document.getElementById('step3-video'); // Изменено на Видео
+    const step3Video = document.getElementById('step3-video'); 
 
     // --- ШАГ 1: КАРТА ---
     const card = document.getElementById('mysticCard');
@@ -279,9 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Автопереход к третьему шагу (Видео)
-    const finalVideo = document.getElementById('finalVideo');
-
+    // Автопереход к третьему шагу (Заглушка)
     audioPlayer.addEventListener('ended', () => {
         step2Audio.style.display = 'none';
         step3Video.style.display = 'block';

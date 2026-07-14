@@ -201,7 +201,7 @@ audio {
     margin-bottom: 25px;
 }
 
-/* Финальный текстовый контейнер и видео-обертка */
+/* Финальный текстовый контейнер и заглушка видео */
 .text-message-container {
     background: #fff;
     padding: 30px 20px;
@@ -226,19 +226,26 @@ audio {
     color: #4a3b52;
 }
 
-.final-video-wrap {
-    width: 100%;
-    margin: 20px 0;
+/* Стиль заглушки видео */
+.video-stub {
+    padding: 40px 20px;
+    background: #f6f0fa;
     border-radius: 12px;
-    overflow: hidden;
-    border: 2px solid #d3bce6;
-    background: #000;
+    margin: 20px 0;
+    border: 2px dashed #d3bce6;
 }
 
-.final-video-wrap video {
-    width: 100%;
-    height: auto;
+.video-stub span {
+    font-size: 2rem;
     display: block;
+    margin-bottom: 10px;
+}
+
+.video-stub p {
+    color: #8a7a94;
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.4;
 }
 
 /* Внутреннее меню видеотеки */
