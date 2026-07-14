@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    // ВАРИАНТ 2: Запрос во Вселенную (Stories)
+  // ВАРИАНТ 2: Запрос во Вселенную (Stories)
     shareToUniverseBtn.addEventListener('click', () => {
         if (!window.Telegram || !window.Telegram.WebApp) {
             console.error("Telegram WebApp API не найдено");
@@ -226,8 +226,11 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const absoluteMediaUrl = new URL(currentCardPath, window.location.href).toString();
             const params = {
-                text: "Получи свое послание от Вселенной в боте! ✨", 
-                widget_link: { url: BOT_LINK, name: "Открыть бота 💫" }
+                text: "Получи своё послание от Вселенной! ✨", // Убрали слово "в боте"
+                widget_link: { 
+                    url: BOT_LINK, 
+                    name: "Получить послание 💫" // Заменили "Открыть бота"
+                }
             };
             webApp.shareToStory(absoluteMediaUrl, params);
         } catch (error) {
