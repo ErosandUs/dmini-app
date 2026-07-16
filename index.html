@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Эзотерические Послания</title>
+    <!-- Подключаем стили для карусели коллекции -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <nav class="tabs">
         <button class="tab-btn active" data-tab="daily">Послание на день</button>
+        <button class="tab-btn" data-tab="collection">Коллекция</button>
         <button class="tab-btn" data-tab="video">Видеотека</button>
     </nav>
 
@@ -48,7 +51,6 @@
             <div class="text-message-container">
                 <h3>Завершение практики</h3>
                 
-                <!-- Визуальная заглушка для будущего видео -->
                 <div class="video-stub">
                     <span>🎥</span>
                     <p>Скоро здесь появится видеопослание от Джамили...</p>
@@ -58,6 +60,20 @@
             </div>
         </div>
 
+    </section>
+
+    <!-- Секция Коллекции -->
+    <section id="collection" class="tab-content">
+        <div class="timeline-container" id="timelineNav"></div>
+        
+        <div class="empty-collection-msg" id="emptyCollection">
+            Ваша коллекция пока пуста. Вытяните свою первую карту в разделе "Послание на день"!
+        </div>
+
+        <div class="swiper collectionSwiper" id="collectionSwiperContainer" style="display: none;">
+            <div class="swiper-wrapper" id="collectionWrapper">
+            </div>
+        </div>
     </section>
 
     <section id="video" class="tab-content">
@@ -110,6 +126,8 @@
         </div>
     </div>
 
+    <!-- Скрипт для работы карусели -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
