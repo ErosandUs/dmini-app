@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCardPath = ""; 
 
     // === ЛОГИКА ТАЙМЕРА (6 ЧАСОВ) ===
-    const COOLDOWN_MS = 6 * 60 * 60 * 1000; 
+    const COOLDOWN_MS = 60 * 1000; 
     let countdownInterval; 
 
     function formatTime(ms) {
@@ -465,8 +465,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Автопереход к третьему шагу (Финальное Видео)
+// Автопереход к третьему шагу (Финальное Видео)
     const finalVideoContainer = document.getElementById('finalVideoContainer');
+    let audioCtx, gainNode, videoSource; // Добавляем переменные для усилителя звука
 
     audioPlayer.addEventListener('ended', () => {
         step2Audio.style.display = 'none';
@@ -475,6 +476,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const randomFinalVideo = finalVideos[Math.floor(Math.random() * finalVideos.length)];
         finalVideoPlayer.src = randomFinalVideo;
         
+        // --- ПРОГРАММНОЕ УСИЛЕНИЕ ЗВУКА ВИДЕО ---
+        try {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
+                gainNode = audioCtx.createGain();
+                
+                // УВЕЛИЧЕНИЕ ГРОМКОСТИ (2.0 = 200%, 3.0 = 300% и т.д.)
+                gainNode.gain.value = 3.0; 
+                
+                videoSource.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        } catch (e) {
+            console.log("Усиление звука не поддерживается на этом устройстве", e);
+        }
+        // ----------------------------------------
+
         // Автовоспроизведение
         finalVideoPlayer.play().catch(err => {
             console.log("Автовоспроизведение заблокировано:", err);
