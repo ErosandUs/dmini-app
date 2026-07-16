@@ -159,11 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawBtn.disabled = false;
                 drawBtn.innerText = "Получить послание";
             } else {
-                drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
+                drawBtn.innerText = `До нового послания: ${formatTime(remain)}`;
             }
         }, 1000);
         // Сразу отображаем актуальное время до первого тика интервала
-        drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
+        drawBtn.innerText = `До нового послания: ${formatTime(remain)}`;
     }
 
     checkTimer();
