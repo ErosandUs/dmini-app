@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     shareToFriendBtn.addEventListener('click', () => {
-        const text = "Привет Нашла классное приложение по натальным картам.";
+        const text = "Привет Нашла классное приложение по метафорическим картам.";
         const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
         
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
