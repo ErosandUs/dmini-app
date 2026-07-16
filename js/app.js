@@ -5,6 +5,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const TOTAL_CARDS = 71; 
     const STORAGE_KEY = "mystic_collection"; // Ключ для локального хранилища коллекции
 
+    // База финальных видео
+    const finalVideos = [
+        "video/final_1.mp4",
+        "video/final_2.mp4",
+        "video/final_3.mp4",
+        "video/final_4.mp4",
+        "video/final_5.mp4"
+    ];
+
     // Полная база аудиопосланий
     const audioData = [
         { id: 1, title: "Доверие или контроль" }, { id: 2, title: "Доверие" }, { id: 3, title: "Драгоценность" },
@@ -78,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('active');
             document.getElementById(btn.dataset.tab).classList.add('active');
             
-            // Если открыли коллекцию, перерисовываем ее
             if(btn.dataset.tab === 'collection') {
                 renderCollection();
             }
@@ -106,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const step2Audio = document.getElementById('step2-audio');
     const step3Video = document.getElementById('step3-video'); 
 
-    // --- ШАГ 1: КАРТА ---
     const card = document.getElementById('mysticCard');
     const drawBtn = document.getElementById('drawCardBtn');
     const cardResultImg = document.getElementById('cardResult');
@@ -118,8 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCardPath = ""; 
 
     // === ЛОГИКА ТАЙМЕРА (6 ЧАСОВ) ===
-    const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 часов в миллисекундах
-    let countdownInterval; // Глобальная переменная для интервала
+    const COOLDOWN_MS = 6 * 60 * 60 * 1000; 
+    let countdownInterval; 
 
     function formatTime(ms) {
         const totalSeconds = Math.ceil(ms / 1000);
@@ -127,13 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
         
-        if (hours > 0) {
-            return `${hours}ч ${minutes}м`;
-        } else if (minutes > 0) {
-            return `${minutes}м ${seconds}с`;
-        } else {
-            return `${seconds} сек.`;
-        }
+        if (hours > 0) return `${hours}ч ${minutes}м`;
+        else if (minutes > 0) return `${minutes}м ${seconds}с`;
+        else return `${seconds} сек.`;
     }
 
     function checkTimer() {
@@ -151,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startCountdown(duration) {
-        if (countdownInterval) clearInterval(countdownInterval); // Очищаем старый таймер во избежание багов
+        if (countdownInterval) clearInterval(countdownInterval); 
         let remain = duration;
         
         countdownInterval = setInterval(() => {
@@ -169,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     checkTimer();
-    // =========================================
 
     function saveCardToCollection(cardNum) {
         let collection = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -222,9 +224,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareToFriendBtn = document.getElementById('shareToFriendBtn');
     const shareToUniverseBtn = document.getElementById('shareToUniverseBtn');
 
-    let activeSharePath = ""; // Переменная для хранения пути текущей карточки для шеринга
+    let activeSharePath = ""; 
 
-    // Клик по кнопке "Поделиться" на главной странице
     shareCardBtn.addEventListener('click', () => {
         activeSharePath = currentCardPath;
         shareOptionsModal.classList.add('active');
@@ -247,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     shareToUniverseBtn.addEventListener('click', () => {
-        shareToStories(activeSharePath); // Отправляем именно активную карту (с главной или из коллекции)
+        shareToStories(activeSharePath); 
         shareOptionsModal.classList.remove('active');
     });
 
@@ -328,7 +329,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncHtml = `<div class="sync-msg">Эта карта возвращалась к вам ${item.count} раза</div>`;
             }
 
-            // Изменили название кнопки и функционал
             const slideHtml = `
                 <div class="swiper-slide">
                     <div class="collection-date">${dateStr}</div>
@@ -345,11 +345,10 @@ document.addEventListener('DOMContentLoaded', () => {
             timelineNav.insertAdjacentHTML('beforeend', btnHtml);
         });
 
-        // Клик по кнопке "Поделиться" внутри коллекции открывает общее меню
         document.querySelectorAll('.collection-share-btn').forEach(btn => {
             btn.addEventListener('click', function() {
-                activeSharePath = this.getAttribute('data-path'); // Запоминаем выбранную карту
-                shareOptionsModal.classList.add('active'); // Вызываем меню
+                activeSharePath = this.getAttribute('data-path'); 
+                shareOptionsModal.classList.add('active'); 
             });
         });
 
@@ -399,6 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // ЛОГИКА ВОЗВРАТА В НАЧАЛО (СБРОС ПРАКТИКИ)
     // ==========================================
     const resetPracticeBtn = document.getElementById('resetPracticeBtn');
+    const finalVideoPlayer = document.getElementById('finalVideoPlayer');
+    const replayFinalVideo = document.getElementById('replayFinalVideo');
     let autoResetTimeout;
 
     function resetToStart() {
@@ -406,27 +407,25 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(autoResetTimeout);
         }
         
-        // Переключаем видимость экранов
+        finalVideoPlayer.pause();
+        finalVideoPlayer.currentTime = 0;
+        
         step3Video.style.display = 'none';
         step1Card.style.display = 'block';
         
-        // Сбрасываем карту (переворачиваем обратно рубашкой)
         card.classList.remove('flipped');
         isFlipped = false;
         
-        // Скрываем кнопки следующего шага
         nextToAudioBtn.style.display = 'none';
         shareCardBtn.style.display = 'none';
         
-        // Показываем главную кнопку и сразу пересчитываем таймер
         drawBtn.style.display = 'block';
         checkTimer();
     }
 
-    // Обработчик кнопки возврата
     resetPracticeBtn.addEventListener('click', resetToStart);
 
-    // --- ШАГ 2: АУДИО (АВТОЗАПУСК) ---
+    // --- ШАГ 2: АУДИО И ПЕРЕХОД К ФИНАЛЬНОМУ ВИДЕО ---
     const audioPlayer = document.getElementById('audioPlayer');
     const audioTitle = document.getElementById('audioTitle');
     const shareAudioBtn = document.getElementById('shareAudioBtn'); 
@@ -466,13 +465,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Автопереход к третьему шагу
+    // Автопереход к третьему шагу (Финальное Видео)
+    const finalVideoContainer = document.getElementById('finalVideoContainer');
+
     audioPlayer.addEventListener('ended', () => {
         step2Audio.style.display = 'none';
         step3Video.style.display = 'block';
         
-        // Запускаем таймер автоматического возврата (15 секунд = 15000 мс)
+        const randomFinalVideo = finalVideos[Math.floor(Math.random() * finalVideos.length)];
+        finalVideoPlayer.src = randomFinalVideo;
+        
+        // Автовоспроизведение
+        finalVideoPlayer.play().catch(err => {
+            console.log("Автовоспроизведение заблокировано:", err);
+            replayFinalVideo.style.display = 'flex';
+        });
+    });
+
+    // Запускаем таймер возврата ТОЛЬКО когда финальное видео завершится
+    finalVideoPlayer.addEventListener('ended', () => {
+        replayFinalVideo.style.display = 'flex';
         autoResetTimeout = setTimeout(resetToStart, 15000);
+    });
+
+    // Остановка/Воспроизведение финального видео по клику
+    finalVideoContainer.addEventListener('click', () => {
+        if (finalVideoPlayer.paused || finalVideoPlayer.ended) {
+            if (autoResetTimeout) clearTimeout(autoResetTimeout); // Отменяем возврат, если человек хочет пересмотреть
+            replayFinalVideo.style.display = 'none';
+            finalVideoPlayer.play();
+        } else {
+            finalVideoPlayer.pause();
+            replayFinalVideo.style.display = 'flex';
+        }
     });
 
     // --- ЛОГИКА ВИДЕОГАЛЕРЕИ (YouTube) ---

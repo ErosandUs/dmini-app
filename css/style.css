@@ -201,7 +201,7 @@ audio {
     margin-bottom: 25px;
 }
 
-/* Финальный текстовый контейнер и заглушка видео */
+/* Финальный текстовый контейнер */
 .text-message-container {
     background: #fff;
     padding: 30px 20px;
@@ -226,26 +226,34 @@ audio {
     color: #4a3b52;
 }
 
-/* Стиль заглушки видео */
-.video-stub {
-    padding: 40px 20px;
-    background: #f6f0fa;
-    border-radius: 12px;
-    margin: 20px 0;
-    border: 2px dashed #d3bce6;
+/* Telegram Кружочек Видео */
+.telegram-circle-video {
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 20px auto;
+    border: 4px solid #d3bce6;
+    box-shadow: 0 10px 25px rgba(211, 188, 230, 0.5);
+    position: relative;
+    background-color: #f6f0fa;
+    cursor: pointer;
+    /* Хака для iOS Safari, чтобы видео точно обрезалось по border-radius */
+    -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
-.video-stub span {
-    font-size: 2rem;
+.telegram-circle-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Обрезает белые края квадратного видео */
     display: block;
-    margin-bottom: 10px;
 }
 
-.video-stub p {
-    color: #8a7a94;
-    font-weight: 500;
-    margin: 0;
-    line-height: 1.4;
+.play-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3);
+    z-index: 2;
 }
 
 /* Внутреннее меню видеотеки */
