@@ -431,6 +431,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareAudioBtn = document.getElementById('shareAudioBtn'); 
     
     let currentAudioName = "";
+    
+    // Переменные для усилителя видео
+    let audioCtx, gainNode, videoSource;
 
     function startRandomAudio() {
         const randomAudioIndex = Math.floor(Math.random() * audioData.length);
@@ -440,6 +443,8 @@ document.addEventListener('DOMContentLoaded', () => {
         audioTitle.innerText = `«${currentAudioName}»`;
         
         audioPlayer.src = `audio/${selectedAudio.id}.mp3`;
+        
+        // Убрали понижение громкости, так как теперь усиливаем видео
         
         audioPlayer.play();
         if (avatarVideo) {
@@ -465,9 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-// Автопереход к третьему шагу (Финальное Видео)
+    // Автопереход к третьему шагу (Финальное Видео)
     const finalVideoContainer = document.getElementById('finalVideoContainer');
-    let audioCtx, gainNode, videoSource; // Добавляем переменные для усилителя звука
 
     audioPlayer.addEventListener('ended', () => {
         step2Audio.style.display = 'none';
@@ -484,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
                 gainNode = audioCtx.createGain();
                 
-                // УВЕЛИЧЕНИЕ ГРОМКОСТИ (2.0 = 200%, 3.0 = 300% и т.д.)
+                // УВЕЛИЧЕНИЕ ГРОМКОСТИ (3.0 = 300%)
                 gainNode.gain.value = 3.0; 
                 
                 videoSource.connect(gainNode);
@@ -497,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log("Усиление звука не поддерживается на этом устройстве", e);
         }
         // ----------------------------------------
-
+        
         // Автовоспроизведение
         finalVideoPlayer.play().catch(err => {
             console.log("Автовоспроизведение заблокировано:", err);
