@@ -119,8 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // === ЛОГИКА ТАЙМЕРА (6 ЧАСОВ) ===
     const COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 часов в миллисекундах
+    let countdownInterval; // Глобальная переменная для интервала
 
-    // Функция для красивого форматирования времени
     function formatTime(ms) {
         const totalSeconds = Math.ceil(ms / 1000);
         const hours = Math.floor(totalSeconds / 3600);
@@ -151,25 +151,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startCountdown(duration) {
+        if (countdownInterval) clearInterval(countdownInterval); // Очищаем старый таймер во избежание багов
         let remain = duration;
-        const interval = setInterval(() => {
+        
+        countdownInterval = setInterval(() => {
             remain -= 1000;
             if (remain <= 0) {
-                clearInterval(interval);
+                clearInterval(countdownInterval);
                 drawBtn.disabled = false;
                 drawBtn.innerText = "Получить послание";
             } else {
-                drawBtn.innerText = `До нового послания: ${formatTime(remain)}`;
+                drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
             }
         }, 1000);
-        // Сразу отображаем актуальное время до первого тика интервала
-        drawBtn.innerText = `До нового послания: ${formatTime(remain)}`;
+        
+        drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
     }
 
     checkTimer();
     // =========================================
 
-    // Функция сохранения карты в LocalStorage
     function saveCardToCollection(cardNum) {
         let collection = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         const existingIndex = collection.findIndex(c => c.id === cardNum);
@@ -199,7 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
             card.classList.add('flipped');
             isFlipped = true;
             
-            // Сохраняем в коллекцию сразу при открытии
             saveCardToCollection(randomNum);
             
             drawBtn.style.display = 'none';
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
     card.addEventListener('click', drawRandomCard);
 
     // ==========================================
-    // ЛОГИКА ШЕРИНГА: Выбор варианта (Для главного экрана)
+    // ЛОГИКА ШЕРИНГА: Выбор варианта
     // ==========================================
     const shareOptionsModal = document.getElementById('shareOptionsModal');
     const closeShareModal = document.getElementById('closeShareModal');
@@ -243,11 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     shareToUniverseBtn.addEventListener('click', () => {
-        shareToStories(currentCardPath); // Вызываем общую функцию
+        shareToStories(currentCardPath); 
         shareOptionsModal.classList.remove('active');
     });
 
-    // Универсальная функция шеринга в Сторис
     function shareToStories(imagePath) {
         if (!window.Telegram || !window.Telegram.WebApp) {
             console.error("Telegram WebApp API не найдено");
@@ -288,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const swiperContainer = document.getElementById('collectionSwiperContainer');
         const timelineNav = document.getElementById('timelineNav');
 
-        // Сортируем от новых к старым
         collection.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         if (collection.length === 0) {
@@ -342,7 +340,6 @@ document.addEventListener('DOMContentLoaded', () => {
             timelineNav.insertAdjacentHTML('beforeend', btnHtml);
         });
 
-        // Шеринг прямо из коллекции
         document.querySelectorAll('.collection-share-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 shareToStories(this.getAttribute('data-path'));
@@ -391,6 +388,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ==========================================
+    // ЛОГИКА ВОЗВРАТА В НАЧАЛО (СБРОС ПРАКТИКИ)
+    // ==========================================
+    const resetPracticeBtn = document.getElementById('resetPracticeBtn');
+    let autoResetTimeout;
+
+    function resetToStart() {
+        if (autoResetTimeout) {
+            clearTimeout(autoResetTimeout);
+        }
+        
+        // Переключаем видимость экранов
+        step3Video.style.display = 'none';
+        step1Card.style.display = 'block';
+        
+        // Сбрасываем карту (переворачиваем обратно рубашкой)
+        card.classList.remove('flipped');
+        isFlipped = false;
+        
+        // Скрываем кнопки следующего шага
+        nextToAudioBtn.style.display = 'none';
+        shareCardBtn.style.display = 'none';
+        
+        // Показываем главную кнопку и сразу пересчитываем таймер
+        drawBtn.style.display = 'block';
+        checkTimer();
+    }
+
+    // Обработчик кнопки возврата
+    resetPracticeBtn.addEventListener('click', resetToStart);
+
     // --- ШАГ 2: АУДИО (АВТОЗАПУСК) ---
     const audioPlayer = document.getElementById('audioPlayer');
     const audioTitle = document.getElementById('audioTitle');
@@ -431,10 +459,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Автопереход к третьему шагу (Заглушка)
+    // Автопереход к третьему шагу
     audioPlayer.addEventListener('ended', () => {
         step2Audio.style.display = 'none';
         step3Video.style.display = 'block';
+        
+        // Запускаем таймер автоматического возврата (15 секунд = 15000 мс)
+        autoResetTimeout = setTimeout(resetToStart, 15000);
     });
 
     // --- ЛОГИКА ВИДЕОГАЛЕРЕИ (YouTube) ---
