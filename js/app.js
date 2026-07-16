@@ -215,14 +215,18 @@ document.addEventListener('DOMContentLoaded', () => {
     card.addEventListener('click', drawRandomCard);
 
     // ==========================================
-    // ЛОГИКА ШЕРИНГА: Выбор варианта
+    // ЛОГИКА ШЕРИНГА И МЕНЮ ВЫБОРА (ОБЩАЯ)
     // ==========================================
     const shareOptionsModal = document.getElementById('shareOptionsModal');
     const closeShareModal = document.getElementById('closeShareModal');
     const shareToFriendBtn = document.getElementById('shareToFriendBtn');
     const shareToUniverseBtn = document.getElementById('shareToUniverseBtn');
 
+    let activeSharePath = ""; // Переменная для хранения пути текущей карточки для шеринга
+
+    // Клик по кнопке "Поделиться" на главной странице
     shareCardBtn.addEventListener('click', () => {
+        activeSharePath = currentCardPath;
         shareOptionsModal.classList.add('active');
     });
 
@@ -243,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     shareToUniverseBtn.addEventListener('click', () => {
-        shareToStories(currentCardPath); 
+        shareToStories(activeSharePath); // Отправляем именно активную карту (с главной или из коллекции)
         shareOptionsModal.classList.remove('active');
     });
 
@@ -324,12 +328,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncHtml = `<div class="sync-msg">Эта карта возвращалась к вам ${item.count} раза</div>`;
             }
 
+            // Изменили название кнопки и функционал
             const slideHtml = `
                 <div class="swiper-slide">
                     <div class="collection-date">${dateStr}</div>
                     <img src="${imgPath}" class="collection-card-img" alt="Карта ${item.id}" loading="lazy">
                     ${syncHtml}
-                    <button class="action-btn share-btn collection-share-btn" data-path="${imgPath}">В Сторис ✨</button>
+                    <button class="action-btn share-btn collection-share-btn" data-path="${imgPath}">Поделиться картой 💫</button>
                 </div>
             `;
             wrapper.insertAdjacentHTML('beforeend', slideHtml);
@@ -340,9 +345,11 @@ document.addEventListener('DOMContentLoaded', () => {
             timelineNav.insertAdjacentHTML('beforeend', btnHtml);
         });
 
+        // Клик по кнопке "Поделиться" внутри коллекции открывает общее меню
         document.querySelectorAll('.collection-share-btn').forEach(btn => {
             btn.addEventListener('click', function() {
-                shareToStories(this.getAttribute('data-path'));
+                activeSharePath = this.getAttribute('data-path'); // Запоминаем выбранную карту
+                shareOptionsModal.classList.add('active'); // Вызываем меню
             });
         });
 
