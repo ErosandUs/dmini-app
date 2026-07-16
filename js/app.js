@@ -124,8 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isFlipped = false;
     let currentCardPath = ""; 
 
-    // === ЛОГИКА ТАЙМЕРА (6 ЧАСОВ) ===
-    const COOLDOWN_MS = 60 * 1000; 
+    // === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
+    const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
     let countdownInterval; 
 
     function formatTime(ms) {
