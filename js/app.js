@@ -11,7 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
         "video/final_2.mp4",
         "video/final_3.mp4",
         "video/final_4.mp4",
-        "video/final_5.mp4"
+        "video/final_5.mp4",
+        "video/final_6.mp4",
+        "video/final_7.mp4",
     ];
 
     // Полная база аудиопосланий
@@ -124,8 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isFlipped = false;
     let currentCardPath = ""; 
 
-    // === ЛОГИКА ТАЙМЕРА (6 ЧАСОВ) ===
-    const COOLDOWN_MS = 60 * 1000; 
+    // === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
+    const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
     let countdownInterval; 
 
     function formatTime(ms) {
