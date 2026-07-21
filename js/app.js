@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ==========================================
+ // ==========================================
     // ЛОГИКА ВОЗВРАТА В НАЧАЛО (СБРОС ПРАКТИКИ)
     // ==========================================
     const resetPracticeBtn = document.getElementById('resetPracticeBtn');
@@ -411,6 +411,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         finalVideoPlayer.pause();
         finalVideoPlayer.currentTime = 0;
+        
+        // ИСПРАВЛЕНИЕ 1: Обязательно прячем значок Play при сбросе приложения
+        replayFinalVideo.style.display = 'none'; 
         
         step3Video.style.display = 'none';
         step1Card.style.display = 'block';
@@ -445,8 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
         audioTitle.innerText = `«${currentAudioName}»`;
         
         audioPlayer.src = `audio/${selectedAudio.id}.mp3`;
-        
-        // Убрали понижение громкости, так как теперь усиливаем видео
         
         audioPlayer.play();
         if (avatarVideo) {
@@ -504,6 +505,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // ----------------------------------------
         
+        // ИСПРАВЛЕНИЕ 2: Принудительно прячем значок перед началом автовоспроизведения
+        replayFinalVideo.style.display = 'none'; 
+        
         // Автовоспроизведение
         finalVideoPlayer.play().catch(err => {
             console.log("Автовоспроизведение заблокировано:", err);
@@ -514,13 +518,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Запускаем таймер возврата ТОЛЬКО когда финальное видео завершится
     finalVideoPlayer.addEventListener('ended', () => {
         replayFinalVideo.style.display = 'flex';
-        autoResetTimeout = setTimeout(resetToStart, 15000);
+        
+        // ИСПРАВЛЕНИЕ 3: Изменили таймер на 20000 миллисекунд (20 секунд)
+        autoResetTimeout = setTimeout(resetToStart, 20000); 
     });
 
     // Остановка/Воспроизведение финального видео по клику
     finalVideoContainer.addEventListener('click', () => {
         if (finalVideoPlayer.paused || finalVideoPlayer.ended) {
-            if (autoResetTimeout) clearTimeout(autoResetTimeout); // Отменяем возврат, если человек хочет пересмотреть
+            if (autoResetTimeout) clearTimeout(autoResetTimeout); // Отменяем автосброс
+            
+            // Если видео закончилось, принудительно перематываем в начало
+            if (finalVideoPlayer.ended) {
+                finalVideoPlayer.currentTime = 0;
+            }
+
             replayFinalVideo.style.display = 'none';
             finalVideoPlayer.play();
         } else {
