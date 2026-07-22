@@ -205,6 +205,11 @@ document.addEventListener('DOMContentLoaded', () => {
             isFlipped = true;
             
             saveCardToCollection(randomNum);
+
+            // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Выбор карты ---
+            if (typeof ym !== 'undefined') {
+                ym(110909428, 'reachGoal', 'get_card');
+            }
             
             drawBtn.style.display = 'none';
 
@@ -238,6 +243,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     shareToFriendBtn.addEventListener('click', () => {
+        // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Поделились в ЛС ---
+        if (typeof ym !== 'undefined') {
+            ym(110909428, 'reachGoal', 'share_direct');
+        }
+
         const text = "Привет Нашла классное приложение по метафорическим картам.";
         const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
         
@@ -250,6 +260,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     shareToUniverseBtn.addEventListener('click', () => {
+        // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Поделились в сторис ---
+        if (typeof ym !== 'undefined') {
+            ym(110909428, 'reachGoal', 'share_story');
+        }
+
         shareToStories(activeSharePath); 
         shareOptionsModal.classList.remove('active');
     });
