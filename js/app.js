@@ -269,16 +269,17 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    function shareToStories(imagePath) {
-        // Проверяем, запущено ли приложение внутри Telegram и поддерживается ли метод
-        if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.shareToStory) {
-            alert("Поделиться в Stories можно только при запуске приложения внутри мобильного Telegram ✨");
+function shareToStories(imagePath) {
+        if (!window.Telegram || !window.Telegram.WebApp) {
+            alert("Поделиться в Stories можно только внутри Telegram ✨");
             return;
         }
+
         const webApp = window.Telegram.WebApp;
 
-        if (!webApp.isVersionAtLeast('7.8')) {
-            webApp.showAlert("Извините, ваша версия Telegram не поддерживает шеринг в сторис. Воспользуйтесь кнопкой «Отправить подруге».");
+        // Проверяем, запущено ли приложение как Mini App и поддерживаются ли Stories
+        if (typeof webApp.shareToStory !== 'function' || !webApp.isVersionAtLeast('7.8')) {
+            alert("Чтобы делиться в Stories, запустите приложение через кнопку в боте (а не просто по ссылке в чате) или обновите Telegram ✨");
             return;
         }
 
@@ -294,7 +295,7 @@ document.addEventListener('DOMContentLoaded', () => {
             webApp.shareToStory(absoluteMediaUrl, params);
         } catch (error) {
             console.error("Ошибка при вызове сторис:", error);
-            webApp.showAlert("Не удалось открыть редактор сторис.");
+            alert("Не удалось открыть редактор сторис. Воспользуйтесь кнопкой «Отправить подруге» 💌");
         }
     }
 
