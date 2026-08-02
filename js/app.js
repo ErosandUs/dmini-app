@@ -270,8 +270,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function shareToStories(imagePath) {
-        if (!window.Telegram || !window.Telegram.WebApp) {
-            console.error("Telegram WebApp API не найдено");
+        // Проверяем, запущено ли приложение внутри Telegram и поддерживается ли метод
+        if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.shareToStory) {
+            alert("Поделиться в Stories можно только при запуске приложения внутри мобильного Telegram ✨");
             return;
         }
         const webApp = window.Telegram.WebApp;
@@ -411,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
- // ==========================================
+    // ==========================================
     // ЛОГИКА ВОЗВРАТА В НАЧАЛО (СБРОС ПРАКТИКИ)
     // ==========================================
     const resetPracticeBtn = document.getElementById('resetPracticeBtn');
@@ -427,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
         finalVideoPlayer.pause();
         finalVideoPlayer.currentTime = 0;
         
-        // ИСПРАВЛЕНИЕ 1: Обязательно прячем значок Play при сбросе приложения
+        // Обязательно прячем значок Play при сбросе приложения
         replayFinalVideo.style.display = 'none'; 
         
         step3Video.style.display = 'none';
@@ -520,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // ----------------------------------------
         
-        // ИСПРАВЛЕНИЕ 2: Принудительно прячем значок перед началом автовоспроизведения
+        // Принудительно прячем значок перед началом автовоспроизведения
         replayFinalVideo.style.display = 'none'; 
         
         // Автовоспроизведение
@@ -534,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
     finalVideoPlayer.addEventListener('ended', () => {
         replayFinalVideo.style.display = 'flex';
         
-        // ИСПРАВЛЕНИЕ 3: Изменили таймер на 20000 миллисекунд (20 секунд)
+        // Установлен таймер возврата на 20 секунд (20000 мс)
         autoResetTimeout = setTimeout(resetToStart, 20000); 
     });
 
