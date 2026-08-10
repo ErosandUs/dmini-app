@@ -242,61 +242,32 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    // --- ОТПРАВКА КАРТОЧКИ В ЛС ---
-    shareToFriendBtn.addEventListener('click', async () => {
+    // --- ОТПРАВКА КАРТОЧКИ В ЛС (ЧЕРЕЗ ИНЛАЙН-РЕЖИМ БОТА) ---
+    shareToFriendBtn.addEventListener('click', () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
+        const cardMatch = activeSharePath.match(/images\/(\d+)\.jpeg/);
+        const cardId = cardMatch ? cardMatch[1] : "1";
         const shareText = "Привет! Нашла классное приложение по метафорическим картам ✨";
 
-        // 1. Пробуем передать файл через системную шторку (работает на ПК и в стандартных браузерах)
-        let success = false;
-        try {
-            success = await shareCardAsFile(activeSharePath, shareText);
-        } catch (e) {
-            console.log("Мобильный WebView заблокировал передачу файла:", e);
-        }
-
-        // 2. Если файл заблокирован мобильным Telegram (стандартное поведение WebView)
-        if (!success) {
-            // Формируем абсолютную HTTPS-ссылку на картинку карты для генерации превью в чате
-            const absoluteImageUrl = new URL(activeSharePath, window.location.href).toString();
+        if (window.Telegram && window.Telegram.WebApp) {
+            const webApp = window.Telegram.WebApp;
             
-            // Формируем ссылку шеринга с предпросмотром
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(absoluteImageUrl)}&text=${encodeURIComponent(shareText + "\n\nЗаходи в бота: " + BOT_LINK)}`;
-            
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-                window.Telegram.WebApp.openTelegramLink(shareUrl);
+            if (webApp.switchInlineQuery) {
+                webApp.switchInlineQuery(`card_${cardId}`);
             } else {
-                window.open(shareUrl, '_blank');
+                const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(shareText)}`;
+                webApp.openTelegramLink(shareUrl);
             }
+        } else {
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(shareText)}`;
+            window.open(shareUrl, '_blank');
         }
         
         shareOptionsModal.classList.remove('active');
     });
-
-    // Вспомогательная функция отправки файла
-    async function shareCardAsFile(imagePath, text) {
-        if (!navigator.share || !navigator.canShare) {
-            return false;
-        }
-
-        const response = await fetch(imagePath);
-        const blob = await response.blob();
-        const file = new File([blob], 'card.jpeg', { type: 'image/jpeg' });
-
-        if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file],
-                title: 'Послание Вселенной',
-                text: text
-            });
-            return true;
-        }
-
-        return false;
-    }
 
     // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
     shareToUniverseBtn.addEventListener('click', () => {
