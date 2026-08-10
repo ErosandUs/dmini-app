@@ -50,6 +50,9 @@
             
             <button class="action-btn next-step-btn" id="nextToAudioBtn" style="display: none;">Перейти к аудиопосланию ✨</button>
             <button class="action-btn share-btn" id="shareCardBtn" style="display: none;">Поделиться картой 💫</button>
+
+            <!-- Незаметная метка версии под кнопками -->
+            <div id="appVersionLabel" style="text-align: center; font-size: 0.75rem; color: #a89bb8; margin-top: 15px; opacity: 0.6; font-family: 'Montserrat', sans-serif;"></div>
         </div>
 
         <div id="step2-audio" style="display: none;">
@@ -149,6 +152,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="js/app.js?v=2"></script>
+    <!-- Подключение скрипта приложения с id для автоопределения версии -->
+    <script id="appScript" src="js/app.js?v=3"></script>
 </body>
 </html>

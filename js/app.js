@@ -1,5 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     
+    // --- ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ ИЗ INDEX.HTML ---
+    const appScriptTag = document.getElementById('appScript');
+    const versionLabel = document.getElementById('appVersionLabel');
+    if (appScriptTag && versionLabel) {
+        const srcAttr = appScriptTag.getAttribute('src');
+        const vMatch = srcAttr ? srcAttr.match(/\?v=(.+)$/) : null;
+        const currentVersion = vMatch ? vMatch[1] : '1';
+        versionLabel.innerText = `v${currentVersion}`;
+    }
+
     // --- НАСТРОЙКИ ---
     const BOT_LINK = "https://t.me/Djamiliakha_bot"; // Ваша актуальная ссылка на бота
     const TOTAL_CARDS = 71; 
@@ -242,18 +252,16 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-  // --- НАДЕТНАЯ ОТПРАВКА В ЛС (ТЕКСТ ПЕРВЫМ, ССЫЛКА ВНИЗУ) ---
+    // --- НАДЕЖНАЯ ОТПРАВКА В ЛС (КРУПНАЯ КАРТИНКА 00.jpeg + ТЕКСТ СВЕРХУ) ---
     shareToFriendBtn.addEventListener('click', () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
-        // 1. Формируем единый текст сообщения, где приветствие СТРОГО на первом месте,
-        // а ссылка на картинку-обложку поставлена в самый конец.
-        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nЗаходи в бота: ${BOT_LINK}\n\nhttps://erosandus.github.io/dmini-app/images/00.jpeg`;
+        const imageUrl = new URL('images/00.jpeg', window.location.href).toString();
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nЗаходи в бота: ${BOT_LINK}`;
 
-        // 2. Передаем ВСЁ сообщение целиком через параметр text (без параметра url, который Telegram выносит наверх)
-        const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(imageUrl)}&text=${encodeURIComponent(shareText)}`;
 
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
             window.Telegram.WebApp.openTelegramLink(shareUrl);
