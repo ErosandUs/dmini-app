@@ -242,27 +242,25 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    // --- ОТПРАВКА КАРТОЧКИ В ЛС (ЧЕРЕЗ ИНЛАЙН-РЕЖИМ БОТА) ---
+    // --- ОТПРАВКА КАРТОЧКИ В ЛС ---
     shareToFriendBtn.addEventListener('click', () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
+        // Вытаскиваем номер карты из пути (например, из "images/25.jpeg" получаем "25")
         const cardMatch = activeSharePath.match(/images\/(\d+)\.jpeg/);
         const cardId = cardMatch ? cardMatch[1] : "1";
-        const shareText = "Привет! Нашла классное приложение по метафорическим картам ✨";
 
-        if (window.Telegram && window.Telegram.WebApp) {
-            const webApp = window.Telegram.WebApp;
-            
-            if (webApp.switchInlineQuery) {
-                webApp.switchInlineQuery(`card_${cardId}`);
-            } else {
-                const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(shareText)}`;
-                webApp.openTelegramLink(shareUrl);
-            }
+        // Текст сообщения: Приветствие идёт ПЕРВЫМ, затем аккуратная ссылка на бота
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nТвое послание ждет тебя здесь: ${BOT_LINK}?start=card_${cardId}`;
+
+        // Стандартная безопасная ссылка шеринга Telegram
+        const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
+
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+            window.Telegram.WebApp.openTelegramLink(shareUrl);
         } else {
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(shareText)}`;
             window.open(shareUrl, '_blank');
         }
         
