@@ -242,33 +242,25 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    // --- ОТПРАВКА КАРТОЧКИ В ЛС ---
     shareToFriendBtn.addEventListener('click', () => {
+        // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Поделились в ЛС ---
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
-        // Вытаскиваем номер карты из пути (например, из "images/25.jpeg" получаем "25")
-        const cardMatch = activeSharePath.match(/images\/(\d+)\.jpeg/);
-        const cardId = cardMatch ? cardMatch[1] : "1";
-
-        // Текст сообщения: Приветствие идёт ПЕРВЫМ, затем аккуратная ссылка на бота
-        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nТвое послание ждет тебя здесь: ${BOT_LINK}?start=card_${cardId}`;
-
-        // Стандартная безопасная ссылка шеринга Telegram
-        const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
-
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+        const text = "Привет Нашла классное приложение по метафорическим картам.";
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
+        
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
             window.Telegram.WebApp.openTelegramLink(shareUrl);
         } else {
             window.open(shareUrl, '_blank');
         }
-        
         shareOptionsModal.classList.remove('active');
     });
 
-    // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
     shareToUniverseBtn.addEventListener('click', () => {
+        // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Поделились в сторис ---
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_story');
         }
@@ -277,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    function shareToStories(imagePath) {
+function shareToStories(imagePath) {
         if (!window.Telegram || !window.Telegram.WebApp) {
             alert("Поделиться в Stories можно только внутри Telegram ✨");
             return;
@@ -285,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const webApp = window.Telegram.WebApp;
 
+        // Проверяем, запущено ли приложение как Mini App и поддерживаются ли Stories
         if (typeof webApp.shareToStory !== 'function' || !webApp.isVersionAtLeast('7.8')) {
             alert("Чтобы делиться в Stories, запустите приложение через кнопку в боте (а не просто по ссылке в чате) или обновите Telegram ✨");
             return;
@@ -436,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         finalVideoPlayer.pause();
         finalVideoPlayer.currentTime = 0;
         
+        // Обязательно прячем значок Play при сбросе приложения
         replayFinalVideo.style.display = 'none'; 
         
         step3Video.style.display = 'none';
@@ -528,8 +522,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         // ----------------------------------------
         
+        // Принудительно прячем значок перед началом автовоспроизведения
         replayFinalVideo.style.display = 'none'; 
         
+        // Автовоспроизведение
         finalVideoPlayer.play().catch(err => {
             console.log("Автовоспроизведение заблокировано:", err);
             replayFinalVideo.style.display = 'flex';
@@ -540,14 +536,16 @@ document.addEventListener('DOMContentLoaded', () => {
     finalVideoPlayer.addEventListener('ended', () => {
         replayFinalVideo.style.display = 'flex';
         
+        // Установлен таймер возврата на 20 секунд (20000 мс)
         autoResetTimeout = setTimeout(resetToStart, 20000); 
     });
 
     // Остановка/Воспроизведение финального видео по клику
     finalVideoContainer.addEventListener('click', () => {
         if (finalVideoPlayer.paused || finalVideoPlayer.ended) {
-            if (autoResetTimeout) clearTimeout(autoResetTimeout);
+            if (autoResetTimeout) clearTimeout(autoResetTimeout); // Отменяем автосброс
             
+            // Если видео закончилось, принудительно перематываем в начало
             if (finalVideoPlayer.ended) {
                 finalVideoPlayer.currentTime = 0;
             }
