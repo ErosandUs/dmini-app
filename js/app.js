@@ -242,20 +242,18 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    // --- НАДЕЖНАЯ ОТПРАВКА В ЛС (ЕДИНОЕ КВАДРАТНОЕ ПРЕВЬЮ 1:1) ---
+  // --- НАДЕТНАЯ ОТПРАВКА В ЛС (ТЕКСТ ПЕРВЫМ, ССЫЛКА ВНИЗУ) ---
     shareToFriendBtn.addEventListener('click', () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
-        // 1. Формируем абсолютную ссылку на единую квадратную картинку (рубашку)
-        const absoluteImageUrl = new URL('images/00.jpeg', window.location.href).toString();
-        
-        // 2. Сначала идёт текст со ссылкой на самого бота
-        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nЗаходи в бота: ${BOT_LINK}`;
+        // 1. Формируем единый текст сообщения, где приветствие СТРОГО на первом месте,
+        // а ссылка на картинку-обложку поставлена в самый конец.
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nЗаходи в бота: ${BOT_LINK}\n\nhttps://erosandus.github.io/dmini-app/images/00.jpeg`;
 
-        // 3. Формируем URL шеринга: Telegram при такой структуре поставит text в начало, а url с картинкой в конец для превью
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(absoluteImageUrl)}&text=${encodeURIComponent(shareText)}`;
+        // 2. Передаем ВСЁ сообщение целиком через параметр text (без параметра url, который Telegram выносит наверх)
+        const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
 
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
             window.Telegram.WebApp.openTelegramLink(shareUrl);
