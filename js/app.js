@@ -252,16 +252,17 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    // --- НАДЕЖНАЯ ОТПРАВКА В ЛС (КРУПНАЯ КАРТИНКА 00.jpeg + ТЕКСТ СВЕРХУ) ---
+// --- НАДЕЖНАЯ ОТПРАВКА В ЛС (ТЕКСТ ПЕРВЫМ + СОКРАЩЕННАЯ ССЫЛКА НА КАРТИНКУ) ---
     shareToFriendBtn.addEventListener('click', () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
-        const imageUrl = new URL('images/00.jpeg', window.location.href).toString();
-        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nЗаходи в бота: ${BOT_LINK}`;
+        // ВАЖНО: Первая ссылка в тексте — clck.ru, поэтому Telegram сгенерирует превью именно для нее.
+        // При этом текст приветствия идет на первой строке над ссылкой.
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\nhttps://clck.ru/3VB8wu\n\nЗаходи в бота: ${BOT_LINK}`;
 
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(imageUrl)}&text=${encodeURIComponent(shareText)}`;
+        const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
 
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
             window.Telegram.WebApp.openTelegramLink(shareUrl);
