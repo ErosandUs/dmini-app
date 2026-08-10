@@ -250,14 +250,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const shareText = "Привет! Нашла классное приложение по метафорическим картам ✨";
 
-        // Пробуем отправить файл изображения во временную память и вызвать шторку
-        const success = await shareCardAsFile(activeSharePath, shareText);
+        // 1. Пробуем передать файл через системную шторку (работает на ПК и в стандартных браузерах)
+        let success = false;
+        try {
+            success = await shareCardAsFile(activeSharePath, shareText);
+        } catch (e) {
+            console.log("Мобильный WebView заблокировал передачу файла:", e);
+        }
 
-        // Фоллбек: Если системный шеринг файлов не сработал (например, на ПК), отправляем ссылку
+        // 2. Если файл заблокирован мобильным Telegram (стандартное поведение WebView)
         if (!success) {
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(shareText)}`;
+            // Формируем абсолютную HTTPS-ссылку на картинку карты для генерации превью в чате
+            const absoluteImageUrl = new URL(activeSharePath, window.location.href).toString();
             
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+            // Формируем ссылку шеринга с предпросмотром
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(absoluteImageUrl)}&text=${encodeURIComponent(shareText + "\n\nЗаходи в бота: " + BOT_LINK)}`;
+            
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
                 window.Telegram.WebApp.openTelegramLink(shareUrl);
             } else {
                 window.open(shareUrl, '_blank');
@@ -273,21 +282,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
 
-        try {
-            const response = await fetch(imagePath);
-            const blob = await response.blob();
-            const file = new File([blob], 'card.jpeg', { type: 'image/jpeg' });
+        const response = await fetch(imagePath);
+        const blob = await response.blob();
+        const file = new File([blob], 'card.jpeg', { type: 'image/jpeg' });
 
-            if (navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    files: [file],
-                    title: 'Послание Вселенной',
-                    text: text
-                });
-                return true;
-            }
-        } catch (error) {
-            console.log("Шеринг файла отменен пользователем или не поддерживается:", error);
+        if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                files: [file],
+                title: 'Послание Вселенной',
+                text: text
+            });
+            return true;
         }
 
         return false;
