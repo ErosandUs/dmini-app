@@ -242,25 +242,91 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    shareToFriendBtn.addEventListener('click', () => {
-        // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Поделились в ЛС ---
+    // --- ФУНКЦИЯ ДИНАМИЧЕСКОГО СОЗДАНИЯ КВАДРАТНОЙ КАРТЫ С ПОЛЯМИ ---
+    function createSquareCardBlob(imagePath) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = imagePath;
+
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Определяем размер идеального квадрата по наибольшей стороне изображения
+                const size = Math.max(img.width, img.height);
+                canvas.width = size;
+                canvas.height = size;
+
+                // Заливаем красивый нежно-фиолетовый фон в стиле приложения
+                ctx.fillStyle = '#f6f0fa';
+                ctx.fillRect(0, 0, size, size);
+
+                // Вычисляем координаты, чтобы отцентровать прямоугольную карту внутри квадрата
+                const x = (size - img.width) / 2;
+                const y = (size - img.height) / 2;
+
+                // Отрисовываем карту по центру
+                ctx.drawImage(img, x, y, img.width, img.height);
+
+                // Преобразуем Canvas во временный файл
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(new File([blob], 'card_square.jpeg', { type: 'image/jpeg' }));
+                    } else {
+                        reject(new Error('Не удалось сгенерировать изображение'));
+                    }
+                }, 'image/jpeg', 0.95);
+            };
+
+            img.onerror = (err) => reject(err);
+        });
+    }
+
+    // --- ОТПРАВКА КАРТОЧКИ В ЛС С CANVAS-ПОДГОНКOЙ ---
+    shareToFriendBtn.addEventListener('click', async () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
-        const text = "Привет Нашла классное приложение по метафорическим картам.";
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
-        
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
-            window.Telegram.WebApp.openTelegramLink(shareUrl);
-        } else {
-            window.open(shareUrl, '_blank');
+        const shareText = "Привет! Нашла классное приложение по метафорическим картам ✨";
+
+        let sharedSuccessfully = false;
+
+        // 1. Пробуем сгенерировать квадратную карту и передать файл в системный шеринг
+        try {
+            if (navigator.share && navigator.canShare) {
+                const squareFile = await createSquareCardBlob(activeSharePath);
+
+                if (navigator.canShare({ files: [squareFile] })) {
+                    await navigator.share({
+                        files: [squareFile],
+                        title: 'Послание Вселенной',
+                        text: `${shareText}\n\nЗаходи в бота: ${BOT_LINK}`
+                    });
+                    sharedSuccessfully = true;
+                }
+            }
+        } catch (e) {
+            console.log("Системный шеринг файла недоступен:", e);
         }
+
+        // 2. Фоллбек для клиентов, где прямое прикрепление файлов заблокировано
+        if (!sharedSuccessfully) {
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(shareText)}`;
+
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+                window.Telegram.WebApp.openTelegramLink(shareUrl);
+            } else {
+                window.open(shareUrl, '_blank');
+            }
+        }
+        
         shareOptionsModal.classList.remove('active');
     });
 
+    // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
     shareToUniverseBtn.addEventListener('click', () => {
-        // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Поделились в сторис ---
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_story');
         }
@@ -269,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-function shareToStories(imagePath) {
+    function shareToStories(imagePath) {
         if (!window.Telegram || !window.Telegram.WebApp) {
             alert("Поделиться в Stories можно только внутри Telegram ✨");
             return;
@@ -277,7 +343,6 @@ function shareToStories(imagePath) {
 
         const webApp = window.Telegram.WebApp;
 
-        // Проверяем, запущено ли приложение как Mini App и поддерживаются ли Stories
         if (typeof webApp.shareToStory !== 'function' || !webApp.isVersionAtLeast('7.8')) {
             alert("Чтобы делиться в Stories, запустите приложение через кнопку в боте (а не просто по ссылке в чате) или обновите Telegram ✨");
             return;
@@ -429,7 +494,6 @@ function shareToStories(imagePath) {
         finalVideoPlayer.pause();
         finalVideoPlayer.currentTime = 0;
         
-        // Обязательно прячем значок Play при сбросе приложения
         replayFinalVideo.style.display = 'none'; 
         
         step3Video.style.display = 'none';
@@ -522,10 +586,8 @@ function shareToStories(imagePath) {
         }
         // ----------------------------------------
         
-        // Принудительно прячем значок перед началом автовоспроизведения
         replayFinalVideo.style.display = 'none'; 
         
-        // Автовоспроизведение
         finalVideoPlayer.play().catch(err => {
             console.log("Автовоспроизведение заблокировано:", err);
             replayFinalVideo.style.display = 'flex';
@@ -536,16 +598,14 @@ function shareToStories(imagePath) {
     finalVideoPlayer.addEventListener('ended', () => {
         replayFinalVideo.style.display = 'flex';
         
-        // Установлен таймер возврата на 20 секунд (20000 мс)
         autoResetTimeout = setTimeout(resetToStart, 20000); 
     });
 
     // Остановка/Воспроизведение финального видео по клику
     finalVideoContainer.addEventListener('click', () => {
         if (finalVideoPlayer.paused || finalVideoPlayer.ended) {
-            if (autoResetTimeout) clearTimeout(autoResetTimeout); // Отменяем автосброс
+            if (autoResetTimeout) clearTimeout(autoResetTimeout);
             
-            // Если видео закончилось, принудительно перематываем в начало
             if (finalVideoPlayer.ended) {
                 finalVideoPlayer.currentTime = 0;
             }
