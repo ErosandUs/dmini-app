@@ -242,84 +242,25 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    // --- ФУНКЦИЯ ДИНАМИЧЕСКОГО СОЗДАНИЯ КВАДРАТНОЙ КАРТЫ С ПОЛЯМИ ---
-    function createSquareCardBlob(imagePath) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
-            img.src = imagePath;
-
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                // Определяем размер идеального квадрата по наибольшей стороне изображения
-                const size = Math.max(img.width, img.height);
-                canvas.width = size;
-                canvas.height = size;
-
-                // Заливаем красивый нежно-фиолетовый фон в стиле приложения
-                ctx.fillStyle = '#f6f0fa';
-                ctx.fillRect(0, 0, size, size);
-
-                // Вычисляем координаты, чтобы отцентровать прямоугольную карту внутри квадрата
-                const x = (size - img.width) / 2;
-                const y = (size - img.height) / 2;
-
-                // Отрисовываем карту по центру
-                ctx.drawImage(img, x, y, img.width, img.height);
-
-                // Преобразуем Canvas во временный файл
-                canvas.toBlob((blob) => {
-                    if (blob) {
-                        resolve(new File([blob], 'card_square.jpeg', { type: 'image/jpeg' }));
-                    } else {
-                        reject(new Error('Не удалось сгенерировать изображение'));
-                    }
-                }, 'image/jpeg', 0.95);
-            };
-
-            img.onerror = (err) => reject(err);
-        });
-    }
-
-    // --- ОТПРАВКА КАРТОЧКИ В ЛС С CANVAS-ПОДГОНКOЙ ---
-    shareToFriendBtn.addEventListener('click', async () => {
+    // --- НАДЕЖНАЯ ОТПРАВКА В ЛС (ЕДИНОЕ КВАДРАТНОЕ ПРЕВЬЮ 1:1) ---
+    shareToFriendBtn.addEventListener('click', () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
-        const shareText = "Привет! Нашла классное приложение по метафорическим картам ✨";
+        // 1. Формируем абсолютную ссылку на единую квадратную картинку (рубашку)
+        const absoluteImageUrl = new URL('images/00.jpeg', window.location.href).toString();
+        
+        // 2. Сначала идёт текст со ссылкой на самого бота
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nЗаходи в бота: ${BOT_LINK}`;
 
-        let sharedSuccessfully = false;
+        // 3. Формируем URL шеринга: Telegram при такой структуре поставит text в начало, а url с картинкой в конец для превью
+        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(absoluteImageUrl)}&text=${encodeURIComponent(shareText)}`;
 
-        // 1. Пробуем сгенерировать квадратную карту и передать файл в системный шеринг
-        try {
-            if (navigator.share && navigator.canShare) {
-                const squareFile = await createSquareCardBlob(activeSharePath);
-
-                if (navigator.canShare({ files: [squareFile] })) {
-                    await navigator.share({
-                        files: [squareFile],
-                        title: 'Послание Вселенной',
-                        text: `${shareText}\n\nЗаходи в бота: ${BOT_LINK}`
-                    });
-                    sharedSuccessfully = true;
-                }
-            }
-        } catch (e) {
-            console.log("Системный шеринг файла недоступен:", e);
-        }
-
-        // 2. Фоллбек для клиентов, где прямое прикрепление файлов заблокировано
-        if (!sharedSuccessfully) {
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(shareText)}`;
-
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-                window.Telegram.WebApp.openTelegramLink(shareUrl);
-            } else {
-                window.open(shareUrl, '_blank');
-            }
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+            window.Telegram.WebApp.openTelegramLink(shareUrl);
+        } else {
+            window.open(shareUrl, '_blank');
         }
         
         shareOptionsModal.classList.remove('active');
