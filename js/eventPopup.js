@@ -100,9 +100,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const promoDisplay = document.getElementById('senderPromoDisplay');
     const rewardTimer = document.getElementById('rewardTimer');
 
+    // 1. Проверка активной вкладки
     function isDailyTabActive() {
         const activeTab = document.getElementById('daily');
         return activeTab && activeTab.classList.contains('active');
+    }
+
+    // 2. Проверка начального экрана (закрытая рубашка карты)
+    function isInitialCardState() {
+        // Если карта перевернута — скрываем таймер
+        const isFlipped = document.querySelector('.flipped') !== null;
+        if (isFlipped) return false;
+
+        // Если открыто любое модальное окно (видео, шеринг и т.д.) — скрываем таймер
+        const isModalActive = document.querySelector('.modal.active') !== null ||
+            (document.getElementById('videoModal') && getComputedStyle(document.getElementById('videoModal')).display !== 'none') ||
+            (document.getElementById('shareOptionsModal') && getComputedStyle(document.getElementById('shareOptionsModal')).display !== 'none');
+        if (isModalActive) return false;
+
+        return true;
     }
 
     function updateTimer() {
@@ -111,11 +127,14 @@ document.addEventListener('DOMContentLoaded', () => {
             timerBanner.style.display = 'none';
             return;
         }
-        if (isDailyTabActive()) {
+
+        // Показываем плашку ТОЛЬКО если пользователь на первой вкладке И карта ещё НЕ перевернута
+        if (isDailyTabActive() && isInitialCardState()) {
             timerBanner.style.display = 'flex';
         } else {
             timerBanner.style.display = 'none';
         }
+
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
@@ -123,15 +142,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     updateTimer();
-    setInterval(updateTimer, 60000);
+    setInterval(updateTimer, 5000);
 
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetTab = btn.getAttribute('data-tab');
-            if (targetTab !== 'daily') timerBanner.style.display = 'none';
-            else { timerBanner.style.display = 'flex'; updateTimer(); }
-        });
+    // Мгновенно пересчитываем видимость при любом клике (переворот карты, просмотр видео)
+    document.addEventListener('click', () => {
+        setTimeout(updateTimer, 100);
     });
 
     function openModal() { modal.classList.add('active'); }
@@ -142,38 +157,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const isFirstShown = localStorage.getItem('event_popup_first');
     const isLastDayShown = localStorage.getItem('event_popup_last');
 
-    // ВОССТАНОВЛЕНИЕ СОСТОЯНИЯ (Если пользователь выходил из приложения)
     const shareClickedTime = localStorage.getItem('event_share_clicked_time');
-    let isRestoringState = false;
+    const isPromoClaimed = localStorage.getItem('event_promo_claimed') === 'true';
+    const isAutoOpenedAfterShare = localStorage.getItem('event_auto_opened_after_share') === 'true';
+    let isSharedState = false;
 
     if (shareClickedTime) {
         const secondsPassed = (nowMs - parseInt(shareClickedTime)) / 1000;
         
-        if (secondsPassed < (24 * 3600)) { // Прошло меньше 24 часов
-            isRestoringState = true;
-            setTimeout(() => {
-                openModal();
-                step1.style.display = 'none';
-                
-                if (secondsPassed < 60) {
-                    // Восстанавливаем таймер проверки (учитывая 60 сек)
-                    stepChecking.style.display = 'block';
-                    startCheckingTimer(60 - Math.floor(secondsPassed));
-                } else {
-                    // Восстанавливаем окно с промокодом и FOMO таймером
-                    step2.style.display = 'block';
-                    promoDisplay.innerText = EVENT_CONFIG.promoSender;
-                    startFomoTimer((24 * 3600) - Math.floor(secondsPassed));
-                }
-            }, 500);
+        if (secondsPassed < (24 * 3600)) {
+            isSharedState = true;
+            
+            step1.style.display = 'none';
+            step2.style.display = 'block';
+            promoDisplay.innerText = EVENT_CONFIG.promoSender;
+            startFomoTimer((24 * 3600) - Math.floor(secondsPassed));
+
+            if (!isPromoClaimed && !isAutoOpenedAfterShare) {
+                setTimeout(() => {
+                    openModal();
+                    if (secondsPassed < 60) {
+                        step2.style.display = 'none';
+                        stepChecking.style.display = 'block';
+                        startCheckingTimer(60 - Math.floor(secondsPassed));
+                    }
+                    localStorage.setItem('event_auto_opened_after_share', 'true');
+                }, 500);
+            }
         } else {
-            // Если прошло больше 24 часов, очищаем память, начинаем заново
             localStorage.removeItem('event_share_clicked_time');
+            localStorage.removeItem('event_promo_claimed');
+            localStorage.removeItem('event_auto_opened_after_share');
         }
     }
 
-    // Автоматические показы (только если мы не восстанавливаем состояние)
-    if (!isRestoringState) {
+    if (!isSharedState) {
         if (hoursUntilEvent > 24 && !isFirstShown) {
             setTimeout(openModal, 2000);
             localStorage.setItem('event_popup_first', 'true');
@@ -192,7 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         openLinkSafe(shareUrl, true);
 
-        // ЗАПОМИНАЕМ ВРЕМЯ КЛИКА В ПАМЯТЬ ТЕЛЕФОНА
         localStorage.setItem('event_share_clicked_time', new Date().getTime().toString());
 
         step1.style.display = 'none';
@@ -201,6 +218,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     applyBtn.addEventListener('click', () => {
+        localStorage.setItem('event_promo_claimed', 'true');
+
         navigator.clipboard.writeText(EVENT_CONFIG.promoSender).then(() => {
             const linkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoSender}`;
             openLinkSafe(linkWithPromo);
@@ -227,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 step2.style.display = 'block';
                 promoDisplay.innerText = EVENT_CONFIG.promoSender;
                 
-                // Просчитываем, сколько осталось из 24 часов, чтобы таймер был точным даже после закрытия
                 const clickedTimeStr = localStorage.getItem('event_share_clicked_time');
                 if (clickedTimeStr) {
                     const passed = (new Date().getTime() - parseInt(clickedTimeStr)) / 1000;
