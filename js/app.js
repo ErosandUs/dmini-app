@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     const shareOptionsModal = document.getElementById('shareOptionsModal');
     const closeShareModal = document.getElementById('closeShareModal');
-    const shareToFriendBtn = document.getElementById('shareToFriendBtn');
+    const shareToFriendBtn = document.getElementById('shareToFriendBtn')А;
     const shareToUniverseBtn = document.getElementById('shareToUniverseBtn');
 
     let activeSharePath = ""; 
@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const absoluteMediaUrl = new URL(imagePath, window.location.href).toString();
             const params = {
-                text: "Получи своё послание от Вселенной! ✨", 
+                text: "Получи своё послание от Вселенной! ✨ @Djamilia_Kha", 
                 widget_link: { 
                     url: BOT_LINK, 
                     name: "Получить послание 💫" 
