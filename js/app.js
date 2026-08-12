@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const absoluteMediaUrl = new URL(imagePath, window.location.href).toString();
             const params = {
-                text: "Получи своё послание от Вселенной! ✨ @Djamilia_Kha", 
+                text: "Получи своё послание от Вселенной! ✨", 
                 widget_link: { 
                     url: BOT_LINK, 
                     name: "Получить послание 💫" 
