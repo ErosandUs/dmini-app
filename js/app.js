@@ -284,33 +284,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function shareToStories(imagePath) {
-        if (!window.Telegram || !window.Telegram.WebApp) {
-            alert("Поделиться в Stories можно только внутри Telegram ✨");
-            return;
-        }
-
-        const webApp = window.Telegram.WebApp;
-
-        if (typeof webApp.shareToStory !== 'function' || !webApp.isVersionAtLeast('7.8')) {
-            alert("Чтобы делиться в Stories, запустите приложение через кнопку в боте (а не просто по ссылке в чате) или обновите Telegram ✨");
-            return;
-        }
-
-        try {
-            const absoluteMediaUrl = new URL(imagePath, window.location.href).toString();
-            const params = {
-                text: "Получи своё послание от Вселенной! ✨", 
-                widget_link: { 
-                    url: BOT_LINK, 
-                    name: "Получить послание 💫" 
-                }
-            };
-            webApp.shareToStory(absoluteMediaUrl, params);
-        } catch (error) {
-            console.error("Ошибка при вызове сторис:", error);
-            alert("Не удалось открыть редактор сторис. Воспользуйтесь кнопкой «Отправить подруге» 💌");
-        }
+    if (!window.Telegram || !window.Telegram.WebApp) {
+        alert("Поделиться в Stories можно только внутри Telegram ✨");
+        return;
     }
+
+    const webApp = window.Telegram.WebApp;
+
+    if (typeof webApp.shareToStory !== 'function' || !webApp.isVersionAtLeast('7.8')) {
+        alert("Чтобы делиться в Stories, запустите приложение через кнопку в боте (а не просто по ссылке в чате) или обновите Telegram ✨");
+        return;
+    }
+
+    try {
+        const absoluteMediaUrl = new URL(imagePath, window.location.href).toString();
+        const params = {
+            text: "Получи своё послание от Вселенной! ✨ @Djamilia_Kha", 
+            widget_link: { 
+                url: BOT_LINK, 
+                name: "Получить послание 💫" 
+            }
+        };
+        webApp.shareToStory(absoluteMediaUrl, params);
+    } catch (error) {
+        console.error("Ошибка при вызове сторис:", error);
+        alert("Не удалось открыть редактор сторис. Воспользуйтесь кнопкой «Отправить подруге» 💌");
+    }
+}
 
     // ==========================================
     // ЛОГИКА ОТРИСОВКИ КОЛЛЕКЦИИ (СВАЙПЕР)
