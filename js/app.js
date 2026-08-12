@@ -15,79 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const TOTAL_CARDS = 71; 
     const STORAGE_KEY = "mystic_collection"; // Ключ для локального хранилища коллекции
 
-    // База финальных видео
-    const finalVideos = [
-        "video/final_1.mp4",
-        "video/final_2.mp4",
-        "video/final_3.mp4",
-        "video/final_4.mp4",
-        "video/final_5.mp4",
-        "video/final_6.mp4",
-        "video/final_7.mp4",
-    ];
-
-    // Полная база аудиопосланий
-    const audioData = [
-        { id: 1, title: "Доверие или контроль" }, { id: 2, title: "Доверие" }, { id: 3, title: "Драгоценность" },
-        { id: 4, title: "Дух и Душа" }, { id: 5, title: "Дух" }, { id: 6, title: "Духовный путь" },
-        { id: 7, title: "Душа и Маски" }, { id: 8, title: "Душа Мастера" }, { id: 9, title: "Дыши сердцем" },
-        { id: 10, title: "Единство мироздания" }, { id: 11, title: "Желание души" }, { id: 12, title: "Желания Души" },
-        { id: 13, title: "Женская Энергия" }, { id: 14, title: "Женское сердце" }, { id: 15, title: "Женственность" },
-        { id: 16, title: "Звездная семья" }, { id: 17, title: "Звездные дары" }, { id: 18, title: "Земля и небеса" },
-        { id: 19, title: "Источник творения в сердце" }, { id: 20, title: "Исцеление" }, { id: 21, title: "Иштар божественное женское" },
-        { id: 22, title: "Качества души" }, { id: 23, title: "Ключ наслаждения" }, { id: 24, title: "Коды Души" },
-        { id: 25, title: "Кокон любви" }, { id: 26, title: "Краски жизни" }, { id: 27, title: "Лотос Сердца" },
-        { id: 28, title: "Любовь внутри" }, { id: 29, title: "Любовь" }, { id: 30, title: "Любовь" },
-        { id: 31, title: "Любящее сердце" }, { id: 32, title: "Мастерство" }, { id: 33, title: "Материя" },
-        { id: 34, title: "Матрица бытия" }, { id: 35, title: "Место силы" }, { id: 36, title: "Мирный воин" },
-        { id: 37, title: "Миссия духа" }, { id: 38, title: "Миссия Духа" }, { id: 39, title: "Мужское начало" },
-        { id: 40, title: "Настройка на закрытие коридора затмений" }, { id: 41, title: "Новатор" }, { id: 42, title: "Новые времена" },
-        { id: 43, title: "Новый цикл" }, { id: 44, title: "Отпускай Контроль" }, { id: 45, title: "Пламя творца" },
-        { id: 46, title: "Поколения" }, { id: 47, title: "Порядок" }, { id: 48, title: "Послание Матери Мира" },
-        { id: 49, title: "Потенциал" }, { id: 50, title: "Примирение" }, { id: 51, title: "Природа женщины" },
-        { id: 52, title: "Пробуждение" }, { id: 53, title: "Путь Ангела" }, { id: 54, title: "Путь жизни" },
-        { id: 55, title: "Путь Мастера" }, { id: 56, title: "Путь пройден" }, { id: 57, title: "Путь процветания" },
-        { id: 58, title: "Разговор сердца" }, { id: 59, title: "Разрешение кармы рода" }, { id: 60, title: "Распутье" },
-        { id: 61, title: "Реализация в масштабе" }, { id: 62, title: "Реализация даров души" }, { id: 63, title: "Реализация и ожидания" },
-        { id: 64, title: "Реализация" }, { id: 65, title: "Родовая система" }, { id: 66, title: "Роли" },
-        { id: 67, title: "Самоценность" }, { id: 68, title: "Свет и любовь" }, { id: 69, title: "Свет на Земле" },
-        { id: 70, title: "Свобода" }, { id: 71, title: "Свободный выбор" }, { id: 72, title: "Семена Жизни" },
-        { id: 73, title: "Сила слова" }, { id: 74, title: "Созерцание" }, { id: 75, title: "Сотворчество" },
-        { id: 76, title: "Творение в любви" }, { id: 77, title: "Творение и Творец" }, { id: 78, title: "Тонкие энергии Души" },
-        { id: 79, title: "Тотальность" }, { id: 80, title: "Уверенность в себе" }, { id: 81, title: "Уникальность" },
-        { id: 82, title: "Физическое тело" }, { id: 83, title: "Цветок любви" }, { id: 84, title: "Ценность пути" },
-        { id: 85, title: "Циклы" }, { id: 86, title: "Чёрное и белое. Свет и тени" }, { id: 87, title: "Чистота" },
-        { id: 88, title: "Шаг к себе" }, { id: 89, title: "Энергии творца" }, { id: 90, title: "Энергия Земли" },
-        { id: 91, title: "Энергия перемен" }, { id: 92, title: "Новый мир 💫" }, { id: 93, title: "Ангелы на Земле" },
-        { id: 94, title: "Баланс мужского и женского" }, { id: 95, title: "Берегиня" }, { id: 96, title: "Бескорыстность" },
-        { id: 97, title: "Благословение пути" }, { id: 98, title: "Божественная Любовь из сердца источника" }, { id: 99, title: "Божественный дух" },
-        { id: 100, title: "Божественный план" }, { id: 101, title: "Божественный ребенок" }, { id: 102, title: "Ведущий" },
-        { id: 103, title: "Величие духа" }, { id: 104, title: "Вертикаль Божественного Духа" }, { id: 105, title: "Вертикаль" },
-        { id: 106, title: "Вместе с Богом" }, { id: 107, title: "Время и циклы" }, { id: 108, title: "Все в тебе" },
-        { id: 109, title: "Вспомни Себя" }, { id: 110, title: "Выбирая свет ты можешь светить" }, { id: 111, title: "Высшая Истина" },
-        { id: 112, title: "Высшие Планы справедливости" }, { id: 113, title: "Гордыня" }, { id: 114, title: "Дары Духа" },
-        { id: 115, title: "Дары души" }, { id: 116, title: "Дары Земли" }, { id: 117, title: "Дверь Любви" },
-        { id: 118, title: "Движение" }, { id: 119, title: "Доверие" }, { id: 120, title: "Доверие (2)" }
-    ];
-
-    const videoData = [
-        { id: "thwMwndsIbs", title: "БОЖЕСТВЕННАЯ ЛЮБОВЬ. Инициация" },
-        { id: "i9XDsrUCGuA", title: "Энергия Плеяд и Альционы" },
-        { id: "QenCbqfw3pc", title: "Врата Просветления" },
-        { id: "i_S7eXWZmQo", title: "Духовное Пробуждение" },
-        { id: "TZo1nK9gu_8", title: "Сакральная Женственность" },
-        { id: "znoOuxhSDwo", title: "Исцеление Сердца" },
-        { id: "5wEu-jPLVwg", title: "Прямой эфир — Ответы на вопросы" },
-        { id: "sOiEJhdPIh4", title: "Послания Нового Времени" },
-        { id: "0YDP8-dqNLg", title: "Родовые Кармические Узлы" },
-        { id: "ZnOiO9UM22E", title: "Медитация Творения" },
-        { id: "I2JwWTd0p5U", title: "Сила Звездных Родов" },
-        { id: "NqQDJt_XhTo", title: "Энергетическая Настройка" },
-        { id: "uXkuOXe9mcA", title: "Отпускание Контроля и Эго" },
-        { id: "TA2YCIr3UWU", title: "Высшая Истина Души" },
-        { id: "iNK061_YtHY", title: "Божественное Процветание" }
-    ];
-
     // --- ЛОГИКА ГЛАВНЫХ ВКЛАДОК ---
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -252,16 +179,16 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-// --- НАДЕЖНАЯ ОТПРАВКА В ЛС (ТЕКСТ ПЕРВЫМ + СОКРАЩЕННАЯ ССЫЛКА НА КАРТИНКУ) ---
+    // --- НАДЕЖНАЯ ОТПРАВКА В ЛС ---
     shareToFriendBtn.addEventListener('click', () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
-        // ВАЖНО: Первая ссылка в тексте — clck.ru, поэтому Telegram сгенерирует превью именно для нее.
-        // При этом текст приветствия идет на первой строке над ссылкой.
-        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\nhttps://clck.ru/3VB8wu\n\nЗаходи в бота: ${BOT_LINK}`;
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨
+https://clck.ru/3VB8wu
 
+Заходи в бота: ${BOT_LINK}`;
         const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
 
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
@@ -292,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const webApp = window.Telegram.WebApp;
 
         if (typeof webApp.shareToStory !== 'function' || !webApp.isVersionAtLeast('7.8')) {
-            alert("Чтобы делиться в Stories, запустите приложение через кнопку в боте (а не просто по ссылке в чате) или обновите Telegram ✨");
+            alert("Чтобы делиться в Stories, обновите Telegram ✨");
             return;
         }
 
@@ -308,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             webApp.shareToStory(absoluteMediaUrl, params);
         } catch (error) {
             console.error("Ошибка при вызове сторис:", error);
-            alert("Не удалось открыть редактор сторис. Воспользуйтесь кнопкой «Отправить подруге» 💌");
+            alert("Не удалось открыть редактор сторис.");
         }
     }
 
@@ -465,13 +392,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareAudioBtn = document.getElementById('shareAudioBtn'); 
     
     let currentAudioName = "";
-    
-    // Переменные для усилителя видео
     let audioCtx, gainNode, videoSource;
 
     function startRandomAudio() {
-        const randomAudioIndex = Math.floor(Math.random() * audioData.length);
-        const selectedAudio = audioData[randomAudioIndex];
+        // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
+        const randomAudioIndex = Math.floor(Math.random() * AUDIO_TRACKS_DATA.length);
+        const selectedAudio = AUDIO_TRACKS_DATA[randomAudioIndex];
 
         currentAudioName = selectedAudio.title;
         audioTitle.innerText = `«${currentAudioName}»`;
@@ -480,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         audioPlayer.play();
         if (avatarVideo) {
-            avatarVideo.play().catch(err => console.log("Видео заблокировано системой:", err));
+            avatarVideo.play().catch(err => console.log("Видео заблокировано:", err));
         }
         
         shareAudioBtn.style.display = 'block';
@@ -509,20 +435,17 @@ document.addEventListener('DOMContentLoaded', () => {
         step2Audio.style.display = 'none';
         step3Video.style.display = 'block';
         
-        const randomFinalVideo = finalVideos[Math.floor(Math.random() * finalVideos.length)];
+        // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
+        const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
         finalVideoPlayer.src = randomFinalVideo;
         
-        // --- ПРОГРАММНОЕ УСИЛЕНИЕ ЗВУКА ВИДЕО ---
         try {
             if (!audioCtx) {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 audioCtx = new AudioContext();
                 videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
                 gainNode = audioCtx.createGain();
-                
-                // УВЕЛИЧЕНИЕ ГРОМКОСТИ (3.0 = 300%)
                 gainNode.gain.value = 3.0; 
-                
                 videoSource.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
             }
@@ -530,34 +453,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 audioCtx.resume();
             }
         } catch (e) {
-            console.log("Усиление звука не поддерживается на этом устройстве", e);
+            console.log("Усиление звука не поддерживается", e);
         }
-        // ----------------------------------------
         
         replayFinalVideo.style.display = 'none'; 
         
         finalVideoPlayer.play().catch(err => {
-            console.log("Автовоспроизведение заблокировано:", err);
             replayFinalVideo.style.display = 'flex';
         });
     });
 
-    // Запускаем таймер возврата ТОЛЬКО когда финальное видео завершится
     finalVideoPlayer.addEventListener('ended', () => {
         replayFinalVideo.style.display = 'flex';
-        
         autoResetTimeout = setTimeout(resetToStart, 20000); 
     });
 
-    // Остановка/Воспроизведение финального видео по клику
     finalVideoContainer.addEventListener('click', () => {
         if (finalVideoPlayer.paused || finalVideoPlayer.ended) {
             if (autoResetTimeout) clearTimeout(autoResetTimeout);
-            
-            if (finalVideoPlayer.ended) {
-                finalVideoPlayer.currentTime = 0;
-            }
-
+            if (finalVideoPlayer.ended) finalVideoPlayer.currentTime = 0;
             replayFinalVideo.style.display = 'none';
             finalVideoPlayer.play();
         } else {
@@ -572,7 +486,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = document.getElementById('closeModal');
     const modalVideoWrap = document.getElementById('modalVideoWrap');
     
-    videoData.forEach(video => {
+    // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
+    YOUTUBE_GALLERY_DATA.forEach(video => {
         const thumbUrl = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
         const videoHtml = `
             <div class="video-item" data-id="${video.id}">
@@ -605,4 +520,124 @@ document.addEventListener('DOMContentLoaded', () => {
             modalVideoWrap.innerHTML = '';
         }
     });
+
+    // ==========================================
+    // ЛОГИКА АНОНСА И ТАЙМЕРА (ПРОМОКОДЫ)
+    // ==========================================
+    if (typeof EVENT_CONFIG !== 'undefined' && EVENT_CONFIG.isActive) {
+        const eventTimerBanner = document.getElementById('eventTimerBanner');
+        const eventTimerCountdown = document.getElementById('eventTimerCountdown');
+        
+        const eventModal = document.getElementById('eventModal');
+        const closeEventModal = document.getElementById('closeEventModal');
+        const eventModalImg = document.getElementById('eventModalImg');
+        const eventModalTitle = document.getElementById('eventModalTitle');
+        const eventModalDate = document.getElementById('eventModalDate');
+        
+        const eventInitialActions = document.getElementById('eventInitialActions');
+        const eventRegisterBtn = document.getElementById('eventRegisterBtn');
+        const eventShareBtn = document.getElementById('eventShareBtn');
+        const promoRewardBlock = document.getElementById('promoRewardBlock');
+        const senderPromoCodeBox = document.getElementById('senderPromoCodeBox');
+        const copyAndApplyPromoBtn = document.getElementById('copyAndApplyPromoBtn');
+
+        const eventDate = new Date(EVENT_CONFIG.date).getTime();
+
+        eventModalImg.src = EVENT_CONFIG.imagePath;
+        eventModalTitle.innerText = EVENT_CONFIG.title;
+        
+        const formatOpts = { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' };
+        eventModalDate.innerText = new Date(EVENT_CONFIG.date).toLocaleDateString('ru-RU', formatOpts);
+        senderPromoCodeBox.innerText = EVENT_CONFIG.promoSender;
+
+        function updateEventTimer() {
+            const now = new Date().getTime();
+            const distance = eventDate - now;
+
+            if (distance < 0) {
+                eventTimerBanner.style.display = 'none';
+                return false;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+
+            eventTimerCountdown.innerText = `${days} дн : ${hours} ч : ${minutes} мин`;
+            eventTimerBanner.style.display = 'flex';
+            return true;
+        }
+
+        if (updateEventTimer()) {
+            setInterval(updateEventTimer, 60000);
+        }
+
+        function openEventModal() {
+            eventModal.classList.add('active');
+            promoRewardBlock.style.display = 'none';
+            eventInitialActions.style.display = 'block';
+        }
+
+        eventTimerBanner.addEventListener('click', openEventModal);
+        closeEventModal.addEventListener('click', () => eventModal.classList.remove('active'));
+
+        const nowMs = new Date().getTime();
+        const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
+        
+        const isFirstShown = localStorage.getItem('promo_first_shown');
+        const isLastDayShown = localStorage.getItem('promo_last_day_shown');
+
+        if (hoursUntilEvent > 24 && !isFirstShown) {
+            setTimeout(openEventModal, 1500);
+            localStorage.setItem('promo_first_shown', 'true');
+        } else if (hoursUntilEvent <= 24 && hoursUntilEvent > 0 && !isLastDayShown) {
+            setTimeout(openEventModal, 1500);
+            localStorage.setItem('promo_first_shown', 'true');
+            localStorage.setItem('promo_last_day_shown', 'true');
+        }
+
+        eventRegisterBtn.addEventListener('click', () => {
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                window.Telegram.WebApp.openLink(EVENT_CONFIG.registrationLink);
+            } else {
+                window.open(EVENT_CONFIG.registrationLink, '_blank');
+            }
+        });
+
+        eventShareBtn.addEventListener('click', () => {
+            const shareText = `Привет, дорогая! Я иду в классное поле на медитацию «${EVENT_CONFIG.title}». Почувствовала, что хочу разделить это с тобой ✨
+
+Держи от меня подарок — промокод на 15%: ${EVENT_CONFIG.promoReceiver}
+
+Подробности тут: ${BOT_LINK}`;
+            const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
+
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+                window.Telegram.WebApp.openTelegramLink(shareUrl);
+            } else {
+                window.open(shareUrl, '_blank');
+            }
+
+            eventInitialActions.style.display = 'none';
+            promoRewardBlock.style.display = 'block';
+
+            if (typeof ym !== 'undefined') {
+                ym(110909428, 'reachGoal', 'event_share_click');
+            }
+        });
+
+        copyAndApplyPromoBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(EVENT_CONFIG.promoSender).then(() => {
+                const linkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoSender}`;
+                
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+                    window.Telegram.WebApp.openLink(linkWithPromo);
+                } else {
+                    window.open(linkWithPromo, '_blank');
+                }
+            }).catch(err => {
+                console.error('Ошибка копирования', err);
+            });
+        });
+    }
 });
