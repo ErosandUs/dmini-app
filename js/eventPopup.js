@@ -6,9 +6,19 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (eventDate - nowMs < 0) return;
 
-    // Вставляем стили модального окна анонса
     const style = document.createElement('style');
     style.innerHTML = `
+        .event-floating-timer {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(211, 188, 230, 0.6); border-radius: 20px;
+            padding: 8px 20px; box-shadow: 0 4px 15px rgba(156, 122, 187, 0.2);
+            z-index: 90; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s ease;
+        }
+        .event-floating-timer:active { transform: translateX(-50%) scale(0.95); }
+        .event-timer-title { font-size: 0.75rem; color: #8a7a94; margin-bottom: 3px; font-weight: 500; text-align: center; }
+        .event-timer-countdown { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: #9c7abb; font-weight: 600; }
+        
         .event-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(246, 240, 250, 0.95); z-index: 10000;
@@ -35,9 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    // Вставляем структуру модального окна в body
-    const modalContainer = document.createElement('div');
-    modalContainer.innerHTML = `
+    const eventContainer = document.createElement('div');
+    eventContainer.innerHTML = `
+        <div class="event-floating-timer" id="eventFloatingTimer">
+            <span class="event-timer-title">До медитации осталось:</span>
+            <span class="event-timer-countdown" id="eventCountdownText">Считаем...</span>
+        </div>
+
         <div class="event-modal-overlay" id="eventPromoModal">
             <div class="event-modal-content">
                 <span class="event-close-btn" id="closeEventModal">&times;</span>
@@ -70,10 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
     `;
-    document.body.appendChild(modalContainer);
+    document.body.appendChild(eventContainer);
 
-    // Получаем элементы
-    const timerBtn = document.getElementById('eventPromoBtn');
+    const timerBanner = document.getElementById('eventFloatingTimer');
     const countdownText = document.getElementById('eventCountdownText');
     const modal = document.getElementById('eventPromoModal');
     const closeModal = document.getElementById('closeEventModal');
@@ -95,11 +108,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Проверка начального экрана (закрытая рубашка карты)
     function isInitialCardState() {
-        // Если карта перевернута — скрываем кнопку
+        // Если карта перевернута — скрываем таймер
         const isFlipped = document.querySelector('.flipped') !== null;
         if (isFlipped) return false;
 
-        // Если открыто любое модальное окно (видео, шеринг и т.д.) — скрываем кнопку
+        // Если открыто любое модальное окно (видео, шеринг и т.д.) — скрываем таймер
         const isModalActive = document.querySelector('.modal.active') !== null ||
             (document.getElementById('videoModal') && getComputedStyle(document.getElementById('videoModal')).display !== 'none') ||
             (document.getElementById('shareOptionsModal') && getComputedStyle(document.getElementById('shareOptionsModal')).display !== 'none');
@@ -111,25 +124,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateTimer() {
         const distance = eventDate - new Date().getTime();
         if (distance < 0) {
-            if (timerBtn) timerBtn.style.display = 'none';
+            timerBanner.style.display = 'none';
             return;
         }
 
-        // Показываем встроенную кнопку ТОЛЬКО если пользователь на первой вкладке И карта ещё НЕ перевернута
-        if (timerBtn) {
-            if (isDailyTabActive() && isInitialCardState()) {
-                timerBtn.style.display = 'flex';
-            } else {
-                timerBtn.style.display = 'none';
-            }
+        // Показываем плашку ТОЛЬКО если пользователь на первой вкладке И карта ещё НЕ перевернута
+        if (isDailyTabActive() && isInitialCardState()) {
+            timerBanner.style.display = 'flex';
+        } else {
+            timerBanner.style.display = 'none';
         }
 
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        if (countdownText) {
-            countdownText.innerText = `${days} дн : ${hours} ч : ${minutes} мин`;
-        }
+        countdownText.innerText = `${days} дн : ${hours} ч : ${minutes} мин`;
     }
 
     updateTimer();
@@ -142,10 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openModal() { modal.classList.add('active'); }
     closeModal.addEventListener('click', () => modal.classList.remove('active'));
-    
-    if (timerBtn) {
-        timerBtn.addEventListener('click', openModal);
-    }
+    timerBanner.addEventListener('click', openModal);
 
     const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
     const isFirstShown = localStorage.getItem('event_popup_first');
