@@ -63,9 +63,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let isFlipped = false;
     let currentCardPath = ""; 
 
-    // === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
+// === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
     const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
     let countdownInterval; 
+
+    // --- НОВЫЙ БЛОК: Проверка VIP-пользователей ---
+    const VIP_USERS = ['Djamilia_Kha', 'atribute']; // Никнеймы без знака @
+
+    function isUserVIP() {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+            const username = window.Telegram.WebApp.initDataUnsafe.user.username;
+            return VIP_USERS.includes(username);
+        }
+        return false;
+    }
+    // ----------------------------------------------
 
     function formatTime(ms) {
         const totalSeconds = Math.ceil(ms / 1000);
@@ -79,6 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkTimer() {
+        // Если пользователь VIP, сразу разрешаем получение карты, игнорируя таймер
+        if (isUserVIP()) {
+            drawBtn.disabled = false;
+            return true;
+        }
+
         const lastDraw = localStorage.getItem('lastDrawTime');
         if (lastDraw) {
             const elapsed = Date.now() - parseInt(lastDraw);
