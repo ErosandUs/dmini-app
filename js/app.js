@@ -64,6 +64,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCardPath = ""; 
 
     // === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
+    
+    // === VIP-СИСТЕМА (АДМИНИСТРАТОРЫ) ===
+    const VIP_USERS = ['atribute', 'Djamilia_Kha'];
+
+    function isVipUser() {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+            const username = window.Telegram.WebApp.initDataUnsafe.user.username;
+            if (username) {
+                // Сравниваем без учета регистра, убираем @ если вдруг есть
+                const cleanName = username.replace('@', '').toLowerCase();
+                return VIP_USERS.map(u => u.replace('@', '').toLowerCase()).includes(cleanName);
+            }
+        }
+        return false;
+    }
+
     const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
     let countdownInterval; 
 
@@ -79,6 +95,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkTimer() {
+        // Если это VIP-пользователь, игнорируем таймер
+        if (isVipUser()) {
+            drawBtn.disabled = false;
+            drawBtn.innerText = "Получить послание (VIP)";
+            return true;
+        }
+
         const lastDraw = localStorage.getItem('lastDrawTime');
         if (lastDraw) {
             const elapsed = Date.now() - parseInt(lastDraw);
