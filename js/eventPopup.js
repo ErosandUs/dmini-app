@@ -8,44 +8,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const style = document.createElement('style');
     style.innerHTML = `
-        /* Стационарная кнопка на рубашке карты */
         .event-floating-timer {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(211, 188, 230, 0.8); border-radius: 20px;
-            padding: 8px 18px; box-shadow: 0 4px 15px rgba(156, 122, 187, 0.25);
-            z-index: 20; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.2s ease;
-            white-space: nowrap; width: max-content; pointer-events: auto;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 100%; max-width: 320px; margin: 12px auto 0 auto; padding: 10px 20px;
+            background: #ffffff; border: 1px solid #d3bce6; border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(156, 122, 187, 0.15); cursor: pointer; transition: 0.2s ease; box-sizing: border-box;
         }
-        .event-floating-timer:active { transform: translateX(-50%) scale(0.95); }
-        .event-timer-title { font-size: 0.75rem; color: #8a7a94; margin-bottom: 2px; font-weight: 600; text-transform: uppercase; }
-        .event-timer-countdown { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: #9c7abb; font-weight: 700; }
+        .event-floating-timer:active { transform: scale(0.98); }
+        .event-timer-title { font-size: 0.75rem; color: #8a7a94; margin-bottom: 3px; font-weight: 500; text-align: center; }
+        .event-timer-countdown { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: #9c7abb; font-weight: 600; }
         
         .event-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(49, 34, 59, 0.7); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); z-index: 10000;
+            background: rgba(246, 240, 250, 0.95); z-index: 10000;
             display: flex; align-items: center; justify-content: center;
             padding: 15px; opacity: 0; visibility: hidden; transition: 0.3s ease;
         }
         .event-modal-overlay.active { opacity: 1; visibility: visible; }
         .event-modal-content {
-            background: #fff; width: 100%; max-width: 360px;
-            border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; overflow: hidden; text-align: center;
+            background: #fff; width: 100%; max-width: 380px;
+            border-radius: 15px; border: 1px solid #d3bce6;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; overflow: hidden; text-align: center;
         }
-        /* Выразительная и заметная красная кнопка закрытия */
         .event-close-btn {
-            position: absolute; top: 12px; right: 12px; width: 34px; height: 34px;
-            background: rgba(220, 53, 69, 0.95); color: #fff; border-radius: 50%;
+            position: absolute; top: 10px; right: 12px; width: 32px; height: 32px;
+            background: #dc3545; color: #fff; border-radius: 50%; border: 2px solid #fff;
             display: flex; align-items: center; justify-content: center;
-            font-size: 22px; font-weight: 800; line-height: 1; cursor: pointer; z-index: 100;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35); border: 2px solid #ffffff; transition: 0.2s ease;
+            font-size: 20px; font-weight: bold; cursor: pointer; line-height: 1;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 2;
         }
-        .event-close-btn:active { transform: scale(0.88); background: rgba(200, 35, 51, 1); }
-        .event-banner-img { width: 100%; height: 180px; object-fit: cover; }
+        .event-banner-img { width: 100%; height: 200px; object-fit: cover; }
         .event-body { padding: 20px; }
-        .event-title { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: #4a3b52; margin-bottom: 8px; font-weight: 600; }
-        .event-desc { font-size: 0.9rem; color: #4a3b52; line-height: 1.4; margin-bottom: 12px; }
-        .event-promo-box { background: #f7f3fb; border: 1px dashed #b897d4; padding: 12px; border-radius: 12px; font-weight: bold; color: #5c3b75; margin: 12px 0; font-size: 1.2rem; }
+        .event-title { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: #9c7abb; margin-bottom: 10px; }
+        .event-desc { font-size: 0.9rem; color: #4a3b52; line-height: 1.5; margin-bottom: 15px; }
+        .event-promo-box { background: rgba(211, 188, 230, 0.2); border: 1px dashed #9c7abb; padding: 10px; border-radius: 8px; font-weight: bold; color: #31223b; margin: 15px 0; letter-spacing: 1px;}
         .event-warning { font-size: 0.75rem; color: #d9534f; font-weight: 600; margin-bottom: 10px; display: block; }
     `;
     document.head.appendChild(style);
@@ -53,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const eventContainer = document.createElement('div');
     eventContainer.innerHTML = `
         <div class="event-floating-timer" id="eventFloatingTimer">
-            <span class="event-timer-title">Дом медитации ✨</span>
+            <span class="event-timer-title">До медитации осталось:</span>
             <span class="event-timer-countdown" id="eventCountdownText">Считаем...</span>
         </div>
 
@@ -66,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3 class="event-title">${EVENT_CONFIG.title}</h3>
                     
                     <div id="eventStep1">
-                        <p class="event-desc">Поделись приглашением с близкой подругой. Вы обе получите <b>скидку 15%</b> на участие! ✨</p>
+                        <p class="event-desc">Поделись приглашением с близкой подругой. Вы обе получите <b>скидку 15%</b> на участие в практике! ✨</p>
                         <span class="event-warning">❗️ Вернись в это окно после отправки, чтобы забрать подарок!</span>
                         <button class="action-btn" id="eventShareBtn">Отправить приглашение 💌</button>
                         <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
@@ -92,6 +88,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(eventContainer);
 
     const timerBanner = document.getElementById('eventFloatingTimer');
+    const getCardBtn = document.getElementById('getCardBtn');
+    if (getCardBtn && getCardBtn.parentNode) {
+        getCardBtn.parentNode.insertBefore(timerBanner, getCardBtn.nextSibling);
+    }
+
     const countdownText = document.getElementById('eventCountdownText');
     const modal = document.getElementById('eventPromoModal');
     const closeModal = document.getElementById('closeEventModal');
@@ -105,27 +106,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const promoDisplay = document.getElementById('senderPromoDisplay');
     const rewardTimer = document.getElementById('rewardTimer');
 
-    // ПРИВЯЗКА КНОПКИ К РУБАШКЕ КАРТЫ
-    const cardFront = document.querySelector('.card-front') || document.getElementById('cardFront');
-    if (cardFront) {
-        cardFront.appendChild(timerBanner);
-    }
-
-    // Запрещаем клику по кнопке переворачивать карту
-    timerBanner.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openModal();
-    });
-
+    // 1. Проверка активной вкладки
     function isDailyTabActive() {
         const activeTab = document.getElementById('daily');
         return activeTab && activeTab.classList.contains('active');
     }
 
+    // 2. Проверка начального экрана (закрытая рубашка карты)
     function isInitialCardState() {
+        // Если карта перевернута — скрываем таймер
         const isFlipped = document.querySelector('.flipped') !== null;
         if (isFlipped) return false;
 
+        // Если открыто любое модальное окно (видео, шеринг и т.д.) — скрываем таймер
         const isModalActive = document.querySelector('.modal.active') !== null ||
             (document.getElementById('videoModal') && getComputedStyle(document.getElementById('videoModal')).display !== 'none') ||
             (document.getElementById('shareOptionsModal') && getComputedStyle(document.getElementById('shareOptionsModal')).display !== 'none');
@@ -141,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Показываем плашку ТОЛЬКО если пользователь на первой вкладке И карта ещё НЕ перевернута
         if (isDailyTabActive() && isInitialCardState()) {
             timerBanner.style.display = 'flex';
         } else {
@@ -156,12 +150,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTimer();
     setInterval(updateTimer, 5000);
 
+    // Мгновенно пересчитываем видимость при любом клике (переворот карты, просмотр видео)
     document.addEventListener('click', () => {
         setTimeout(updateTimer, 100);
     });
 
     function openModal() { modal.classList.add('active'); }
-    closeModal.addEventListener('click', (e) => { e.stopPropagation(); modal.classList.remove('active'); });
+    closeModal.addEventListener('click', () => modal.classList.remove('active'));
+    timerBanner.addEventListener('click', openModal);
 
     const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
     const isFirstShown = localStorage.getItem('event_popup_first');
@@ -177,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (secondsPassed < (24 * 3600)) {
             isSharedState = true;
+            
             step1.style.display = 'none';
             step2.style.display = 'block';
             promoDisplay.innerText = EVENT_CONFIG.promoSender;
@@ -218,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
         
         openLinkSafe(shareUrl, true);
+
         localStorage.setItem('event_share_clicked_time', new Date().getTime().toString());
 
         step1.style.display = 'none';
@@ -227,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     applyBtn.addEventListener('click', () => {
         localStorage.setItem('event_promo_claimed', 'true');
+
         navigator.clipboard.writeText(EVENT_CONFIG.promoSender).then(() => {
             const linkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoSender}`;
             openLinkSafe(linkWithPromo);
