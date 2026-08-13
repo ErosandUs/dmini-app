@@ -146,6 +146,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function drawRandomCard() {
         if (!isFlipped && checkTimer()) {
+            window.isCardDrawing = true;
+            if (typeof window.hideEventTimer === 'function') {
+                window.hideEventTimer();
+            }
             localStorage.setItem('lastDrawTime', Date.now()); 
             setNewCard();
         }
@@ -154,29 +158,38 @@ document.addEventListener('DOMContentLoaded', () => {
     function setNewCard() {
         const randomNum = Math.floor(Math.random() * TOTAL_CARDS) + 1;
         currentCardPath = `images/${randomNum}.jpeg`; 
-        cardResultImg.src = currentCardPath; 
-        cardResultImg.onload = () => {
-            card.classList.add('flipped');
-            isFlipped = true;
-            
-            saveCardToCollection(randomNum);
+        if (cardResultImg) {
+            cardResultImg.src = currentCardPath; 
+            cardResultImg.onload = () => {
+                if (card) card.classList.add('flipped');
+                isFlipped = true;
+                window.isCardDrawing = false;
+                
+                saveCardToCollection(randomNum);
 
-            // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Выбор карты ---
-            if (typeof ym !== 'undefined') {
-                ym(110909428, 'reachGoal', 'get_card');
-            }
-            
-            drawBtn.style.display = 'none';
+                // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Выбор карты ---
+                if (typeof ym !== 'undefined') {
+                    ym(110909428, 'reachGoal', 'get_card');
+                }
+                
+                if (drawBtn) drawBtn.style.display = 'none';
+                if (typeof window.updateEventTimer === 'function') {
+                    window.updateEventTimer();
+                }
 
-            setTimeout(() => { 
-                nextToAudioBtn.style.display = 'block';
-                shareCardBtn.style.display = 'block'; 
-            }, 500);
-        };
+                setTimeout(() => { 
+                    if (nextToAudioBtn) nextToAudioBtn.style.display = 'block';
+                    if (shareCardBtn) shareCardBtn.style.display = 'block'; 
+                    if (typeof window.updateEventTimer === 'function') {
+                        window.updateEventTimer();
+                    }
+                }, 500);
+            };
+        }
     }
 
-    drawBtn.addEventListener('click', drawRandomCard);
-    card.addEventListener('click', drawRandomCard);
+    if (drawBtn) drawBtn.addEventListener('click', drawRandomCard);
+    if (card) card.addEventListener('click', drawRandomCard);
 
     // ==========================================
     // ЛОГИКА ШЕРИНГА И МЕНЮ ВЫБОРА (ОБЩАЯ)
@@ -383,23 +396,30 @@ https://clck.ru/3VB8wu
         if (autoResetTimeout) {
             clearTimeout(autoResetTimeout);
         }
+        window.isCardDrawing = false;
         
-        finalVideoPlayer.pause();
-        finalVideoPlayer.currentTime = 0;
+        if (finalVideoPlayer) {
+            finalVideoPlayer.pause();
+            finalVideoPlayer.currentTime = 0;
+        }
         
-        replayFinalVideo.style.display = 'none'; 
+        if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
         
-        step3Video.style.display = 'none';
-        step1Card.style.display = 'block';
+        if (step3Video) step3Video.style.display = 'none';
+        if (step1Card) step1Card.style.display = 'block';
         
-        card.classList.remove('flipped');
+        if (card) card.classList.remove('flipped');
         isFlipped = false;
         
-        nextToAudioBtn.style.display = 'none';
-        shareCardBtn.style.display = 'none';
+        if (nextToAudioBtn) nextToAudioBtn.style.display = 'none';
+        if (shareCardBtn) shareCardBtn.style.display = 'none';
         
-        drawBtn.style.display = 'block';
+        if (drawBtn) drawBtn.style.display = 'block';
         checkTimer();
+
+        if (typeof window.updateEventTimer === 'function') {
+            window.updateEventTimer();
+        }
     }
 
     resetPracticeBtn.addEventListener('click', resetToStart);
@@ -414,89 +434,108 @@ https://clck.ru/3VB8wu
 
     function startRandomAudio() {
         // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
-        const randomAudioIndex = Math.floor(Math.random() * AUDIO_TRACKS_DATA.length);
-        const selectedAudio = AUDIO_TRACKS_DATA[randomAudioIndex];
+        if (typeof AUDIO_TRACKS_DATA !== 'undefined' && AUDIO_TRACKS_DATA.length > 0) {
+            const randomAudioIndex = Math.floor(Math.random() * AUDIO_TRACKS_DATA.length);
+            const selectedAudio = AUDIO_TRACKS_DATA[randomAudioIndex];
 
-        currentAudioName = selectedAudio.title;
-        audioTitle.innerText = `«${currentAudioName}»`;
-        
-        audioPlayer.src = `audio/${selectedAudio.id}.mp3`;
-        
-        audioPlayer.play();
-        if (avatarVideo) {
-            avatarVideo.play().catch(err => console.log("Видео заблокировано:", err));
+            currentAudioName = selectedAudio.title;
+            if (audioTitle) audioTitle.innerText = `«${currentAudioName}»`;
+            
+            if (audioPlayer) {
+                audioPlayer.src = `audio/${selectedAudio.id}.mp3`;
+                audioPlayer.play().catch(err => console.log("Audio play blocked:", err));
+            }
+            
+            if (avatarVideo) {
+                avatarVideo.play().catch(err => console.log("Видео заблокировано:", err));
+            }
+            
+            if (shareAudioBtn) shareAudioBtn.style.display = 'block';
         }
-        
-        shareAudioBtn.style.display = 'block';
     }
 
-    nextToAudioBtn.addEventListener('click', () => {
-        step1Card.style.display = 'none';
-        step2Audio.style.display = 'flex'; 
-        startRandomAudio();
-    });
+    if (nextToAudioBtn) {
+        nextToAudioBtn.addEventListener('click', () => {
+            if (step1Card) step1Card.style.display = 'none';
+            if (step2Audio) step2Audio.style.display = 'flex'; 
+            startRandomAudio();
+        });
+    }
 
-    shareAudioBtn.addEventListener('click', () => {
-        const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:`;
-        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
-            window.Telegram.WebApp.openTelegramLink(shareUrl);
-        } else {
-            window.open(shareUrl, '_blank');
-        }
-    });
+    if (shareAudioBtn) {
+        shareAudioBtn.addEventListener('click', () => {
+            const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:`;
+            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+                window.Telegram.WebApp.openTelegramLink(shareUrl);
+            } else {
+                window.open(shareUrl, '_blank');
+            }
+        });
+    }
 
     // Автопереход к третьему шагу (Финальное Видео)
     const finalVideoContainer = document.getElementById('finalVideoContainer');
 
-    audioPlayer.addEventListener('ended', () => {
-        step2Audio.style.display = 'none';
-        step3Video.style.display = 'block';
-        
-        // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
-        const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
-        finalVideoPlayer.src = randomFinalVideo;
-        
-        try {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                audioCtx = new AudioContext();
-                videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
-                gainNode = audioCtx.createGain();
-                gainNode.gain.value = 3.0; 
-                videoSource.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
+    if (audioPlayer) {
+        audioPlayer.addEventListener('ended', () => {
+            if (step2Audio) step2Audio.style.display = 'none';
+            if (step3Video) step3Video.style.display = 'block';
+            
+            // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
+            if (typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0) {
+                const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
+                if (finalVideoPlayer) finalVideoPlayer.src = randomFinalVideo;
             }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
+            
+            try {
+                if (!audioCtx && finalVideoPlayer) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext();
+                    videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
+                    gainNode = audioCtx.createGain();
+                    gainNode.gain.value = 3.0; 
+                    videoSource.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (e) {
+                console.log("Усиление звука не поддерживается", e);
             }
-        } catch (e) {
-            console.log("Усиление звука не поддерживается", e);
-        }
-        
-        replayFinalVideo.style.display = 'none'; 
-        
-        finalVideoPlayer.play().catch(err => {
-            replayFinalVideo.style.display = 'flex';
+            
+            if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
+            
+            if (finalVideoPlayer) {
+                finalVideoPlayer.play().catch(err => {
+                    if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
+                });
+            }
         });
-    });
+    }
 
-    finalVideoPlayer.addEventListener('ended', () => {
-        replayFinalVideo.style.display = 'flex';
-        autoResetTimeout = setTimeout(resetToStart, 20000); 
-    });
+    if (finalVideoPlayer) {
+        finalVideoPlayer.addEventListener('ended', () => {
+            if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
+            autoResetTimeout = setTimeout(resetToStart, 20000); 
+        });
+    }
 
-    finalVideoContainer.addEventListener('click', () => {
-        if (finalVideoPlayer.paused || finalVideoPlayer.ended) {
-            if (autoResetTimeout) clearTimeout(autoResetTimeout);
-            if (finalVideoPlayer.ended) finalVideoPlayer.currentTime = 0;
-            replayFinalVideo.style.display = 'none';
-            finalVideoPlayer.play();
-        } else {
-            finalVideoPlayer.pause();
-            replayFinalVideo.style.display = 'flex';
-        }
-    });
+    if (finalVideoContainer) {
+        finalVideoContainer.addEventListener('click', () => {
+            if (!finalVideoPlayer) return;
+            if (finalVideoPlayer.paused || finalVideoPlayer.ended) {
+                if (autoResetTimeout) clearTimeout(autoResetTimeout);
+                if (finalVideoPlayer.ended) finalVideoPlayer.currentTime = 0;
+                if (replayFinalVideo) replayFinalVideo.style.display = 'none';
+                finalVideoPlayer.play();
+            } else {
+                finalVideoPlayer.pause();
+                if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
+            }
+        });
+    }
 
     // --- ЛОГИКА ВИДЕОГАЛЕРЕИ (YouTube) ---
     const videoGallery = document.getElementById('videoGallery');
@@ -539,123 +578,6 @@ https://clck.ru/3VB8wu
         }
     });
 
-    // ==========================================
-    // ЛОГИКА АНОНСА И ТАЙМЕРА (ПРОМОКОДЫ)
-    // ==========================================
-    if (typeof EVENT_CONFIG !== 'undefined' && EVENT_CONFIG.isActive) {
-        const eventTimerBanner = document.getElementById('eventTimerBanner');
-        const eventTimerCountdown = document.getElementById('eventTimerCountdown');
-        
-        const eventModal = document.getElementById('eventModal');
-        const closeEventModal = document.getElementById('closeEventModal');
-        const eventModalImg = document.getElementById('eventModalImg');
-        const eventModalTitle = document.getElementById('eventModalTitle');
-        const eventModalDate = document.getElementById('eventModalDate');
-        
-        const eventInitialActions = document.getElementById('eventInitialActions');
-        const eventRegisterBtn = document.getElementById('eventRegisterBtn');
-        const eventShareBtn = document.getElementById('eventShareBtn');
-        const promoRewardBlock = document.getElementById('promoRewardBlock');
-        const senderPromoCodeBox = document.getElementById('senderPromoCodeBox');
-        const copyAndApplyPromoBtn = document.getElementById('copyAndApplyPromoBtn');
-
-        const eventDate = new Date(EVENT_CONFIG.date).getTime();
-
-        eventModalImg.src = EVENT_CONFIG.imagePath;
-        eventModalTitle.innerText = EVENT_CONFIG.title;
-        
-        const formatOpts = { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' };
-        eventModalDate.innerText = new Date(EVENT_CONFIG.date).toLocaleDateString('ru-RU', formatOpts);
-        senderPromoCodeBox.innerText = EVENT_CONFIG.promoSender;
-
-        function updateEventTimer() {
-            const now = new Date().getTime();
-            const distance = eventDate - now;
-
-            if (distance < 0) {
-                eventTimerBanner.style.display = 'none';
-                return false;
-            }
-
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-
-            eventTimerCountdown.innerText = `${days} дн : ${hours} ч : ${minutes} мин`;
-            eventTimerBanner.style.display = 'flex';
-            return true;
-        }
-
-        if (updateEventTimer()) {
-            setInterval(updateEventTimer, 60000);
-        }
-
-        function openEventModal() {
-            eventModal.classList.add('active');
-            promoRewardBlock.style.display = 'none';
-            eventInitialActions.style.display = 'block';
-        }
-
-        eventTimerBanner.addEventListener('click', openEventModal);
-        closeEventModal.addEventListener('click', () => eventModal.classList.remove('active'));
-
-        const nowMs = new Date().getTime();
-        const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
-        
-        const isFirstShown = localStorage.getItem('promo_first_shown');
-        const isLastDayShown = localStorage.getItem('promo_last_day_shown');
-
-        if (hoursUntilEvent > 24 && !isFirstShown) {
-            setTimeout(openEventModal, 1500);
-            localStorage.setItem('promo_first_shown', 'true');
-        } else if (hoursUntilEvent <= 24 && hoursUntilEvent > 0 && !isLastDayShown) {
-            setTimeout(openEventModal, 1500);
-            localStorage.setItem('promo_first_shown', 'true');
-            localStorage.setItem('promo_last_day_shown', 'true');
-        }
-
-        eventRegisterBtn.addEventListener('click', () => {
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-                window.Telegram.WebApp.openLink(EVENT_CONFIG.registrationLink);
-            } else {
-                window.open(EVENT_CONFIG.registrationLink, '_blank');
-            }
-        });
-
-        eventShareBtn.addEventListener('click', () => {
-            const shareText = `Привет, дорогая! Я иду в классное поле на медитацию «${EVENT_CONFIG.title}». Почувствовала, что хочу разделить это с тобой ✨
-
-Держи от меня подарок — промокод на 15%: ${EVENT_CONFIG.promoReceiver}
-
-Подробности тут: ${BOT_LINK}`;
-            const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
-
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-                window.Telegram.WebApp.openTelegramLink(shareUrl);
-            } else {
-                window.open(shareUrl, '_blank');
-            }
-
-            eventInitialActions.style.display = 'none';
-            promoRewardBlock.style.display = 'block';
-
-            if (typeof ym !== 'undefined') {
-                ym(110909428, 'reachGoal', 'event_share_click');
-            }
-        });
-
-        copyAndApplyPromoBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(EVENT_CONFIG.promoSender).then(() => {
-                const linkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoSender}`;
-                
-                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-                    window.Telegram.WebApp.openLink(linkWithPromo);
-                } else {
-                    window.open(linkWithPromo, '_blank');
-                }
-            }).catch(err => {
-                console.error('Ошибка копирования', err);
-            });
-        });
-    }
+    // Event popup logic is handled dynamically in eventPopup.js
 });
+

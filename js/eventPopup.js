@@ -8,16 +8,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const style = document.createElement('style');
     style.innerHTML = `
-        .event-floating-timer {
-            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(211, 188, 230, 0.6); border-radius: 20px;
-            padding: 8px 20px; box-shadow: 0 4px 15px rgba(156, 122, 187, 0.2);
-            z-index: 90; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s ease;
+        .event-timer-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 300px;
+            margin: 12px auto;
+            padding: 12px 15px;
+            background: linear-gradient(135deg, #f0e4f7, #e3d3f2);
+            border: 1.5px solid #bba0d6;
+            border-radius: 8px;
+            color: #31223b;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(187, 160, 214, 0.3);
+            transition: all 0.3s ease;
+            box-sizing: border-box;
         }
-        .event-floating-timer:active { transform: translateX(-50%) scale(0.95); }
-        .event-timer-title { font-size: 0.75rem; color: #8a7a94; margin-bottom: 3px; font-weight: 500; text-align: center; }
-        .event-timer-countdown { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: #9c7abb; font-weight: 600; }
+        .event-timer-btn:active {
+            transform: scale(0.96);
+        }
+        .event-timer-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.72rem;
+            color: #725687;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 2px;
+            text-align: center;
+        }
+        .event-timer-countdown {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.25rem;
+            color: #4a2868;
+            font-weight: 700;
+            text-align: center;
+        }
         
         .event-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -45,17 +73,29 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    const eventContainer = document.createElement('div');
-    eventContainer.innerHTML = `
-        <div class="event-floating-timer" id="eventFloatingTimer">
+    // Если кнопка таймера ещё не найдена — ищем или создаем её под кнопкой вытягивания карты
+    let timerBanner = document.getElementById('eventFloatingTimer');
+    if (!timerBanner) {
+        timerBanner = document.createElement('button');
+        timerBanner.className = 'action-btn share-btn event-timer-btn';
+        timerBanner.id = 'eventFloatingTimer';
+        timerBanner.style.display = 'none';
+        timerBanner.innerHTML = `
             <span class="event-timer-title">До медитации осталось:</span>
             <span class="event-timer-countdown" id="eventCountdownText">Считаем...</span>
-        </div>
+        `;
+        const drawCardBtn = document.getElementById('drawCardBtn');
+        if (drawCardBtn && drawCardBtn.parentNode) {
+            drawCardBtn.parentNode.insertBefore(timerBanner, drawCardBtn.nextSibling);
+        }
+    }
 
+    const eventContainer = document.createElement('div');
+    eventContainer.innerHTML = `
         <div class="event-modal-overlay" id="eventPromoModal">
             <div class="event-modal-content">
                 <span class="event-close-btn" id="closeEventModal">&times;</span>
-                <img src="${EVENT_CONFIG.imagePath}" alt="Анонс" class="event-banner-img">
+                <img src="${EVENT_CONFIG.imagePath}" id="eventModalImg" alt="Анонс" class="event-banner-img">
                 
                 <div class="event-body">
                     <h3 class="event-title">${EVENT_CONFIG.title}</h3>
@@ -86,10 +126,9 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.body.appendChild(eventContainer);
 
-    const timerBanner = document.getElementById('eventFloatingTimer');
     const countdownText = document.getElementById('eventCountdownText');
     const modal = document.getElementById('eventPromoModal');
-    const closeModal = document.getElementById('closeEventModal');
+    const closeEventModal = document.getElementById('closeEventModal');
     const shareBtn = document.getElementById('eventShareBtn');
     const applyBtn = document.getElementById('eventApplyPromoBtn');
     const directRegBtn = document.getElementById('eventDirectRegisterBtn');
@@ -106,22 +145,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return activeTab && activeTab.classList.contains('active');
     }
 
-    // 2. Проверка начального экрана (закрытая рубашка карты)
+    // 2. Проверка начального экрана (первый шаг с неперевернутой картой)
     function isInitialCardState() {
-        // Если карта перевернута — скрываем таймер
-        const isFlipped = document.querySelector('.flipped') !== null;
-        if (isFlipped) return false;
+        if (window.isCardDrawing) return false;
 
-        // Если открыто любое модальное окно (видео, шеринг и т.д.) — скрываем таймер
-        const isModalActive = document.querySelector('.modal.active') !== null ||
-            (document.getElementById('videoModal') && getComputedStyle(document.getElementById('videoModal')).display !== 'none') ||
-            (document.getElementById('shareOptionsModal') && getComputedStyle(document.getElementById('shareOptionsModal')).display !== 'none');
+        // Проверяем видимость первого шага
+        const step1Card = document.getElementById('step1-card');
+        if (!step1Card || getComputedStyle(step1Card).display === 'none') return false;
+
+        // Если карта перевернута — скрываем таймер
+        const card = document.getElementById('card');
+        if (card && card.classList.contains('flipped')) return false;
+
+        // Если кнопка "Получить послание" скрыта — значит карта перевернута или вытягивается
+        const drawBtn = document.getElementById('drawCardBtn');
+        if (drawBtn && getComputedStyle(drawBtn).display === 'none') return false;
+
+        // Если видны кнопки перехода ко 2-му шагу (аудио / шеринг) — скрываем
+        const nextToAudioBtn = document.getElementById('nextToAudioBtn');
+        if (nextToAudioBtn && getComputedStyle(nextToAudioBtn).display !== 'none') return false;
+
+        const shareCardBtn = document.getElementById('shareCardBtn');
+        if (shareCardBtn && getComputedStyle(shareCardBtn).display !== 'none') return false;
+
+        // Если открыто любое модальное окно — скрываем таймер
+        const isModalActive = (document.getElementById('videoModal') && getComputedStyle(document.getElementById('videoModal')).display !== 'none') ||
+            (document.getElementById('shareOptionsModal') && getComputedStyle(document.getElementById('shareOptionsModal')).display !== 'none') ||
+            (document.getElementById('eventPromoModal') && document.getElementById('eventPromoModal').classList.contains('active'));
         if (isModalActive) return false;
 
         return true;
     }
 
     function updateTimer() {
+        if (!timerBanner) return;
         const distance = eventDate - new Date().getTime();
         if (distance < 0) {
             timerBanner.style.display = 'none';
@@ -135,23 +192,30 @@ document.addEventListener('DOMContentLoaded', () => {
             timerBanner.style.display = 'none';
         }
 
-        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        countdownText.innerText = `${days} дн : ${hours} ч : ${minutes} мин`;
+        if (countdownText) {
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            countdownText.innerText = `${days} дн : ${hours} ч : ${minutes} мин`;
+        }
     }
 
-    updateTimer();
-    setInterval(updateTimer, 5000);
+    window.updateEventTimer = updateTimer;
+    window.hideEventTimer = () => {
+        if (timerBanner) timerBanner.style.display = 'none';
+    };
 
-    // Мгновенно пересчитываем видимость при любом клике (переворот карты, просмотр видео)
+    updateTimer();
+    setInterval(updateTimer, 3000);
+
+    // Мгновенно пересчитываем видимость при любом клике
     document.addEventListener('click', () => {
-        setTimeout(updateTimer, 100);
+        updateTimer();
     });
 
-    function openModal() { modal.classList.add('active'); }
-    closeModal.addEventListener('click', () => modal.classList.remove('active'));
-    timerBanner.addEventListener('click', openModal);
+    function openModal() { if (modal) modal.classList.add('active'); }
+    if (closeEventModal) closeEventModal.addEventListener('click', () => { if (modal) modal.classList.remove('active'); });
+    if (timerBanner) timerBanner.addEventListener('click', openModal);
 
     const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
     const isFirstShown = localStorage.getItem('event_popup_first');
