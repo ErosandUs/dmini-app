@@ -9,12 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const style = document.createElement('style');
     style.innerHTML = `
         .event-floating-timer {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            width: 100%; max-width: 320px; margin: 12px auto 0 auto; padding: 10px 20px;
-            background: #ffffff; border: 1px solid #d3bce6; border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(156, 122, 187, 0.15); cursor: pointer; transition: 0.2s ease; box-sizing: border-box;
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(211, 188, 230, 0.6); border-radius: 20px;
+            padding: 8px 20px; box-shadow: 0 4px 15px rgba(156, 122, 187, 0.2);
+            z-index: 90; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s ease;
         }
-        .event-floating-timer:active { transform: scale(0.98); }
+        .event-floating-timer:active { transform: translateX(-50%) scale(0.95); }
         .event-timer-title { font-size: 0.75rem; color: #8a7a94; margin-bottom: 3px; font-weight: 500; text-align: center; }
         .event-timer-countdown { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: #9c7abb; font-weight: 600; }
         
@@ -31,11 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
             box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; overflow: hidden; text-align: center;
         }
         .event-close-btn {
-            position: absolute; top: 10px; right: 12px; width: 32px; height: 32px;
-            background: #dc3545; color: #fff; border-radius: 50%; border: 2px solid #fff;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px; font-weight: bold; cursor: pointer; line-height: 1;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 2;
+            position: absolute; top: 10px; right: 15px;
+            font-size: 30px; color: #fff; cursor: pointer; line-height: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 2;
         }
         .event-banner-img { width: 100%; height: 200px; object-fit: cover; }
         .event-body { padding: 20px; }
@@ -88,11 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(eventContainer);
 
     const timerBanner = document.getElementById('eventFloatingTimer');
-    const getCardBtn = document.getElementById('getCardBtn');
-    if (getCardBtn && getCardBtn.parentNode) {
-        getCardBtn.parentNode.insertBefore(timerBanner, getCardBtn.nextSibling);
-    }
-
     const countdownText = document.getElementById('eventCountdownText');
     const modal = document.getElementById('eventPromoModal');
     const closeModal = document.getElementById('closeEventModal');

@@ -15,19 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const TOTAL_CARDS = 71; 
     const STORAGE_KEY = "mystic_collection"; // Ключ для локального хранилища коллекции
 
-    // --- VIP ПОЛЬЗОВАТЕЛИ (Без лимита по времени) ---
-    const VIP_USERS = ['Djamilia_Kha', 'atribute'];
-
-    function isVipUser() {
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-            const username = window.Telegram.WebApp.initDataUnsafe.user.username;
-            if (username && VIP_USERS.some(vip => vip.toLowerCase() === username.toLowerCase())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     // --- ЛОГИКА ГЛАВНЫХ ВКЛАДОК ---
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -92,11 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkTimer() {
-        if (isVipUser()) {
-            drawBtn.disabled = false;
-            return true;
-        }
-
         const lastDraw = localStorage.getItem('lastDrawTime');
         if (lastDraw) {
             const elapsed = Date.now() - parseInt(lastDraw);
@@ -146,9 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function drawRandomCard() {
         if (!isFlipped && checkTimer()) {
-            if (!isVipUser()) {
-                localStorage.setItem('lastDrawTime', Date.now()); 
-            }
+            localStorage.setItem('lastDrawTime', Date.now()); 
             setNewCard();
         }
     }
