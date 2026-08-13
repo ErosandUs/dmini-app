@@ -1,6 +1,6 @@
 const EVENT_CONFIG = {
     // Статус: true (показывать анонс и таймер) или false (скрыть всё)
-    isActive: false, 
+    isActive: true, 
     
     // Основная информация
     title: "Осеннее Равноденствие: Баланс энергий",
