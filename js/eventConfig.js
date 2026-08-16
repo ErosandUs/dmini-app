@@ -1,6 +1,6 @@
 const EVENT_CONFIG = {
     // Статус: true (показывать анонс и таймер) или false (скрыть всё)
-    isActive: false, 
+    isActive: true, 
     
     // Основная информация
     title: "Осеннее Равноденствие: Баланс энергий",
@@ -11,5 +11,14 @@ const EVENT_CONFIG = {
     imagePath: "images/event_banner.jpeg", 
     
     // Ссылка на регистрацию/оплату (GetCourse)
-    registrationLink: "https://твоя-ссылка..."
+    registrationLink: "https://djamiliakha.ru/23.09.2026",
+    
+    // Юзернейм Telegram-бота без символа @ (для генерации реферальной ссылки)
+    botUsername: "Djamiliakha_bot",
+
+    // Промокод для получателя
+    promoReceiver: "ЛЮБОВЬ15",
+
+    // Пул промокодов для отправителя
+    promoSendersPool: ["KODi DLIA OTPRAVITELIA"]
 };

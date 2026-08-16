@@ -68,8 +68,19 @@ document.addEventListener('DOMContentLoaded', () => {
         .event-body { padding: 20px; }
         .event-title { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: #9c7abb; margin-bottom: 10px; }
         .event-desc { font-size: 0.9rem; color: #4a3b52; line-height: 1.5; margin-bottom: 15px; }
-        .event-promo-box { background: rgba(211, 188, 230, 0.2); border: 1px dashed #9c7abb; padding: 10px; border-radius: 8px; font-weight: bold; color: #31223b; margin: 15px 0; letter-spacing: 1px;}
-        .event-warning { font-size: 0.75rem; color: #d9534f; font-weight: 600; margin-bottom: 10px; display: block; }
+        .event-success-note {
+            display: none;
+            background: rgba(211, 188, 230, 0.25);
+            border: 1px solid #d3bce6;
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 0.85rem;
+            color: #4a2868;
+            line-height: 1.4;
+            margin-top: 12px;
+            text-align: center;
+            box-sizing: border-box;
+        }
     `;
     document.head.appendChild(style);
 
@@ -100,25 +111,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="event-body">
                     <h3 class="event-title">${EVENT_CONFIG.title}</h3>
                     
-                    <div id="eventStep1">
-                        <p class="event-desc">Поделись приглашением с близкой подругой. Вы обе получите <b>скидку 15%</b> на участие в практике! ✨</p>
-                        <span class="event-warning">❗️ Вернись в это окно после отправки, чтобы забрать подарок!</span>
-                        <button class="action-btn" id="eventShareBtn">Отправить приглашение 💌</button>
-                        <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
-                    </div>
+                    <p class="event-desc">Отправь приглашение подруге, которая ещё не была на наших практиках. Как только она перейдёт в бота, вы обе моментально получите промокоды со скидкой 15% на участие!</p>
+                    
+                    <button class="action-btn" id="eventShareBtn">Поделиться с подругой 💌</button>
+                    <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
 
-                    <div id="eventStepChecking" style="display: none;">
-                        <h3 class="event-title" style="font-size: 1.3rem;">Проверка отправки... ✨</h3>
-                        <p class="event-desc">Проверяем отправку вашего приглашения. Пожалуйста, не закрывайте окно.</p>
-                        <div style="font-size: 2.5rem; font-family: 'Cormorant Garamond', serif; font-weight: bold; color: #9c7abb; margin: 15px 0;" id="checkingCountdown">60</div>
-                    </div>
-
-                    <div id="eventStep2" style="display: none;">
-                        <h3 class="event-title" style="font-size: 1.3rem;">Приглашение отправлено! ✨</h3>
-                        <p class="event-desc">Твой персональный промокод на скидку 15%:</p>
-                        <div class="event-promo-box" id="senderPromoDisplay"></div>
-                        <p class="event-timer-title" style="margin-bottom:15px; color: #d9534f;">Скидка сгорит через: <span id="rewardTimer">23:59:59</span></p>
-                        <button class="action-btn" id="eventApplyPromoBtn">Скопировать и применить</button>
+                    <div class="event-success-note" id="eventSuccessNote">
+                        Приглашение готово! Как только подруга нажмет «Старт» в боте, бот сразу пришлет твой промокод в чат ✨
                     </div>
                 </div>
             </div>
@@ -130,14 +129,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('eventPromoModal');
     const closeEventModal = document.getElementById('closeEventModal');
     const shareBtn = document.getElementById('eventShareBtn');
-    const applyBtn = document.getElementById('eventApplyPromoBtn');
     const directRegBtn = document.getElementById('eventDirectRegisterBtn');
-    const step1 = document.getElementById('eventStep1');
-    const stepChecking = document.getElementById('eventStepChecking');
-    const checkingCountdown = document.getElementById('checkingCountdown');
-    const step2 = document.getElementById('eventStep2');
-    const promoDisplay = document.getElementById('senderPromoDisplay');
-    const rewardTimer = document.getElementById('rewardTimer');
+    const successNote = document.getElementById('eventSuccessNote');
 
     // 1. Проверка активной вкладки
     function isDailyTabActive() {
@@ -214,124 +207,64 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function openModal() { if (modal) modal.classList.add('active'); }
-    if (closeEventModal) closeEventModal.addEventListener('click', () => { if (modal) modal.classList.remove('active'); });
+    function closeModal() { if (modal) modal.classList.remove('active'); }
+
+    if (closeEventModal) closeEventModal.addEventListener('click', closeModal);
     if (timerBanner) timerBanner.addEventListener('click', openModal);
+
+    // Закрытие при клике по затемненному фону
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+    }
 
     const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
     const isFirstShown = localStorage.getItem('event_popup_first');
     const isLastDayShown = localStorage.getItem('event_popup_last');
 
-    const shareClickedTime = localStorage.getItem('event_share_clicked_time');
-    const isPromoClaimed = localStorage.getItem('event_promo_claimed') === 'true';
-    const isAutoOpenedAfterShare = localStorage.getItem('event_auto_opened_after_share') === 'true';
-    let isSharedState = false;
+    if (hoursUntilEvent > 24 && !isFirstShown) {
+        setTimeout(openModal, 2000);
+        localStorage.setItem('event_popup_first', 'true');
+    } else if (hoursUntilEvent <= 24 && hoursUntilEvent > 0 && !isLastDayShown) {
+        setTimeout(openModal, 2000);
+        localStorage.setItem('event_popup_first', 'true');
+        localStorage.setItem('event_popup_last', 'true');
+    }
 
-    if (shareClickedTime) {
-        const secondsPassed = (nowMs - parseInt(shareClickedTime)) / 1000;
-        
-        if (secondsPassed < (24 * 3600)) {
-            isSharedState = true;
+    if (directRegBtn) {
+        directRegBtn.addEventListener('click', () => {
+            openLinkSafe(EVENT_CONFIG.registrationLink);
+        });
+    }
+
+    if (shareBtn) {
+        shareBtn.addEventListener('click', () => {
+            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+            const senderId = tgUser?.id || 'direct';
+            const botDeeplink = `https://t.me/${EVENT_CONFIG.botUsername}?start=ref_${senderId}`;
+            const shareText = `Привет! Приглашаю тебя на медитацию «${EVENT_CONFIG.title}». Переходи в бота по моей ссылке, чтобы забрать приветственную скидку 15%:\n${botDeeplink}`;
+            const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
             
-            step1.style.display = 'none';
-            step2.style.display = 'block';
-            promoDisplay.innerText = EVENT_CONFIG.promoSender;
-            startFomoTimer((24 * 3600) - Math.floor(secondsPassed));
+            openLinkSafe(shareUrl, true);
 
-            if (!isPromoClaimed && !isAutoOpenedAfterShare) {
-                setTimeout(() => {
-                    openModal();
-                    if (secondsPassed < 60) {
-                        step2.style.display = 'none';
-                        stepChecking.style.display = 'block';
-                        startCheckingTimer(60 - Math.floor(secondsPassed));
-                    }
-                    localStorage.setItem('event_auto_opened_after_share', 'true');
-                }, 500);
+            if (successNote) {
+                successNote.style.display = 'block';
             }
-        } else {
-            localStorage.removeItem('event_share_clicked_time');
-            localStorage.removeItem('event_promo_claimed');
-            localStorage.removeItem('event_auto_opened_after_share');
-        }
+        });
     }
-
-    if (!isSharedState) {
-        if (hoursUntilEvent > 24 && !isFirstShown) {
-            setTimeout(openModal, 2000);
-            localStorage.setItem('event_popup_first', 'true');
-        } else if (hoursUntilEvent <= 24 && hoursUntilEvent > 0 && !isLastDayShown) {
-            setTimeout(openModal, 2000);
-            localStorage.setItem('event_popup_first', 'true');
-            localStorage.setItem('event_popup_last', 'true');
-        }
-    }
-
-    directRegBtn.addEventListener('click', () => openLinkSafe(EVENT_CONFIG.registrationLink));
-
-    shareBtn.addEventListener('click', () => {
-        const shareText = `Привет, дорогая! Я иду в классное поле на медитацию «${EVENT_CONFIG.title}». Почувствовала, что хочу разделить это с тобой ✨\n\nДержи от меня подарок — промокод на 15%: ${EVENT_CONFIG.promoReceiver}\n\nПодробности тут: ${EVENT_CONFIG.registrationLink}`;
-        const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
-        
-        openLinkSafe(shareUrl, true);
-
-        localStorage.setItem('event_share_clicked_time', new Date().getTime().toString());
-
-        step1.style.display = 'none';
-        stepChecking.style.display = 'block';
-        startCheckingTimer(60);
-    });
-
-    applyBtn.addEventListener('click', () => {
-        localStorage.setItem('event_promo_claimed', 'true');
-
-        navigator.clipboard.writeText(EVENT_CONFIG.promoSender).then(() => {
-            const linkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoSender}`;
-            openLinkSafe(linkWithPromo);
-        }).catch(err => console.log('Clipboard error', err));
-    });
 
     function openLinkSafe(url, isTelegramShare = false) {
         if (window.Telegram && window.Telegram.WebApp) {
-            if (isTelegramShare && window.Telegram.WebApp.openTelegramLink) window.Telegram.WebApp.openTelegramLink(url);
-            else if (window.Telegram.WebApp.openLink) window.Telegram.WebApp.openLink(url);
-            else window.open(url, '_blank');
-        } else window.open(url, '_blank');
-    }
-
-    function startCheckingTimer(startSeconds) {
-        let checkRemain = startSeconds;
-        checkingCountdown.innerText = checkRemain;
-
-        const checkInterval = setInterval(() => {
-            checkRemain--;
-            if (checkRemain <= 0) {
-                clearInterval(checkInterval);
-                stepChecking.style.display = 'none';
-                step2.style.display = 'block';
-                promoDisplay.innerText = EVENT_CONFIG.promoSender;
-                
-                const clickedTimeStr = localStorage.getItem('event_share_clicked_time');
-                if (clickedTimeStr) {
-                    const passed = (new Date().getTime() - parseInt(clickedTimeStr)) / 1000;
-                    startFomoTimer((24 * 3600) - Math.floor(passed));
-                } else {
-                    startFomoTimer(24 * 3600);
-                }
+            if (isTelegramShare && window.Telegram.WebApp.openTelegramLink) {
+                window.Telegram.WebApp.openTelegramLink(url);
+            } else if (window.Telegram.WebApp.openLink) {
+                window.Telegram.WebApp.openLink(url);
             } else {
-                checkingCountdown.innerText = checkRemain;
+                window.open(url, '_blank');
             }
-        }, 1000);
-    }
-
-    function startFomoTimer(remainSeconds) {
-        let remain = remainSeconds;
-        setInterval(() => {
-            if (remain <= 0) return;
-            remain--;
-            const h = Math.floor(remain / 3600).toString().padStart(2, '0');
-            const m = Math.floor((remain % 3600) / 60).toString().padStart(2, '0');
-            const s = (remain % 60).toString().padStart(2, '0');
-            rewardTimer.innerText = `${h}:${m}:${s}`;
-        }, 1000);
+        } else {
+            window.open(url, '_blank');
+        }
     }
 });

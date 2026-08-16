@@ -63,8 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isFlipped = false;
     let currentCardPath = ""; 
 
-// === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
-    const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
+// === ЛОГИКА ТАЙМЕРА (1 МИНУТА) ===
+    const COOLDOWN_MS = 1 * 60 * 1000; 
     let countdownInterval; 
 
     // --- НОВЫЙ БЛОК: Проверка VIP-пользователей ---
@@ -447,6 +447,9 @@ https://clck.ru/3VB8wu
             }
             
             if (avatarVideo) {
+                if (!avatarVideo.src && avatarVideo.dataset.src) {
+                    avatarVideo.src = avatarVideo.dataset.src;
+                }
                 avatarVideo.play().catch(err => console.log("Видео заблокировано:", err));
             }
             
