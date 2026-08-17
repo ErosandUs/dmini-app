@@ -1,24 +1,20 @@
 const EVENT_CONFIG = {
-    // Статус: true (показывать анонс и таймер) или false (скрыть всё)
-    isActive: false, 
-    
-    // Основная информация
-    title: "Осеннее Равноденствие: Баланс энергий",
-    date: "2026-09-21T20:30:00", // Дата и время (в формате Год-Месяц-День T Время)
-    price: "1500 руб.",
-    
-    // Картинка (ты просто заменяешь файл event_banner.jpeg в папке images)
-    imagePath: "images/event_banner.jpeg", 
-    
-    // Ссылка на регистрацию/оплату (GetCourse)
-    registrationLink: "https://djamiliakha.ru/23.09.2026",
-    
-    // Юзернейм Telegram-бота без символа @ (для генерации реферальной ссылки)
-    botUsername: "Djamiliakha_bot",
+    // Включение/выключение модуля анонса
+    isActive: true,
 
-    // Промокод для получателя
+    // Данные события
+    title: "Осеннее Равноденствие: Баланс энергий",
+    date: "2026-09-21T20:30:00", // Дата и время события (ISO)
+    price: "1500 руб.",
+    imagePath: "images/event_banner.jpeg",
+
+    // Платформенные ссылки
+    botUsername: "Djamiliakha_bot",
+    registrationLink: "https://djamiliakha.ru/23.09.2026",
+
+    // Промокод для подруги (получателя)
     promoReceiver: "ЛЮБОВЬ15",
 
-    // Пул промокодов для отправителя
-    promoSendersPool: ["KODi DLIA OTPRAVITELIA"]
+    // URL веб-приложения Google Apps Script для уникальных промокодов отправителей
+    appsScriptUrl: "https://script.google.com/macros/s/AKfycbxvBYeGEZgc22LaqwFhE8wX7JyX94Ti1QhwssyJqeZP3JDCJN5ey_iE5XuEm2S0xXMm-w/exec"
 };

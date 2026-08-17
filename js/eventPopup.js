@@ -68,18 +68,30 @@ document.addEventListener('DOMContentLoaded', () => {
         .event-body { padding: 20px; }
         .event-title { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: #9c7abb; margin-bottom: 10px; }
         .event-desc { font-size: 0.9rem; color: #4a3b52; line-height: 1.5; margin-bottom: 15px; }
-        .event-success-note {
-            display: none;
-            background: rgba(211, 188, 230, 0.25);
-            border: 1px solid #d3bce6;
+        .event-warning { font-size: 0.78rem; color: #b33939; font-weight: 600; margin-bottom: 12px; display: block; line-height: 1.35; }
+        .event-promo-box {
+            background: linear-gradient(135deg, rgba(211, 188, 230, 0.3), rgba(240, 228, 247, 0.5));
+            border: 2px dashed #9c7abb;
+            padding: 12px;
             border-radius: 10px;
-            padding: 12px 14px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: #31223b;
+            margin: 15px 0;
+            letter-spacing: 2px;
+            user-select: all;
+        }
+        .event-reward-timer-box {
             font-size: 0.85rem;
-            color: #4a2868;
-            line-height: 1.4;
-            margin-top: 12px;
-            text-align: center;
-            box-sizing: border-box;
+            color: #b33939;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .event-reward-timer-val {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.15rem;
+            font-weight: 700;
         }
     `;
     document.head.appendChild(style);
@@ -109,15 +121,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 <img src="${EVENT_CONFIG.imagePath}" id="eventModalImg" alt="Анонс" class="event-banner-img">
                 
                 <div class="event-body">
-                    <h3 class="event-title">${EVENT_CONFIG.title}</h3>
-                    
-                    <p class="event-desc">Отправь приглашение подруге, которая ещё не была на наших практиках. Как только она перейдёт в бота, вы обе моментально получите промокоды со скидкой 15% на участие!</p>
-                    
-                    <button class="action-btn" id="eventShareBtn">Поделиться с подругой 💌</button>
-                    <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
+                    <!-- Шаг 1: Инвайт -->
+                    <div id="eventStep1">
+                        <h3 class="event-title">${EVENT_CONFIG.title}</h3>
+                        <p class="event-desc">Поделись приглашением с близкой подругой. Вы обе получите <b>скидку 15%</b> на участие в практике! ✨</p>
+                        <span class="event-warning">❗️ Нажми кнопку, чтобы отправить подруге приглашение и сразу забрать свой промокод!</span>
+                        <button class="action-btn" id="eventShareBtn">Отправить приглашение 💌</button>
+                        <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
+                    </div>
 
-                    <div class="event-success-note" id="eventSuccessNote">
-                        Приглашение готово! Как только подруга нажмет «Старт» в боте, бот сразу пришлет твой промокод в чат ✨
+                    <!-- Шаг 2: Персональная награда -->
+                    <div id="eventStep2" style="display: none;">
+                        <h3 class="event-title" style="font-size: 1.35rem;">Твой подарок разблокирован! ✨</h3>
+                        <p class="event-desc" id="eventStep2Desc">Твой персональный промокод на скидку 15%:</p>
+                        <div class="event-promo-box" id="senderPromoDisplay">...</div>
+                        <div class="event-reward-timer-box" id="eventRewardTimerBox">
+                            Скидка сгорит через: <span class="event-reward-timer-val" id="rewardTimer">23:59:59</span>
+                        </div>
+                        <button class="action-btn" id="eventApplyPromoBtn">Скопировать и применить</button>
                     </div>
                 </div>
             </div>
@@ -128,9 +149,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const countdownText = document.getElementById('eventCountdownText');
     const modal = document.getElementById('eventPromoModal');
     const closeEventModal = document.getElementById('closeEventModal');
+    const step1 = document.getElementById('eventStep1');
+    const step2 = document.getElementById('eventStep2');
+    const step2Desc = document.getElementById('eventStep2Desc');
     const shareBtn = document.getElementById('eventShareBtn');
     const directRegBtn = document.getElementById('eventDirectRegisterBtn');
-    const successNote = document.getElementById('eventSuccessNote');
+    const applyPromoBtn = document.getElementById('eventApplyPromoBtn');
+    const promoDisplay = document.getElementById('senderPromoDisplay');
+    const rewardTimer = document.getElementById('rewardTimer');
+    const rewardTimerBox = document.getElementById('eventRewardTimerBox');
+
+    let currentSenderPromo = localStorage.getItem('event_sender_promo') || '';
+    let fomoInterval = null;
 
     // 1. Проверка активной вкладки
     function isDailyTabActive() {
@@ -212,26 +242,111 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeEventModal) closeEventModal.addEventListener('click', closeModal);
     if (timerBanner) timerBanner.addEventListener('click', openModal);
 
-    // Закрытие при клике по затемненному фону
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
         });
     }
 
-    const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
-    const isFirstShown = localStorage.getItem('event_popup_first');
-    const isLastDayShown = localStorage.getItem('event_popup_last');
+    // 3. Логика Шага 2 и 24-часового FOMO-таймера
+    function startFomoTimer(initialRemainingSeconds) {
+        if (fomoInterval) clearInterval(fomoInterval);
 
-    if (hoursUntilEvent > 24 && !isFirstShown) {
-        setTimeout(openModal, 2000);
-        localStorage.setItem('event_popup_first', 'true');
-    } else if (hoursUntilEvent <= 24 && hoursUntilEvent > 0 && !isLastDayShown) {
-        setTimeout(openModal, 2000);
-        localStorage.setItem('event_popup_first', 'true');
-        localStorage.setItem('event_popup_last', 'true');
+        let remain = initialRemainingSeconds;
+        
+        function tick() {
+            if (remain <= 0) {
+                clearInterval(fomoInterval);
+                if (rewardTimer) rewardTimer.innerText = '00:00:00';
+                localStorage.removeItem('event_share_clicked_time');
+                if (timerBanner) timerBanner.style.display = 'none';
+                closeModal();
+                return;
+            }
+
+            const h = Math.floor(remain / 3600).toString().padStart(2, '0');
+            const m = Math.floor((remain % 3600) / 60).toString().padStart(2, '0');
+            const s = (remain % 60).toString().padStart(2, '0');
+            if (rewardTimer) rewardTimer.innerText = `${h}:${m}:${s}`;
+            remain--;
+        }
+
+        tick();
+        fomoInterval = setInterval(tick, 1000);
     }
 
+    function showStep2(promoCode) {
+        currentSenderPromo = promoCode;
+        if (step1) step1.style.display = 'none';
+        if (step2) step2.style.display = 'block';
+
+        if (step2Desc) step2Desc.innerText = 'Твой персональный промокод на скидку 15%:';
+        if (promoDisplay) {
+            promoDisplay.style.display = 'block';
+            promoDisplay.innerText = currentSenderPromo;
+        }
+        if (rewardTimerBox) rewardTimerBox.style.display = 'block';
+        if (applyPromoBtn) applyPromoBtn.style.display = 'block';
+
+        const clickedTimeStr = localStorage.getItem('event_share_clicked_time');
+        const clickedTime = clickedTimeStr ? parseInt(clickedTimeStr) : new Date().getTime();
+        const secondsPassed = Math.floor((new Date().getTime() - clickedTime) / 1000);
+        const remainingSeconds = (24 * 3600) - secondsPassed;
+
+        if (remainingSeconds > 0) {
+            startFomoTimer(remainingSeconds);
+        } else {
+            localStorage.removeItem('event_share_clicked_time');
+            if (step1) step1.style.display = 'block';
+            if (step2) step2.style.display = 'none';
+        }
+    }
+
+    function showStep2Error() {
+        if (fomoInterval) clearInterval(fomoInterval);
+        if (step1) step1.style.display = 'none';
+        if (step2) step2.style.display = 'block';
+
+        if (step2Desc) step2Desc.innerText = 'Извините, сервис временно недоступен, обратитесь позже.';
+        if (promoDisplay) promoDisplay.style.display = 'none';
+        if (rewardTimerBox) rewardTimerBox.style.display = 'none';
+        if (applyPromoBtn) applyPromoBtn.style.display = 'none';
+    }
+
+    // 4. Восстановление состояния при загрузке страницы
+    const savedShareTime = localStorage.getItem('event_share_clicked_time');
+    const isPromoClaimed = localStorage.getItem('event_promo_claimed') === 'true';
+
+    if (savedShareTime) {
+        const secondsPassed = Math.floor((nowMs - parseInt(savedShareTime)) / 1000);
+        if (secondsPassed < (24 * 3600)) {
+            const savedPromo = localStorage.getItem('event_sender_promo');
+            if (savedPromo) {
+                showStep2(savedPromo);
+            }
+        } else {
+            localStorage.removeItem('event_share_clicked_time');
+            localStorage.removeItem('event_sender_promo');
+        }
+    }
+
+    // Автопоказ модального окна (если промокод еще не забран)
+    if (!isPromoClaimed) {
+        const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
+        const isFirstShown = localStorage.getItem('event_popup_first');
+        const isLastDayShown = localStorage.getItem('event_popup_last');
+
+        if (hoursUntilEvent > 24 && !isFirstShown) {
+            setTimeout(openModal, 2000);
+            localStorage.setItem('event_popup_first', 'true');
+        } else if (hoursUntilEvent <= 24 && hoursUntilEvent > 0 && !isLastDayShown) {
+            setTimeout(openModal, 2000);
+            localStorage.setItem('event_popup_first', 'true');
+            localStorage.setItem('event_popup_last', 'true');
+        }
+    }
+
+    // 5. Обработчики кнопок
     if (directRegBtn) {
         directRegBtn.addEventListener('click', () => {
             openLinkSafe(EVENT_CONFIG.registrationLink);
@@ -240,17 +355,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (shareBtn) {
         shareBtn.addEventListener('click', () => {
-            const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-            const senderId = tgUser?.id || 'direct';
-            const botDeeplink = `https://t.me/${EVENT_CONFIG.botUsername}?start=ref_${senderId}`;
-            const shareText = `Привет! Приглашаю тебя на медитацию «${EVENT_CONFIG.title}». Переходи в бота по моей ссылке, чтобы забрать приветственную скидку 15%:\n${botDeeplink}`;
+            const senderId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'direct';
+            const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
+            const shareText = `Привет! Приглашаю тебя на медитацию «${EVENT_CONFIG.title}». Держи от меня подарок — скидку 15% по промокоду ${EVENT_CONFIG.promoReceiver} ✨\n\nРегистрируйся по ссылке:\n${directLinkWithPromo}`;
             const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
             
+            // Нативный шеринг
             openLinkSafe(shareUrl, true);
 
-            if (successNote) {
-                successNote.style.display = 'block';
+            // Фиксируем время старта таймера
+            if (!localStorage.getItem('event_share_clicked_time')) {
+                localStorage.setItem('event_share_clicked_time', new Date().getTime().toString());
             }
+
+            // Переключаем на шаг 2 в состоянии ожидания
+            if (step1) step1.style.display = 'none';
+            if (step2) step2.style.display = 'block';
+            if (step2Desc) step2Desc.innerText = 'Получаем твой промокод...';
+            if (promoDisplay) {
+                promoDisplay.style.display = 'block';
+                promoDisplay.innerText = '...';
+            }
+            if (rewardTimerBox) rewardTimerBox.style.display = 'none';
+            if (applyPromoBtn) applyPromoBtn.style.display = 'none';
+
+            // Запрос в Google Apps Script за персональным промокодом
+            if (EVENT_CONFIG.appsScriptUrl) {
+                fetch(EVENT_CONFIG.appsScriptUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ userId: senderId })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.status === 'success' && data.promo) {
+                        localStorage.setItem('event_sender_promo', data.promo);
+                        showStep2(data.promo);
+                    } else {
+                        showStep2Error();
+                    }
+                })
+                .catch(err => {
+                    console.warn('Google Apps Script fetch error:', err);
+                    showStep2Error();
+                });
+            } else {
+                showStep2Error();
+            }
+        });
+    }
+
+    if (applyPromoBtn) {
+        applyPromoBtn.addEventListener('click', () => {
+            const promoToApply = currentSenderPromo || localStorage.getItem('event_sender_promo') || '';
+            if (!promoToApply) return;
+            localStorage.setItem('event_promo_claimed', 'true');
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(promoToApply).catch(err => console.log('Clipboard error:', err));
+            }
+
+            const applyUrl = `${EVENT_CONFIG.registrationLink}?promo=${encodeURIComponent(promoToApply)}`;
+            openLinkSafe(applyUrl);
         });
     }
 
