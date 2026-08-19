@@ -64,7 +64,22 @@ document.addEventListener('DOMContentLoaded', () => {
             font-size: 30px; color: #fff; cursor: pointer; line-height: 1;
             text-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 2;
         }
-        .event-banner-img { width: 100%; height: 200px; object-fit: cover; }
+        .event-banner-wrap {
+            width: 100%;
+            padding-top: 100%;
+            position: relative;
+            overflow: hidden;
+            background: #f6f0fa;
+        }
+        .event-banner-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
         .event-body { padding: 20px; }
         .event-title { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; color: #9c7abb; margin-bottom: 10px; }
         .event-desc { font-size: 0.9rem; color: #4a3b52; line-height: 1.5; margin-bottom: 15px; }
@@ -96,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     document.head.appendChild(style);
 
-    // Если кнопка таймера ещё не найдена — ищем или создаем её под кнопкой вытягивания карты
     let timerBanner = document.getElementById('eventFloatingTimer');
     if (!timerBanner) {
         timerBanner = document.createElement('button');
@@ -118,7 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="event-modal-overlay" id="eventPromoModal">
             <div class="event-modal-content">
                 <span class="event-close-btn" id="closeEventModal">&times;</span>
-                <img src="${EVENT_CONFIG.imagePath}" id="eventModalImg" alt="Анонс" class="event-banner-img">
+                <div class="event-banner-wrap">
+                    <img src="${EVENT_CONFIG.imagePath}" id="eventModalImg" alt="Анонс" class="event-banner-img">
+                </div>
                 
                 <div class="event-body">
                     <!-- Шаг 1: Инвайт -->
@@ -162,41 +178,27 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSenderPromo = localStorage.getItem('event_sender_promo') || '';
     let fomoInterval = null;
 
-    // 1. Проверка активной вкладки
     function isDailyTabActive() {
         const activeTab = document.getElementById('daily');
         return activeTab && activeTab.classList.contains('active');
     }
 
-    // 2. Проверка начального экрана (первый шаг с неперевернутой картой)
     function isInitialCardState() {
         if (window.isCardDrawing) return false;
-
-        // Проверяем видимость первого шага
         const step1Card = document.getElementById('step1-card');
         if (!step1Card || getComputedStyle(step1Card).display === 'none') return false;
-
-        // Если карта перевернута — скрываем таймер
         const card = document.getElementById('card');
         if (card && card.classList.contains('flipped')) return false;
-
-        // Если кнопка "Получить послание" скрыта — значит карта перевернута или вытягивается
         const drawBtn = document.getElementById('drawCardBtn');
         if (drawBtn && getComputedStyle(drawBtn).display === 'none') return false;
-
-        // Если видны кнопки перехода ко 2-му шагу (аудио / шеринг) — скрываем
         const nextToAudioBtn = document.getElementById('nextToAudioBtn');
         if (nextToAudioBtn && getComputedStyle(nextToAudioBtn).display !== 'none') return false;
-
         const shareCardBtn = document.getElementById('shareCardBtn');
         if (shareCardBtn && getComputedStyle(shareCardBtn).display !== 'none') return false;
-
-        // Если открыто любое модальное окно — скрываем таймер
         const isModalActive = (document.getElementById('videoModal') && getComputedStyle(document.getElementById('videoModal')).display !== 'none') ||
             (document.getElementById('shareOptionsModal') && getComputedStyle(document.getElementById('shareOptionsModal')).display !== 'none') ||
             (document.getElementById('eventPromoModal') && document.getElementById('eventPromoModal').classList.contains('active'));
         if (isModalActive) return false;
-
         return true;
     }
 
@@ -207,14 +209,11 @@ document.addEventListener('DOMContentLoaded', () => {
             timerBanner.style.display = 'none';
             return;
         }
-
-        // Показываем плашку ТОЛЬКО если пользователь на первой вкладке И карта ещё НЕ перевернута
         if (isDailyTabActive() && isInitialCardState()) {
             timerBanner.style.display = 'flex';
         } else {
             timerBanner.style.display = 'none';
         }
-
         if (countdownText) {
             const days = Math.floor(distance / (1000 * 60 * 60 * 24));
             const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -231,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTimer();
     setInterval(updateTimer, 3000);
 
-    // Мгновенно пересчитываем видимость при любом клике
     document.addEventListener('click', () => {
         updateTimer();
     });
@@ -241,19 +239,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (closeEventModal) closeEventModal.addEventListener('click', closeModal);
     if (timerBanner) timerBanner.addEventListener('click', openModal);
-
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
         });
     }
 
-    // 3. Логика Шага 2 и 24-часового FOMO-таймера
     function startFomoTimer(initialRemainingSeconds) {
         if (fomoInterval) clearInterval(fomoInterval);
-
         let remain = initialRemainingSeconds;
-        
         function tick() {
             if (remain <= 0) {
                 clearInterval(fomoInterval);
@@ -263,14 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeModal();
                 return;
             }
-
             const h = Math.floor(remain / 3600).toString().padStart(2, '0');
             const m = Math.floor((remain % 3600) / 60).toString().padStart(2, '0');
             const s = (remain % 60).toString().padStart(2, '0');
             if (rewardTimer) rewardTimer.innerText = `${h}:${m}:${s}`;
             remain--;
         }
-
         tick();
         fomoInterval = setInterval(tick, 1000);
     }
@@ -279,7 +271,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSenderPromo = promoCode;
         if (step1) step1.style.display = 'none';
         if (step2) step2.style.display = 'block';
-
         if (step2Desc) step2Desc.innerText = 'Твой персональный промокод на скидку 15%:';
         if (promoDisplay) {
             promoDisplay.style.display = 'block';
@@ -306,14 +297,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fomoInterval) clearInterval(fomoInterval);
         if (step1) step1.style.display = 'none';
         if (step2) step2.style.display = 'block';
-
         if (step2Desc) step2Desc.innerText = 'Извините, сервис временно недоступен, обратитесь позже.';
         if (promoDisplay) promoDisplay.style.display = 'none';
         if (rewardTimerBox) rewardTimerBox.style.display = 'none';
         if (applyPromoBtn) applyPromoBtn.style.display = 'none';
     }
 
-    // 4. Восстановление состояния при загрузке страницы
     const savedShareTime = localStorage.getItem('event_share_clicked_time');
     const isPromoClaimed = localStorage.getItem('event_promo_claimed') === 'true';
 
@@ -330,7 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Автопоказ модального окна (если промокод еще не забран)
     if (!isPromoClaimed) {
         const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
         const isFirstShown = localStorage.getItem('event_popup_first');
@@ -346,7 +334,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 5. Обработчики кнопок
     if (directRegBtn) {
         directRegBtn.addEventListener('click', () => {
             openLinkSafe(EVENT_CONFIG.registrationLink);
@@ -357,18 +344,17 @@ document.addEventListener('DOMContentLoaded', () => {
         shareBtn.addEventListener('click', () => {
             const senderId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'direct';
             const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
-            const shareText = `Привет! Приглашаю тебя на медитацию «${EVENT_CONFIG.title}». Держи от меня подарок — скидку 15% по промокоду ${EVENT_CONFIG.promoReceiver} ✨\n\nРегистрируйся по ссылке:\n${directLinkWithPromo}`;
+            
+            const shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — скидку 15% по промокоду ${EVENT_CONFIG.promoReceiver}.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
+            
             const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
             
-            // Нативный шеринг
             openLinkSafe(shareUrl, true);
 
-            // Фиксируем время старта таймера
             if (!localStorage.getItem('event_share_clicked_time')) {
                 localStorage.setItem('event_share_clicked_time', new Date().getTime().toString());
             }
 
-            // Переключаем на шаг 2 в состоянии ожидания
             if (step1) step1.style.display = 'none';
             if (step2) step2.style.display = 'block';
             if (step2Desc) step2Desc.innerText = 'Получаем твой промокод...';
@@ -379,7 +365,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (rewardTimerBox) rewardTimerBox.style.display = 'none';
             if (applyPromoBtn) applyPromoBtn.style.display = 'none';
 
-            // Запрос в Google Apps Script за персональным промокодом
             if (EVENT_CONFIG.appsScriptUrl) {
                 fetch(EVENT_CONFIG.appsScriptUrl, {
                     method: 'POST',
