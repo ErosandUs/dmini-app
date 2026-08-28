@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <!-- Шаг 1: Инвайт -->
                     <div id="eventStep1">
                         <h3 class="event-title">${EVENT_CONFIG.title}</h3>
-                        <p class="event-desc">Поделись приглашением с близкой подругой. Вы обе получите <b>скидку 15%</b> на участие в практике! ✨</p>
+                        <p class="event-desc">Поделись приглашением с близкой подругой. Вы обе получите <b>скидку 10%</b> на участие в практике! ✨</p>
                         <span class="event-warning">❗️ Нажми кнопку, чтобы отправить подруге приглашение и сразу забрать свой промокод!</span>
                         <button class="action-btn" id="eventShareBtn">Отправить приглашение 💌</button>
                         <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <!-- Шаг 2: Персональная награда -->
                     <div id="eventStep2" style="display: none;">
                         <h3 class="event-title" style="font-size: 1.35rem;">Твой подарок разблокирован! ✨</h3>
-                        <p class="event-desc" id="eventStep2Desc">Твой персональный промокод на скидку 15%:</p>
+                        <p class="event-desc" id="eventStep2Desc">Твой персональный промокод на скидку 10%:</p>
                         <div class="event-promo-box" id="senderPromoDisplay">...</div>
                         <div class="event-reward-timer-box" id="eventRewardTimerBox">
                             Скидка сгорит через: <span class="event-reward-timer-val" id="rewardTimer">23:59:59</span>
