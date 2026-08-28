@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSenderPromo = promoCode;
         if (step1) step1.style.display = 'none';
         if (step2) step2.style.display = 'block';
-        if (step2Desc) step2Desc.innerText = 'Твой персональный промокод на скидку 15%:';
+        if (step2Desc) step2Desc.innerText = 'Твой персональный промокод на скидку 10%:';
         if (promoDisplay) {
             promoDisplay.style.display = 'block';
             promoDisplay.innerText = currentSenderPromo;
