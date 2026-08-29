@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof EVENT_CONFIG === 'undefined' || !EVENT_CONFIG.isActive) return;
 
+    const getEventKey = (baseKey) => `${baseKey}_${EVENT_CONFIG.date}`;
+
     const eventDate = new Date(EVENT_CONFIG.date).getTime();
     const nowMs = new Date().getTime();
     
@@ -140,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <!-- Шаг 1: Инвайт -->
                     <div id="eventStep1">
                         <h3 class="event-title">${EVENT_CONFIG.title}</h3>
-                        <p class="event-desc">Поделись приглашением с близкой подругой. Вы обе получите <b>скидку 10%</b> на участие в практике! ✨</p>
+                        <p class="event-desc">Поделись приглашением с близкой подругой. Вы обе получите <b>промокод на скидку</b> для участия в практике! ✨</p>
                         <span class="event-warning">❗️ Нажми кнопку, чтобы отправить подруге приглашение и сразу забрать свой промокод!</span>
                         <button class="action-btn" id="eventShareBtn">Отправить приглашение 💌</button>
                         <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
@@ -149,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <!-- Шаг 2: Персональная награда -->
                     <div id="eventStep2" style="display: none;">
                         <h3 class="event-title" style="font-size: 1.35rem;">Твой подарок разблокирован! ✨</h3>
-                        <p class="event-desc" id="eventStep2Desc">Твой персональный промокод на скидку 10%:</p>
+                        <p class="event-desc" id="eventStep2Desc">Твой персональный промокод на скидку:</p>
                         <div class="event-promo-box" id="senderPromoDisplay">...</div>
                         <div class="event-reward-timer-box" id="eventRewardTimerBox">
                             Скидка сгорит через: <span class="event-reward-timer-val" id="rewardTimer">23:59:59</span>
@@ -175,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rewardTimer = document.getElementById('rewardTimer');
     const rewardTimerBox = document.getElementById('eventRewardTimerBox');
 
-    let currentSenderPromo = localStorage.getItem('event_sender_promo') || '';
+    let currentSenderPromo = localStorage.getItem(getEventKey('event_sender_promo')) || '';
     let fomoInterval = null;
 
     function isDailyTabActive() {
@@ -252,7 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (remain <= 0) {
                 clearInterval(fomoInterval);
                 if (rewardTimer) rewardTimer.innerText = '00:00:00';
-                localStorage.removeItem('event_share_clicked_time');
+                localStorage.removeItem(getEventKey('event_share_clicked_time'));
                 if (timerBanner) timerBanner.style.display = 'none';
                 closeModal();
                 return;
@@ -271,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSenderPromo = promoCode;
         if (step1) step1.style.display = 'none';
         if (step2) step2.style.display = 'block';
-        if (step2Desc) step2Desc.innerText = 'Твой персональный промокод на скидку 10%:';
+        if (step2Desc) step2Desc.innerText = 'Твой персональный промокод на скидку:';
         if (promoDisplay) {
             promoDisplay.style.display = 'block';
             promoDisplay.innerText = currentSenderPromo;
@@ -279,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rewardTimerBox) rewardTimerBox.style.display = 'block';
         if (applyPromoBtn) applyPromoBtn.style.display = 'block';
 
-        const clickedTimeStr = localStorage.getItem('event_share_clicked_time');
+        const clickedTimeStr = localStorage.getItem(getEventKey('event_share_clicked_time'));
         const clickedTime = clickedTimeStr ? parseInt(clickedTimeStr) : new Date().getTime();
         const secondsPassed = Math.floor((new Date().getTime() - clickedTime) / 1000);
         const remainingSeconds = (24 * 3600) - secondsPassed;
@@ -287,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (remainingSeconds > 0) {
             startFomoTimer(remainingSeconds);
         } else {
-            localStorage.removeItem('event_share_clicked_time');
+            localStorage.removeItem(getEventKey('event_share_clicked_time'));
             if (step1) step1.style.display = 'block';
             if (step2) step2.style.display = 'none';
         }
@@ -303,34 +305,40 @@ document.addEventListener('DOMContentLoaded', () => {
         if (applyPromoBtn) applyPromoBtn.style.display = 'none';
     }
 
-    const savedShareTime = localStorage.getItem('event_share_clicked_time');
-    const isPromoClaimed = localStorage.getItem('event_promo_claimed') === 'true';
+    const savedShareTime = localStorage.getItem(getEventKey('event_share_clicked_time'));
+    const isPromoClaimed = localStorage.getItem(getEventKey('event_promo_claimed')) === 'true';
 
     if (savedShareTime) {
         const secondsPassed = Math.floor((nowMs - parseInt(savedShareTime)) / 1000);
         if (secondsPassed < (24 * 3600)) {
-            const savedPromo = localStorage.getItem('event_sender_promo');
+            const savedPromo = localStorage.getItem(getEventKey('event_sender_promo'));
             if (savedPromo) {
                 showStep2(savedPromo);
+                if (!isPromoClaimed) {
+                    if (window.Telegram?.WebApp?.expand) {
+                        window.Telegram.WebApp.expand();
+                    }
+                    setTimeout(openModal, 400);
+                }
             }
         } else {
-            localStorage.removeItem('event_share_clicked_time');
-            localStorage.removeItem('event_sender_promo');
+            localStorage.removeItem(getEventKey('event_share_clicked_time'));
+            localStorage.removeItem(getEventKey('event_sender_promo'));
         }
     }
 
-    if (!isPromoClaimed) {
+    if (!isPromoClaimed && !savedShareTime) {
         const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
-        const isFirstShown = localStorage.getItem('event_popup_first');
-        const isLastDayShown = localStorage.getItem('event_popup_last');
+        const isFirstShown = localStorage.getItem(getEventKey('event_popup_first'));
+        const isLastDayShown = localStorage.getItem(getEventKey('event_popup_last'));
 
         if (hoursUntilEvent > 24 && !isFirstShown) {
             setTimeout(openModal, 2000);
-            localStorage.setItem('event_popup_first', 'true');
+            localStorage.setItem(getEventKey('event_popup_first'), 'true');
         } else if (hoursUntilEvent <= 24 && hoursUntilEvent > 0 && !isLastDayShown) {
             setTimeout(openModal, 2000);
-            localStorage.setItem('event_popup_first', 'true');
-            localStorage.setItem('event_popup_last', 'true');
+            localStorage.setItem(getEventKey('event_popup_first'), 'true');
+            localStorage.setItem(getEventKey('event_popup_last'), 'true');
         }
     }
 
@@ -345,14 +353,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const senderId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'direct';
             const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
             
-            const shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — скидку 15% по промокоду ${EVENT_CONFIG.promoReceiver}.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
+            const shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — промокод на скидку ${EVENT_CONFIG.promoReceiver}.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
             
             const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
             
             openLinkSafe(shareUrl, true);
+            if (window.Telegram?.WebApp?.expand) {
+                window.Telegram.WebApp.expand();
+            }
 
-            if (!localStorage.getItem('event_share_clicked_time')) {
-                localStorage.setItem('event_share_clicked_time', new Date().getTime().toString());
+            if (!localStorage.getItem(getEventKey('event_share_clicked_time'))) {
+                localStorage.setItem(getEventKey('event_share_clicked_time'), new Date().getTime().toString());
             }
 
             if (step1) step1.style.display = 'none';
@@ -374,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.status === 'success' && data.promo) {
-                        localStorage.setItem('event_sender_promo', data.promo);
+                        localStorage.setItem(getEventKey('event_sender_promo'), data.promo);
                         showStep2(data.promo);
                     } else {
                         showStep2Error();
@@ -392,9 +403,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (applyPromoBtn) {
         applyPromoBtn.addEventListener('click', () => {
-            const promoToApply = currentSenderPromo || localStorage.getItem('event_sender_promo') || '';
+            const promoToApply = currentSenderPromo || localStorage.getItem(getEventKey('event_sender_promo')) || '';
             if (!promoToApply) return;
-            localStorage.setItem('event_promo_claimed', 'true');
+            localStorage.setItem(getEventKey('event_promo_claimed'), 'true');
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(promoToApply).catch(err => console.log('Clipboard error:', err));

@@ -1,5 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
     
+    // Принудительное разворачивание Mini App при старте
+    if (window.Telegram?.WebApp?.expand) {
+        window.Telegram.WebApp.expand();
+    }
+    window.addEventListener('focus', () => {
+        if (window.Telegram?.WebApp?.expand) {
+            window.Telegram.WebApp.expand();
+        }
+    });
+
     // --- ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ ИЗ INDEX.HTML ---
     const appScriptTag = document.getElementById('appScript');
     const versionLabel = document.getElementById('appVersionLabel');
@@ -226,6 +236,10 @@ https://clck.ru/3VB8wu
             window.Telegram.WebApp.openTelegramLink(shareUrl);
         } else {
             window.open(shareUrl, '_blank');
+        }
+
+        if (window.Telegram?.WebApp?.expand) {
+            window.Telegram.WebApp.expand();
         }
         
         shareOptionsModal.classList.remove('active');
@@ -473,6 +487,10 @@ https://clck.ru/3VB8wu
                 window.Telegram.WebApp.openTelegramLink(shareUrl);
             } else {
                 window.open(shareUrl, '_blank');
+            }
+
+            if (window.Telegram?.WebApp?.expand) {
+                window.Telegram.WebApp.expand();
             }
         });
     }
