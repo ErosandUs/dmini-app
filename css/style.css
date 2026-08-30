@@ -847,6 +847,30 @@ audio {
     font-weight: 600;
 }
 
+.sheet-streak-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(211, 188, 230, 0.45);
+    border-radius: 12px;
+    padding: 8px 14px;
+    margin-bottom: 14px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.streak-icon {
+    font-size: 1rem;
+}
+
+.streak-text {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4a3b52;
+}
+
 /* ==========================================
    СЕТКА И КАРТОЧКИ ПЕЧАТЕЙ (ACHIEVEMENTS)
    ========================================== */

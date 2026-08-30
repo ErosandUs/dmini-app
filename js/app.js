@@ -138,9 +138,45 @@ document.addEventListener('DOMContentLoaded', () => {
         drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
     }
 
+    function updatePracticeStreak() {
+        const now = Date.now();
+        const lastDrawStr = localStorage.getItem('practice_last_draw_time');
+        let streak = parseInt(localStorage.getItem('practice_streak_count') || '1', 10);
+        if (isNaN(streak) || streak < 1) {
+            streak = 1;
+        }
+
+        if (!lastDrawStr) {
+            streak = 1;
+        } else {
+            const lastTime = parseInt(lastDrawStr, 10);
+            if (isNaN(lastTime)) {
+                streak = 1;
+            } else {
+                const diffHours = (now - lastTime) / (1000 * 60 * 60);
+                const isSameDay = new Date(now).toDateString() === new Date(lastTime).toDateString();
+
+                if (isSameDay) {
+                    // В тот же день стрик не увеличиваем
+                } else if (diffHours <= 48) {
+                    // Прошло меньше 48 часов и день другой -> +1
+                    streak += 1;
+                } else {
+                    // Прошло больше 48 часов -> сброс на 1
+                    streak = 1;
+                }
+            }
+        }
+
+        localStorage.setItem('practice_streak_count', streak.toString());
+        localStorage.setItem('practice_last_draw_time', now.toString());
+        return streak;
+    }
+
     checkTimer();
 
     function saveCardToCollection(cardNum) {
+        updatePracticeStreak();
         let collection = getNormalizedCollection();
         const existingIndex = collection.findIndex(c => c.id === cardNum);
         const now = new Date().toISOString();
@@ -683,6 +719,15 @@ https://clck.ru/3VB8wu
         return 'карт';
     }
 
+    function getDaysDeclension(n) {
+        const abs = Math.abs(n) % 100;
+        const rem = abs % 10;
+        if (abs > 10 && abs < 20) return 'дней';
+        if (rem > 1 && rem < 5) return 'дня';
+        if (rem === 1) return 'день';
+        return 'дней';
+    }
+
     function calculateSacredProgress() {
         const collection = getNormalizedCollection();
         const uniqueSet = new Set();
@@ -740,11 +785,17 @@ https://clck.ru/3VB8wu
         const sheetFieldDescEl = document.getElementById('sheetFieldDesc');
         const sheetCardsCountEl = document.getElementById('sheetCardsCount');
         const sheetBadgesFractionEl = document.getElementById('sheetBadgesFraction');
+        const streakDisplayEl = document.getElementById('streakDisplayText');
         const achievementsGridEl = document.getElementById('achievementsGrid');
 
         if (sheetFieldDescEl) sheetFieldDescEl.innerText = fieldText;
         if (sheetCardsCountEl) sheetCardsCountEl.innerText = `${uniqueCardsCount} ${getCardsDeclension(uniqueCardsCount)}`;
         if (sheetBadgesFractionEl) sheetBadgesFractionEl.innerText = `${unlockedCount} / ${SACRED_SEALS.length}`;
+
+        const currentStreak = parseInt(localStorage.getItem('practice_streak_count') || '1');
+        if (streakDisplayEl) {
+            streakDisplayEl.innerText = `Ритм осознанности: ${currentStreak} ${getDaysDeclension(currentStreak)} в потоке ✨`;
+        }
 
         // Генерация карточек печатей
         if (achievementsGridEl) {
@@ -761,8 +812,8 @@ https://clck.ru/3VB8wu
                     : `<span class="achievement-req">Цель: ${seal.count} ${getCardsDeclension(seal.count)}</span>`;
 
                 const statusLabel = isUnlocked
-                    ? `<span class="achievement-status">✨ Печать открыта</span>`
-                    : `<span class="achievement-status">🔒 Осталось открыть: ${remaining} ${getCardsDeclension(remaining)}</span>`;
+                    ? `<span class="achievement-status">✨ Видья открыта</span>`
+                    : `<span class="achievement-status">🔒 Видья сокрыта: осталось ${remaining} ${getCardsDeclension(remaining)}</span>`;
 
                 sealCard.innerHTML = `
                     <div class="achievement-icon-wrap">

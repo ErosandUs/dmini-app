@@ -112,7 +112,7 @@
         <div id="sacredProgressWidget" class="sacred-widget glass-panel" role="button" tabindex="0" aria-label="Сакральный прогресс и достижения">
             <div class="sacred-widget-top">
                 <span id="fieldContributionText" class="field-text">✨ Твоё намерение мягко вливается в общее поле</span>
-                <div class="sacred-badges-count" id="badgesTrigger">[ <span id="unlockedBadgesCount">0</span>/5 🏅 ]</div>
+                <div class="sacred-badges-count" id="badgesTrigger">[ <span id="unlockedBadgesCount">0</span>/5 🪷 ]</div>
             </div>
             <div class="sacred-widget-bottom">
                 <div class="sacred-progress-track">
@@ -202,9 +202,13 @@
                     <span class="stat-pill-value" id="sheetCardsCount">0</span>
                 </div>
                 <div class="sheet-stat-pill">
-                    <span class="stat-pill-label">Печатей открыто:</span>
+                    <span class="stat-pill-label">Видий открыто:</span>
                     <span class="stat-pill-value" id="sheetBadgesFraction">0 / 5</span>
                 </div>
+            </div>
+            <div class="sheet-streak-bar" id="sheetStreakBar">
+                <span class="streak-icon">🕯</span>
+                <span class="streak-text" id="streakDisplayText">Ритм осознанности: 1 день в потоке ✨</span>
             </div>
             <div class="achievements-grid" id="achievementsGrid">
                 <!-- Печати генерируются через JS -->
@@ -218,7 +222,7 @@
     
     <script src="js/appData.js?v=15" defer></script> 
     
-    <script id="appScript" src="js/app.js?v=1" defer></script>
+    <script id="appScript" src="js/app.js?v=01" defer></script>
     <script src="js/eventPopup.js?v=15" defer></script>
 </body>
 </html>
