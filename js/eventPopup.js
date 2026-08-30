@@ -110,6 +110,21 @@ document.addEventListener('DOMContentLoaded', () => {
             font-size: 1.15rem;
             font-weight: 700;
         }
+        @keyframes urgentBlink {
+            0%, 100% { opacity: 1; color: #ff4d4d; transform: scale(1); }
+            50% { opacity: 0.6; color: #9c7abb; transform: scale(0.98); }
+        }
+        .timer-urgent {
+            animation: urgentBlink 1.5s infinite ease-in-out !important;
+            color: #ff4d4d !important;
+            font-weight: 700;
+        }
+        .urgent-text {
+            color: #ff4d4d;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.1rem;
+        }
     `;
     document.head.appendChild(style);
 
@@ -142,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <!-- Шаг 1: Инвайт -->
                     <div id="eventStep1">
                         <h3 class="event-title">${EVENT_CONFIG.title}</h3>
-                        <p class="event-desc">Поделись приглашением с близкой подругой. Вы обе получите <b>промокод на скидку</b> для участия в практике! ✨</p>
+                        <p class="event-desc">Поделись приглашением с близкой подругой, которая ещё не была на наших практиках. Вы обе получите <b>промокод на скидку</b> для участия! ✨</p>
                         <span class="event-warning">❗️ Нажми кнопку, чтобы отправить подруге приглашение и сразу забрать свой промокод!</span>
                         <button class="action-btn" id="eventShareBtn">Отправить приглашение 💌</button>
                         <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
@@ -269,8 +284,10 @@ document.addEventListener('DOMContentLoaded', () => {
         fomoInterval = setInterval(tick, 1000);
     }
 
-    function showStep2(promoCode) {
+    function showStep2(promoCode, remainingSeconds = null) {
         currentSenderPromo = promoCode;
+        const desc = step2Desc;
+        const timerBox = rewardTimerBox;
         if (step1) step1.style.display = 'none';
         if (step2) step2.style.display = 'block';
         if (step2Desc) step2Desc.innerText = 'Твой персональный промокод на скидку:';
@@ -281,15 +298,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rewardTimerBox) rewardTimerBox.style.display = 'block';
         if (applyPromoBtn) applyPromoBtn.style.display = 'block';
 
-        const clickedTimeStr = localStorage.getItem(getEventKey('event_share_clicked_time'));
-        const clickedTime = clickedTimeStr ? parseInt(clickedTimeStr) : new Date().getTime();
-        const secondsPassed = Math.floor((new Date().getTime() - clickedTime) / 1000);
-        const remainingSeconds = (24 * 3600) - secondsPassed;
+        // Логика срочности (< 3 часов)
+        const clickedTimeVal = localStorage.getItem(getEventKey('event_share_clicked_time')) || localStorage.getItem('event_share_clicked_time');
+        const currentRemaining = remainingSeconds !== null ? remainingSeconds : ((24 * 3600) - Math.floor((new Date().getTime() - (parseInt(clickedTimeVal) || new Date().getTime())) / 1000));
+        
+        if (currentRemaining > 0 && currentRemaining <= (3 * 3600) && timerBox) {
+            if (desc) desc.innerHTML = '<div class="urgent-text">Осталось совсем мало времени! Применяй промокод!</div>Твой персональный промокод на скидку 15%:';
+            timerBox.classList.add('timer-urgent');
+        } else if (timerBox) {
+            timerBox.classList.remove('timer-urgent');
+        }
 
-        if (remainingSeconds > 0) {
-            startFomoTimer(remainingSeconds);
+        if (currentRemaining > 0) {
+            startFomoTimer(currentRemaining);
         } else {
             localStorage.removeItem(getEventKey('event_share_clicked_time'));
+            localStorage.removeItem('event_share_clicked_time');
             if (step1) step1.style.display = 'block';
             if (step2) step2.style.display = 'none';
         }
@@ -303,28 +327,57 @@ document.addEventListener('DOMContentLoaded', () => {
         if (promoDisplay) promoDisplay.style.display = 'none';
         if (rewardTimerBox) rewardTimerBox.style.display = 'none';
         if (applyPromoBtn) applyPromoBtn.style.display = 'none';
+        
+        // НОВОЕ: Сбрасываем метки, чтобы при перезаходе пользователь снова оказался на Шаге 1 и мог попробовать получить код заново
+        localStorage.removeItem(getEventKey('event_share_clicked_time'));
+        localStorage.removeItem('event_share_clicked_time');
+        localStorage.removeItem(getEventKey('event_sender_promo'));
+        localStorage.removeItem('event_sender_promo');
     }
 
-    const savedShareTime = localStorage.getItem(getEventKey('event_share_clicked_time'));
-    const isPromoClaimed = localStorage.getItem(getEventKey('event_promo_claimed')) === 'true';
+    // 4. Восстановление состояния при загрузке страницы
+    const savedShareTime = localStorage.getItem(getEventKey('event_share_clicked_time')) || localStorage.getItem('event_share_clicked_time');
+    const isPromoClaimed = (localStorage.getItem(getEventKey('event_promo_claimed')) || localStorage.getItem('event_promo_claimed')) === 'true';
+    const savedPromo = localStorage.getItem(getEventKey('event_sender_promo')) || localStorage.getItem('event_sender_promo');
 
-    if (savedShareTime) {
+    // Проверяем: таймер восстанавливаем ТОЛЬКО если есть и время, и реальный промокод
+    if (savedShareTime && savedPromo) {
         const secondsPassed = Math.floor((nowMs - parseInt(savedShareTime)) / 1000);
-        if (secondsPassed < (24 * 3600)) {
-            const savedPromo = localStorage.getItem(getEventKey('event_sender_promo'));
-            if (savedPromo) {
-                showStep2(savedPromo);
-                if (!isPromoClaimed) {
-                    if (window.Telegram?.WebApp?.expand) {
-                        window.Telegram.WebApp.expand();
-                    }
-                    setTimeout(openModal, 400);
+        const remainingSeconds = (24 * 3600) - secondsPassed;
+
+        if (remainingSeconds > 0) {
+            if (!isPromoClaimed) {
+                let showCount = parseInt(localStorage.getItem(getEventKey('event_promo_auto_shown_count')) || localStorage.getItem('event_promo_auto_shown_count') || '0');
+                
+                if (showCount === 0) {
+                    if (window.Telegram?.WebApp?.expand) window.Telegram.WebApp.expand();
+                    setTimeout(openModal, 500);
+                    localStorage.setItem(getEventKey('event_promo_auto_shown_count'), '1');
+                    localStorage.setItem('event_promo_auto_shown_count', '1');
+                } else if (showCount === 1 && remainingSeconds <= (3 * 3600)) {
+                    if (window.Telegram?.WebApp?.expand) window.Telegram.WebApp.expand();
+                    setTimeout(openModal, 500);
+                    localStorage.setItem(getEventKey('event_promo_auto_shown_count'), '2');
+                    localStorage.setItem('event_promo_auto_shown_count', '2');
                 }
             }
+            
+            showStep2(savedPromo, remainingSeconds);
         } else {
+            // Время истекло
             localStorage.removeItem(getEventKey('event_share_clicked_time'));
+            localStorage.removeItem('event_share_clicked_time');
+            localStorage.removeItem(getEventKey('event_promo_auto_shown_count'));
+            localStorage.removeItem('event_promo_auto_shown_count');
             localStorage.removeItem(getEventKey('event_sender_promo'));
+            localStorage.removeItem('event_sender_promo');
         }
+    } else if (savedShareTime && !savedPromo) {
+        // Битый стейт (время записано, а промокода нет) — полностью зачищаем
+        localStorage.removeItem(getEventKey('event_share_clicked_time'));
+        localStorage.removeItem('event_share_clicked_time');
+        localStorage.removeItem(getEventKey('event_promo_auto_shown_count'));
+        localStorage.removeItem('event_promo_auto_shown_count');
     }
 
     if (!isPromoClaimed && !savedShareTime) {
@@ -353,17 +406,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const senderId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'direct';
             const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
             
-            const shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — промокод на скидку ${EVENT_CONFIG.promoReceiver}.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
+            const shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — промокод на скидку ${EVENT_CONFIG.promoReceiver} на первое участие.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
             
             const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
             
             openLinkSafe(shareUrl, true);
             if (window.Telegram?.WebApp?.expand) {
                 window.Telegram.WebApp.expand();
-            }
-
-            if (!localStorage.getItem(getEventKey('event_share_clicked_time'))) {
-                localStorage.setItem(getEventKey('event_share_clicked_time'), new Date().getTime().toString());
             }
 
             if (step1) step1.style.display = 'none';
@@ -385,6 +434,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.status === 'success' && data.promo) {
+                        // Записываем время И промокод строго ТОЛЬКО при успешном ответе
+                        localStorage.setItem(getEventKey('event_share_clicked_time'), new Date().getTime().toString());
                         localStorage.setItem(getEventKey('event_sender_promo'), data.promo);
                         showStep2(data.promo);
                     } else {
