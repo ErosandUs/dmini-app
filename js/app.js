@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
     checkTimer();
 
     function saveCardToCollection(cardNum) {
-        let collection = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let collection = getNormalizedCollection();
         const existingIndex = collection.findIndex(c => c.id === cardNum);
         const now = new Date().toISOString();
 
@@ -152,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             collection.push({ id: cardNum, date: now, count: 1 });
         }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(collection));
+        calculateSacredProgress();
     }
 
     function drawRandomCard() {
@@ -290,7 +291,8 @@ https://clck.ru/3VB8wu
     let collectionSwiper = null; 
 
     function renderCollection() {
-        let collection = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        calculateSacredProgress();
+        let collection = getNormalizedCollection();
         const wrapper = document.getElementById('collectionWrapper');
         const emptyMsg = document.getElementById('emptyCollection');
         const swiperContainer = document.getElementById('collectionSwiperContainer');
@@ -598,6 +600,246 @@ https://clck.ru/3VB8wu
             modalVideoWrap.innerHTML = '';
         }
     });
+
+    // ==========================================
+    // МОДУЛЬ: САКРАЛЬНЫЙ ПРОГРЕСС И ДОСТИЖЕНИЯ
+    // ==========================================
+
+    const SACRED_RANKS = [
+        { min: 1, max: 4, rank: "Искательница смыслов ✦", text: "✨ Твоё намерение мягко вливается в общий круг" },
+        { min: 5, max: 14, rank: "Хранительница знаков ✦", text: "🌿 Твоя практика звучит в унисон со всем полем" },
+        { min: 15, max: 29, rank: "Глубокое видение ✦", text: "💫 Твой свет укрепляет пространство осознанности" },
+        { min: 30, max: 49, rank: "Мастер синхронии ✦", text: "🌟 Ты создаёшь резонанс для других сердец" },
+        { min: 50, max: Infinity, rank: "Абсолютный свет ✦", text: "👑 Ты держишь сакральное поле для всего сообщества" }
+    ];
+
+    const SACRED_SEALS = [
+        { id: 'first_touch', count: 1, title: "Первое касание", icon: "🪷", desc: "Сделан первый шаг в доверие Вселенной" },
+        { id: 'guardian', count: 7, title: "Хранительница знаков", icon: "🌿", desc: "Семь открытых посланий и устойчивый диалог с собой" },
+        { id: 'deep_vision', count: 20, title: "Глубокое видение", icon: "💫", desc: "Умение считывать тонкие смыслы между строк" },
+        { id: 'master_sync', count: 40, title: "Мастер синхронии", icon: "🌟", desc: "Более половины пути в непрерывном потоке Джамили" },
+        { id: 'absolute_light', count: 65, title: "Абсолютный свет", icon: "👑", desc: "Высшая ступень интеграции сакральных знаний" }
+    ];
+
+    function getNormalizedCollection() {
+        let collection = [];
+        try {
+            const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            if (Array.isArray(raw)) collection = raw;
+        } catch (e) {
+            collection = [];
+        }
+        
+        let normalized = [];
+        let isModified = false;
+
+        collection.forEach(item => {
+            if (!item) return;
+            let id = null;
+            let date = new Date().toISOString();
+            let count = 1;
+
+            if (typeof item === 'object') {
+                if (item.id !== undefined) id = item.id;
+                else if (item.path !== undefined) {
+                    const m = String(item.path).match(/(\d+)/);
+                    if (m) id = parseInt(m[1]);
+                    isModified = true;
+                }
+                
+                if (item.date) date = item.date;
+                else isModified = true;
+                
+                if (item.count) count = item.count;
+                else isModified = true;
+            } else {
+                // Старейший формат
+                const match = String(item).match(/(\d+)/);
+                if (match) {
+                    id = parseInt(match[1]);
+                    isModified = true;
+                }
+            }
+
+            if (id !== null && !isNaN(parseInt(id))) {
+                normalized.push({ id: parseInt(id), date: date, count: count });
+            }
+        });
+
+        // Перезаписываем хранилище в новом виде
+        if (isModified) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        }
+
+        return normalized;
+    }
+
+    function getCardsDeclension(n) {
+        const abs = Math.abs(n) % 100;
+        const rem = abs % 10;
+        if (abs > 10 && abs < 20) return 'карт';
+        if (rem > 1 && rem < 5) return 'карты';
+        if (rem === 1) return 'карта';
+        return 'карт';
+    }
+
+    function calculateSacredProgress() {
+        const collection = getNormalizedCollection();
+        const uniqueSet = new Set();
+        collection.forEach(item => uniqueSet.add(item.id));
+        const uniqueCardsCount = uniqueSet.size;
+
+        // Расчет текущего ранга и прогресса
+        let currentRank = null;
+        let rankName = "Искательница смыслов ✦";
+        let fieldText = "✨ Твоё намерение мягко вливается в общий круг";
+        let progressPercent = 0;
+
+        if (uniqueCardsCount === 0) {
+            rankName = "Искательница смыслов ✦";
+            fieldText = "✨ Твоё намерение мягко вливается в общий круг";
+            progressPercent = 0;
+        } else {
+            currentRank = SACRED_RANKS.find(r => uniqueCardsCount >= r.min && uniqueCardsCount <= r.max);
+            if (!currentRank) {
+                currentRank = SACRED_RANKS[SACRED_RANKS.length - 1];
+            }
+
+            rankName = currentRank.rank;
+            fieldText = currentRank.text;
+
+            if (currentRank.max === Infinity || uniqueCardsCount >= 50) {
+                progressPercent = 100;
+            } else {
+                const intervalSpan = currentRank.max - currentRank.min;
+                if (intervalSpan > 0) {
+                    const rawProgress = ((uniqueCardsCount - currentRank.min) / intervalSpan) * 100;
+                    progressPercent = Math.max(0, Math.min(100, Math.round(rawProgress)));
+                } else {
+                    progressPercent = 100;
+                }
+            }
+        }
+
+        // Подсчет открытых печатей (ачивок)
+        const unlockedBadges = SACRED_SEALS.filter(seal => uniqueCardsCount >= seal.count);
+        const unlockedCount = unlockedBadges.length;
+
+        // Обновление DOM-элементов виджета в секции #collection
+        const fieldTextEl = document.getElementById('fieldContributionText');
+        const badgesCountEl = document.getElementById('unlockedBadgesCount');
+        const progressFillEl = document.getElementById('sacredProgressFill');
+        const rankTextEl = document.getElementById('sacredRankText');
+
+        if (fieldTextEl) fieldTextEl.innerText = fieldText;
+        if (badgesCountEl) badgesCountEl.innerText = unlockedCount;
+        if (progressFillEl) progressFillEl.style.width = `${progressPercent}%`;
+        if (rankTextEl) rankTextEl.innerText = rankName;
+
+        // Обновление элементов модальной шторки (Bottom Sheet)
+        const sheetFieldDescEl = document.getElementById('sheetFieldDesc');
+        const sheetCardsCountEl = document.getElementById('sheetCardsCount');
+        const sheetBadgesFractionEl = document.getElementById('sheetBadgesFraction');
+        const achievementsGridEl = document.getElementById('achievementsGrid');
+
+        if (sheetFieldDescEl) sheetFieldDescEl.innerText = fieldText;
+        if (sheetCardsCountEl) sheetCardsCountEl.innerText = `${uniqueCardsCount} ${getCardsDeclension(uniqueCardsCount)}`;
+        if (sheetBadgesFractionEl) sheetBadgesFractionEl.innerText = `${unlockedCount} / ${SACRED_SEALS.length}`;
+
+        // Генерация карточек печатей
+        if (achievementsGridEl) {
+            achievementsGridEl.innerHTML = '';
+            SACRED_SEALS.forEach(seal => {
+                const isUnlocked = uniqueCardsCount >= seal.count;
+                const remaining = Math.max(0, seal.count - uniqueCardsCount);
+
+                const sealCard = document.createElement('div');
+                sealCard.className = `achievement-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+
+                const reqBadge = isUnlocked
+                    ? `<span class="achievement-req">✦ ${seal.count} ${getCardsDeclension(seal.count)}</span>`
+                    : `<span class="achievement-req">Цель: ${seal.count} ${getCardsDeclension(seal.count)}</span>`;
+
+                const statusLabel = isUnlocked
+                    ? `<span class="achievement-status">✨ Печать открыта</span>`
+                    : `<span class="achievement-status">🔒 Осталось открыть: ${remaining} ${getCardsDeclension(remaining)}</span>`;
+
+                sealCard.innerHTML = `
+                    <div class="achievement-icon-wrap">
+                        <span>${seal.icon}</span>
+                    </div>
+                    <div class="achievement-info">
+                        <div class="achievement-header">
+                            <h4 class="achievement-title">${seal.title}</h4>
+                            ${reqBadge}
+                        </div>
+                        <p class="achievement-desc">${seal.desc}</p>
+                        ${statusLabel}
+                    </div>
+                `;
+                achievementsGridEl.appendChild(sealCard);
+            });
+        }
+    }
+
+    // Обработчики открытия и закрытия модальной шторки (Bottom Sheet)
+    const sacredProgressWidget = document.getElementById('sacredProgressWidget');
+    const sacredBottomSheet = document.getElementById('sacredBottomSheet');
+    const sheetOverlay = document.getElementById('sheetOverlay');
+    const closeSheetBtn = document.getElementById('closeSheetBtn');
+
+    function openSacredBottomSheet() {
+        try {
+            calculateSacredProgress();
+        } catch(e) {
+            console.error("Ошибка расчета сакрального прогресса:", e);
+        }
+        if (sacredBottomSheet) {
+            sacredBottomSheet.classList.remove('hidden');
+            void sacredBottomSheet.offsetWidth;
+            sacredBottomSheet.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeSacredBottomSheet() {
+        if (sacredBottomSheet) {
+            sacredBottomSheet.classList.remove('active');
+            setTimeout(() => {
+                if (!sacredBottomSheet.classList.contains('active')) {
+                    sacredBottomSheet.classList.add('hidden');
+                }
+            }, 300);
+            document.body.style.overflow = '';
+        }
+    }
+
+    if (sacredProgressWidget) {
+        sacredProgressWidget.addEventListener('click', openSacredBottomSheet);
+        sacredProgressWidget.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openSacredBottomSheet();
+            }
+        });
+    }
+
+    if (sheetOverlay) {
+        sheetOverlay.addEventListener('click', closeSacredBottomSheet);
+    }
+
+    if (closeSheetBtn) {
+        closeSheetBtn.addEventListener('click', closeSacredBottomSheet);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sacredBottomSheet && sacredBottomSheet.classList.contains('active')) {
+            closeSacredBottomSheet();
+        }
+    });
+
+    // Первичный расчет сакрального прогресса при загрузке страницы
+    calculateSacredProgress();
 
     // Event popup logic is handled dynamically in eventPopup.js
 });

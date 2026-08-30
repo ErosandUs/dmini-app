@@ -108,6 +108,22 @@
 
     <!-- Секция Коллекции -->
     <section id="collection" class="tab-content">
+        <!-- Виджет сакрального прогресса -->
+        <div id="sacredProgressWidget" class="sacred-widget glass-panel" role="button" tabindex="0" aria-label="Сакральный прогресс и достижения">
+            <div class="sacred-widget-top">
+                <span id="fieldContributionText" class="field-text">✨ Твоё намерение мягко вливается в общее поле</span>
+                <div class="sacred-badges-count" id="badgesTrigger">[ <span id="unlockedBadgesCount">0</span>/5 🏅 ]</div>
+            </div>
+            <div class="sacred-widget-bottom">
+                <div class="sacred-progress-track">
+                    <div class="sacred-progress-fill" id="sacredProgressFill"></div>
+                </div>
+                <div class="sacred-rank-row">
+                    <span id="sacredRankText" class="rank-text">Искательница смыслов ✦</span>
+                </div>
+            </div>
+        </div>
+
         <div class="timeline-container" id="timelineNav"></div>
         
         <div class="empty-collection-msg" id="emptyCollection">
@@ -170,13 +186,39 @@
         </div>
     </div>
 
+    <!-- Модальная шторка (Bottom Sheet) Сакрального прогресса -->
+    <div id="sacredBottomSheet" class="sacred-bottom-sheet hidden">
+        <div class="sheet-overlay" id="sheetOverlay"></div>
+        <div class="sheet-content glass-panel">
+            <div class="sheet-drag-handle"></div>
+            <div class="sheet-header">
+                <h3 class="sheet-title">Твой путь и вклад</h3>
+                <button class="sheet-close-btn" id="closeSheetBtn" aria-label="Закрыть">&times;</button>
+            </div>
+            <p id="sheetFieldDesc" class="sheet-desc">✨ Твоё намерение мягко вливается в общий круг</p>
+            <div class="sheet-stats-bar">
+                <div class="sheet-stat-pill">
+                    <span class="stat-pill-label">Собрано карт:</span>
+                    <span class="stat-pill-value" id="sheetCardsCount">0</span>
+                </div>
+                <div class="sheet-stat-pill">
+                    <span class="stat-pill-label">Печатей открыто:</span>
+                    <span class="stat-pill-value" id="sheetBadgesFraction">0 / 5</span>
+                </div>
+            </div>
+            <div class="achievements-grid" id="achievementsGrid">
+                <!-- Печати генерируются через JS -->
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script>
     
     <script src="js/eventConfig.js?v=15" defer></script>
     
     <script src="js/appData.js?v=15" defer></script> 
     
-    <script id="appScript" src="js/app.js?v=01" defer></script>
+    <script id="appScript" src="js/app.js?v=1" defer></script>
     <script src="js/eventPopup.js?v=15" defer></script>
 </body>
 </html>
