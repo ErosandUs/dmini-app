@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let isFlipped = false;
     let currentCardPath = ""; 
+    let currentCardNumber = 1; 
 
 // === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
     const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
@@ -204,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setNewCard() {
         const randomNum = Math.floor(Math.random() * TOTAL_CARDS) + 1;
+        currentCardNumber = randomNum;
         currentCardPath = `images/${randomNum}.jpeg`; 
         if (cardResultImg) {
             cardResultImg.src = currentCardPath; 
@@ -484,36 +486,31 @@ https://clck.ru/3VB8wu
     let currentAudioName = "";
     let audioCtx, gainNode, videoSource;
 
-    function startRandomAudio() {
-        // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
-        if (typeof AUDIO_TRACKS_DATA !== 'undefined' && AUDIO_TRACKS_DATA.length > 0) {
-            const randomAudioIndex = Math.floor(Math.random() * AUDIO_TRACKS_DATA.length);
-            const selectedAudio = AUDIO_TRACKS_DATA[randomAudioIndex];
+    function startAudioForCurrentCard() {
+        const availableTrackIds = (typeof CARD_TO_AUDIO_MAP !== 'undefined' && CARD_TO_AUDIO_MAP[currentCardNumber]) ? CARD_TO_AUDIO_MAP[currentCardNumber] : [1];
+        const targetAudioId = availableTrackIds[Math.floor(Math.random() * availableTrackIds.length)];
+        const selectedAudio = AUDIO_TRACKS_DATA.find(track => track.id === targetAudioId) || AUDIO_TRACKS_DATA[0];
 
-            currentAudioName = selectedAudio.title;
-            if (audioTitle) audioTitle.innerText = `«${currentAudioName}»`;
-            
-            if (audioPlayer) {
-                audioPlayer.src = `audio/${selectedAudio.id}.mp3`;
-                audioPlayer.play().catch(err => console.log("Audio play blocked:", err));
-            }
-            
-            if (avatarVideo) {
-                if (!avatarVideo.src && avatarVideo.dataset.src) {
-                    avatarVideo.src = avatarVideo.dataset.src;
-                }
-                avatarVideo.play().catch(err => console.log("Видео заблокировано:", err));
-            }
-            
-            if (shareAudioBtn) shareAudioBtn.style.display = 'block';
+        currentAudioName = selectedAudio.title;
+        if (audioTitle) audioTitle.innerText = `«${currentAudioName}»`;
+        if (audioPlayer) {
+            audioPlayer.src = `audio/${selectedAudio.id}.mp3`;
+            audioPlayer.play().catch(err => console.log("Audio play blocked:", err));
         }
+        if (avatarVideo) {
+            if (!avatarVideo.src && avatarVideo.dataset.src) {
+                avatarVideo.src = avatarVideo.dataset.src;
+            }
+            avatarVideo.play().catch(err => console.log("Видео заблокировано:", err));
+        }
+        if (shareAudioBtn) shareAudioBtn.style.display = 'block';
     }
 
     if (nextToAudioBtn) {
         nextToAudioBtn.addEventListener('click', () => {
             if (step1Card) step1Card.style.display = 'none';
             if (step2Audio) step2Audio.style.display = 'flex'; 
-            startRandomAudio();
+            startAudioForCurrentCard();
         });
     }
 
@@ -850,6 +847,14 @@ https://clck.ru/3VB8wu
             void sacredBottomSheet.offsetWidth;
             sacredBottomSheet.classList.add('active');
             document.body.style.overflow = 'hidden';
+
+            // Запуск односекундного светодиодного луча по контуру плашки стрика
+            const streakBar = document.getElementById('sheetStreakBar');
+            if (streakBar) {
+                streakBar.classList.remove('led-pulse');
+                void streakBar.offsetWidth; // Принудительный reflow для перезапуска
+                streakBar.classList.add('led-pulse');
+            }
         }
     }
 
