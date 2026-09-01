@@ -395,6 +395,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    let statusPollInterval = null;
+    let isCheckingStatus = false;
+    let activeSenderId = null;
+
+    function getSenderId() {
+        const tgId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+        if (tgId) return String(tgId);
+        if (!activeSenderId) {
+            activeSenderId = String(Math.floor(Math.random() * 1000000000));
+        }
+        return activeSenderId;
+    }
+
+    function checkPromoStatus(senderId) {
+        if (!EVENT_CONFIG.appsScriptUrl || !senderId) return;
+        if (currentSenderPromo) return;
+        if (isCheckingStatus) return;
+
+        isCheckingStatus = true;
+        fetch(EVENT_CONFIG.appsScriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ userId: senderId, action: 'check_status' })
+        })
+        .then(res => res.json())
+        .then(data => {
+            isCheckingStatus = false;
+            if (data && data.status === 'success' && data.promo) {
+                if (statusPollInterval) {
+                    clearInterval(statusPollInterval);
+                    statusPollInterval = null;
+                }
+                localStorage.setItem(getEventKey('event_sender_promo'), data.promo);
+                localStorage.setItem(getEventKey('event_share_clicked_time'), new Date().getTime().toString());
+                showStep2(data.promo);
+            } else if (data && data.status === 'error') {
+                // Пул пуст или серверная ошибка
+                if (statusPollInterval) {
+                    clearInterval(statusPollInterval);
+                    statusPollInterval = null;
+                }
+                showStep2Error();
+            }
+        })
+        .catch(err => {
+            isCheckingStatus = false;
+            console.warn('Check promo status error:', err);
+        });
+    }
+
+    function startStatusPolling(senderId) {
+        if (statusPollInterval) clearInterval(statusPollInterval);
+        checkPromoStatus(senderId);
+        statusPollInterval = setInterval(() => {
+            checkPromoStatus(senderId);
+        }, 2500);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !currentSenderPromo && step2 && step2.style.display !== 'none') {
+            const senderId = getSenderId();
+            checkPromoStatus(senderId);
+        }
+    });
+
+    window.addEventListener('focus', () => {
+        if (!currentSenderPromo && step2 && step2.style.display !== 'none') {
+            const senderId = getSenderId();
+            checkPromoStatus(senderId);
+        }
+    });
+
     if (directRegBtn) {
         directRegBtn.addEventListener('click', () => {
             openLinkSafe(EVENT_CONFIG.registrationLink);
@@ -403,13 +475,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (shareBtn) {
         shareBtn.addEventListener('click', () => {
-            const senderId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'direct';
+            const senderId = getSenderId();
 
-            const directLink = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
-            const shareText = `Привет! Приглашаю тебя на медитацию «${EVENT_CONFIG.title}». Держи от меня подарок — скидку 15% по промокоду ${EVENT_CONFIG.promoReceiver} ✨\n\nРегистрируйся по ссылке:\n${directLink}`;
-            const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
-
-            openLinkSafe(shareUrl, true);
+            if (window.Telegram?.WebApp?.switchInlineQuery) {
+                window.Telegram.WebApp.switchInlineQuery("invite");
+            } else {
+                // Fallback на случай открытия в обычном браузере вне Telegram (с параметром url= для iOS)
+                const directLink = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
+                const shareText = `Привет! Приглашаю тебя на медитацию «${EVENT_CONFIG.title}». Держи от меня подарок — скидку 15% по промокоду ${EVENT_CONFIG.promoReceiver} ✨\n\nРегистрируйся по ссылке:\n${directLink}`;
+                const shareUrl = `https://t.me/share/url?url=&text=${encodeURIComponent(shareText)}`;
+                openLinkSafe(shareUrl, true);
+            }
 
             if (window.Telegram?.WebApp?.expand) {
                 window.Telegram.WebApp.expand();
@@ -417,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (step1) step1.style.display = 'none';
             if (step2) step2.style.display = 'block';
-            if (step2Desc) step2Desc.innerText = 'Получаем твой персональный промокод...';
+            if (step2Desc) step2Desc.innerText = 'Ожидаем подтверждения отправки...';
             if (promoDisplay) {
                 promoDisplay.style.display = 'block';
                 promoDisplay.innerText = '...';
@@ -425,29 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (rewardTimerBox) rewardTimerBox.style.display = 'none';
             if (applyPromoBtn) applyPromoBtn.style.display = 'none';
 
-            if (EVENT_CONFIG.appsScriptUrl) {
-                fetch(EVENT_CONFIG.appsScriptUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ userId: String(senderId) })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.status === 'success' && data.promo) {
-                        localStorage.setItem(getEventKey('event_share_clicked_time'), new Date().getTime().toString());
-                        localStorage.setItem(getEventKey('event_sender_promo'), data.promo);
-                        showStep2(data.promo);
-                    } else {
-                        showStep2Error();
-                    }
-                })
-                .catch(err => {
-                    console.warn('Google Apps Script fetch error:', err);
-                    showStep2Error();
-                });
-            } else {
-                showStep2Error();
-            }
+            startStatusPolling(senderId);
         });
     }
 
