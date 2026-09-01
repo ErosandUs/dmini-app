@@ -478,15 +478,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const senderId = getSenderId();
 
             if (window.Telegram?.WebApp?.switchInlineQuery) {
-                const inlineParams = JSON.stringify({
-                    title: EVENT_CONFIG.title,
-                    regLink: EVENT_CONFIG.registrationLink,
-                    promo: EVENT_CONFIG.promoReceiver,
-                    img: new URL(EVENT_CONFIG.imagePath, window.location.href).toString()
-                });
-                window.Telegram.WebApp.switchInlineQuery(inlineParams);
+                try {
+                    window.Telegram.WebApp.switchInlineQuery("invite");
+                } catch (e) {
+                    console.warn("switchInlineQuery error:", e);
+                }
             } else {
-                // Fallback на случай открытия в обычном браузере вне Telegram (с параметром url= для iOS)
                 const directLink = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
                 const shareText = `Привет! Приглашаю тебя на медитацию «${EVENT_CONFIG.title}». Держи от меня подарок — скидку 15% по промокоду ${EVENT_CONFIG.promoReceiver} ✨\n\nРегистрируйся по ссылке:\n${directLink}`;
                 const shareUrl = `https://t.me/share/url?url=&text=${encodeURIComponent(shareText)}`;
