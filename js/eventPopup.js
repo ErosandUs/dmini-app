@@ -415,19 +415,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (shareBtn) {
         shareBtn.addEventListener('click', () => {
             const senderId = getSenderId();
-
-            // 1. Безотказный нативный шеринг (как в app.js)
             const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
-            const shareText = `Привет! Приглашаю тебя на медитацию «${EVENT_CONFIG.title}». Держи от меня подарок — скидку 15% по промокоду ${EVENT_CONFIG.promoReceiver} ✨\n\nРегистрируйся по ссылке:\n${directLinkWithPromo}`;
+            
+            // ВОССТАНОВЛЕННЫЙ ТЁПЛЫЙ ТЕКСТ:
+            const shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — промокод на скидку ${EVENT_CONFIG.promoReceiver} на первое участие.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
+            
             const shareUrl = `https://t.me/share/url?url=&text=${encodeURIComponent(shareText)}`;
             
             openLinkSafe(shareUrl, true);
-
             if (window.Telegram?.WebApp?.expand) {
                 window.Telegram.WebApp.expand();
             }
 
-            // 2. Переключаем UI на мгновенную загрузку (никаких ожиданий)
+            // Переключаем UI на мгновенную загрузку (БЕЗ поллинга)
             if (step1) step1.style.display = 'none';
             if (step2) step2.style.display = 'block';
             if (step2Desc) step2Desc.innerText = 'Получаем твой персональный промокод...';
@@ -438,12 +438,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (rewardTimerBox) rewardTimerBox.style.display = 'none';
             if (applyPromoBtn) applyPromoBtn.style.display = 'none';
 
-            // 3. Мгновенный запрос к Google Таблице за кодом (без action: 'check_status')
+            // Мгновенный запрос к Google Таблице за кодом
             if (EVENT_CONFIG.appsScriptUrl) {
                 fetch(EVENT_CONFIG.appsScriptUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ userId: senderId }) 
+                    body: JSON.stringify({ userId: senderId })
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 })
                 .catch(err => {
-                    console.warn('Apps Script error:', err);
+                    console.warn('Google Apps Script fetch error:', err);
                     showStep2Error();
                 });
             } else {
