@@ -250,10 +250,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let activeSharePath = ""; 
 
-    function openTelegramShare(targetUrl, shareText) {
-        const encodedUrl = encodeURIComponent(targetUrl);
+    function openTelegramShare(shareText) {
         const encodedText = encodeURIComponent(shareText);
-        const fullShareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
+        const fullShareUrl = `https://t.me/share/url?url=&text=${encodedText}`;
 
         if (window.Telegram?.WebApp?.openTelegramLink) {
             window.Telegram.WebApp.openTelegramLink(fullShareUrl);
@@ -281,10 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
-        const shareUrl = "https://clck.ru/3VB8wu";
-        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nЗаходи в бота: ${BOT_LINK}`;
-        
-        openTelegramShare(shareUrl, shareText);
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\nhttps://clck.ru/3VB8wu\n\nЗаходи в бота: ${BOT_LINK}`;
+        openTelegramShare(shareText);
 
         if (shareOptionsModal) {
             shareOptionsModal.classList.remove('active');
@@ -523,8 +520,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (shareAudioBtn) {
         shareAudioBtn.addEventListener('click', () => {
-            const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:`;
-            openTelegramShare(BOT_LINK, text);
+            const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:\n${BOT_LINK}`;
+            openTelegramShare(text);
         });
     }
 
