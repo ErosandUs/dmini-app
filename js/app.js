@@ -250,6 +250,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let activeSharePath = ""; 
 
+    function openTelegramShare(shareText) {
+        const encodedText = encodeURIComponent(shareText);
+        const webShareUrl = `https://t.me/share/url?text=${encodedText}`;
+        const tgDeepLink = `tg://msg_url?text=${encodedText}`;
+
+        if (window.Telegram?.WebApp?.openTelegramLink) {
+            window.Telegram.WebApp.openTelegramLink(webShareUrl);
+        } else {
+            // Fallback для нативного открытия клиента Telegram на мобильных устройствах
+            window.location.href = tgDeepLink;
+        }
+
+        if (window.Telegram?.WebApp?.expand) {
+            window.Telegram.WebApp.expand();
+        }
+    }
+
     shareCardBtn.addEventListener('click', () => {
         activeSharePath = currentCardPath;
         shareOptionsModal.classList.add('active');
@@ -269,18 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
 https://clck.ru/3VB8wu
 
 Заходи в бота: ${BOT_LINK}`;
-        const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
-
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-            window.Telegram.WebApp.openTelegramLink(shareUrl);
-        } else {
-            window.open(shareUrl, '_blank');
-        }
-
-        if (window.Telegram?.WebApp?.expand) {
-            window.Telegram.WebApp.expand();
-        }
         
+        openTelegramShare(shareText);
         shareOptionsModal.classList.remove('active');
     });
 
@@ -516,17 +523,9 @@ https://clck.ru/3VB8wu
 
     if (shareAudioBtn) {
         shareAudioBtn.addEventListener('click', () => {
-            const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:`;
-            const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(BOT_LINK)}&text=${encodeURIComponent(text)}`;
-            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
-                window.Telegram.WebApp.openTelegramLink(shareUrl);
-            } else {
-                window.open(shareUrl, '_blank');
-            }
-
-            if (window.Telegram?.WebApp?.expand) {
-                window.Telegram.WebApp.expand();
-            }
+            const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:
+${BOT_LINK}`;
+            openTelegramShare(text);
         });
     }
 
