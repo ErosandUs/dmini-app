@@ -395,6 +395,61 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    let statusPollInterval = null;
+    let isCheckingStatus = false;
+
+    function checkPromoStatus(senderId) {
+        if (!EVENT_CONFIG.appsScriptUrl || !senderId) return;
+        if (currentSenderPromo) return;
+        if (isCheckingStatus) return;
+
+        isCheckingStatus = true;
+        fetch(EVENT_CONFIG.appsScriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ userId: senderId, action: 'check_status' })
+        })
+        .then(res => res.json())
+        .then(data => {
+            isCheckingStatus = false;
+            if (data && data.status === 'success' && data.promo) {
+                if (statusPollInterval) {
+                    clearInterval(statusPollInterval);
+                    statusPollInterval = null;
+                }
+                localStorage.setItem(getEventKey('event_sender_promo'), data.promo);
+                localStorage.setItem(getEventKey('event_share_clicked_time'), new Date().getTime().toString());
+                showStep2(data.promo);
+            }
+        })
+        .catch(err => {
+            isCheckingStatus = false;
+            console.warn('Check promo status error:', err);
+        });
+    }
+
+    function startStatusPolling(senderId) {
+        if (statusPollInterval) clearInterval(statusPollInterval);
+        checkPromoStatus(senderId);
+        statusPollInterval = setInterval(() => {
+            checkPromoStatus(senderId);
+        }, 2500);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !currentSenderPromo && step2 && step2.style.display !== 'none') {
+            const senderId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'direct';
+            checkPromoStatus(senderId);
+        }
+    });
+
+    window.addEventListener('focus', () => {
+        if (!currentSenderPromo && step2 && step2.style.display !== 'none') {
+            const senderId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'direct';
+            checkPromoStatus(senderId);
+        }
+    });
+
     if (directRegBtn) {
         directRegBtn.addEventListener('click', () => {
             openLinkSafe(EVENT_CONFIG.registrationLink);
@@ -404,20 +459,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (shareBtn) {
         shareBtn.addEventListener('click', () => {
             const senderId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || 'direct';
-            const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
-            
-            const shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — промокод на скидку ${EVENT_CONFIG.promoReceiver} на первое участие.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
-            
-            const shareUrl = `https://t.me/share/url?text=${encodeURIComponent(shareText)}`;
-            
-            openLinkSafe(shareUrl, true);
+
+            const inlineParams = encodeURIComponent(JSON.stringify({
+                title: EVENT_CONFIG.title,
+                regLink: EVENT_CONFIG.registrationLink,
+                promo: EVENT_CONFIG.promoReceiver,
+                img: new URL(EVENT_CONFIG.imagePath, window.location.href).toString()
+            }));
+
+            if (window.Telegram?.WebApp?.switchInlineQuery) {
+                window.Telegram.WebApp.switchInlineQuery(inlineParams, ['users']);
+            } else {
+                // Fallback для тестирования вне мобильного клиента Telegram
+                const fallbackUrl = `https://t.me/share/url?url=&text=${encodeURIComponent('Привет! Приглашаю тебя на медитацию «' + EVENT_CONFIG.title + '»: ' + EVENT_CONFIG.registrationLink + '?promo=' + EVENT_CONFIG.promoReceiver)}`;
+                openLinkSafe(fallbackUrl, true);
+            }
+
             if (window.Telegram?.WebApp?.expand) {
                 window.Telegram.WebApp.expand();
             }
 
             if (step1) step1.style.display = 'none';
             if (step2) step2.style.display = 'block';
-            if (step2Desc) step2Desc.innerText = 'Получаем твой промокод...';
+            if (step2Desc) step2Desc.innerText = 'Ожидаем подтверждения отправки...';
             if (promoDisplay) {
                 promoDisplay.style.display = 'block';
                 promoDisplay.innerText = '...';
@@ -425,30 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (rewardTimerBox) rewardTimerBox.style.display = 'none';
             if (applyPromoBtn) applyPromoBtn.style.display = 'none';
 
-            if (EVENT_CONFIG.appsScriptUrl) {
-                fetch(EVENT_CONFIG.appsScriptUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ userId: senderId })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.status === 'success' && data.promo) {
-                        // Записываем время И промокод строго ТОЛЬКО при успешном ответе
-                        localStorage.setItem(getEventKey('event_share_clicked_time'), new Date().getTime().toString());
-                        localStorage.setItem(getEventKey('event_sender_promo'), data.promo);
-                        showStep2(data.promo);
-                    } else {
-                        showStep2Error();
-                    }
-                })
-                .catch(err => {
-                    console.warn('Google Apps Script fetch error:', err);
-                    showStep2Error();
-                });
-            } else {
-                showStep2Error();
-            }
+            startStatusPolling(senderId);
         });
     }
 
