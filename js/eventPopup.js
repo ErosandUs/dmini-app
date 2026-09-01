@@ -478,7 +478,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const senderId = getSenderId();
 
             if (window.Telegram?.WebApp?.switchInlineQuery) {
-                window.Telegram.WebApp.switchInlineQuery("invite");
+                const inlineParams = JSON.stringify({
+                    title: EVENT_CONFIG.title,
+                    regLink: EVENT_CONFIG.registrationLink,
+                    promo: EVENT_CONFIG.promoReceiver,
+                    img: new URL(EVENT_CONFIG.imagePath, window.location.href).toString()
+                });
+                window.Telegram.WebApp.switchInlineQuery(inlineParams);
             } else {
                 // Fallback на случай открытия в обычном браузере вне Telegram (с параметром url= для iOS)
                 const directLink = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
