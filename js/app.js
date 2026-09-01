@@ -282,10 +282,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const shareUrl = "https://clck.ru/3VB8wu";
-        const shareText = "Привет! Нашла классное приложение по метафорическим картам ✨";
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\n\nЗаходи в бота: ${BOT_LINK}`;
         
         openTelegramShare(shareUrl, shareText);
-        
+
         if (shareOptionsModal) {
             shareOptionsModal.classList.remove('active');
         }
