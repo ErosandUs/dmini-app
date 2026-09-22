@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ym(110909428, 'reachGoal', 'share_direct');
         }
 
-        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\nhttps://clck.ru/3VB8wu\n\nЗаходи в бота: ${BOT_LINK}`;
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\nhttps://clck.ru/3VB8wu\n\nЗаходи в приложение: ${BOT_LINK}`;
         openTelegramShare(shareText);
 
         if (shareOptionsModal) {
