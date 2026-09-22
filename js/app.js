@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- НАСТРОЙКИ ---
-    const BOT_LINK = "https://t.me/Djamiliakha_bot"; // Ваша актуальная ссылка на бота
+    const BOT_LINK = "https://t.me/Djamiliakha_bot?start=go"; // Ваша актуальная ссылка на бота
     const TOTAL_CARDS = 71; 
     const STORAGE_KEY = "mystic_collection"; // Ключ для локального хранилища коллекции
 
