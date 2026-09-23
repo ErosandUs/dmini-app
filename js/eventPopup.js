@@ -255,7 +255,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function closeModal() { if (modal) modal.classList.remove('active'); }
 
     if (closeEventModal) closeEventModal.addEventListener('click', closeModal);
-    if (timerBanner) timerBanner.addEventListener('click', openModal);
+    if (timerBanner) {
+        timerBanner.addEventListener('click', () => {
+            window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+            openModal();
+        });
+    }
     if (modal) {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) closeModal();
@@ -408,12 +413,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (directRegBtn) {
         directRegBtn.addEventListener('click', () => {
+            window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
             openLinkSafe(EVENT_CONFIG.registrationLink);
         });
     }
 
     if (shareBtn) {
         shareBtn.addEventListener('click', () => {
+            window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
             const senderId = getSenderId();
             const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
             
@@ -472,7 +479,11 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem(getEventKey('event_promo_claimed'), 'true');
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(promoToApply).catch(err => console.log('Clipboard error:', err));
+                navigator.clipboard.writeText(promoToApply)
+                    .then(() => {
+                        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+                    })
+                    .catch(err => console.log('Clipboard error:', err));
             }
 
             const applyUrl = `${EVENT_CONFIG.registrationLink}?promo=${encodeURIComponent(promoToApply)}`;

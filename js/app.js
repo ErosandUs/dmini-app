@@ -11,19 +11,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- ТАКТИЛЬНЫЙ ОТКЛИК (HAPTIC FEEDBACK) ---
+    // Тройная мягкая вибрация для сакрального вытягивания карты
     function triggerMysticCardHaptic() {
         const haptic = window.Telegram?.WebApp?.HapticFeedback;
         if (!haptic) return;
-
         haptic.impactOccurred('light');
+        setTimeout(() => { haptic.impactOccurred('light'); }, 90);
+        setTimeout(() => { haptic.impactOccurred('light'); }, 180);
+    }
 
-        setTimeout(() => {
-            haptic.impactOccurred('light');
-        }, 90);
+    // Универсальный мягкий клик для кнопок
+    function triggerSoftHaptic() {
+        window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    }
 
-        setTimeout(() => {
-            haptic.impactOccurred('light');
-        }, 180);
+    // Легкий микротик для навигации
+    function triggerSelectionHaptic() {
+        window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
     }
 
     // --- ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ ИЗ INDEX.HTML ---
@@ -47,9 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            if (window.Telegram?.WebApp?.HapticFeedback?.selectionChanged) {
-                window.Telegram.WebApp.HapticFeedback.selectionChanged();
-            }
+            triggerSelectionHaptic();
             tabBtns.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
@@ -67,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     vTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            triggerSelectionHaptic();
             vTabBtns.forEach(b => b.classList.remove('active'));
             vTabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
@@ -286,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     shareCardBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
         activeSharePath = currentCardPath;
         shareOptionsModal.classList.add('active');
     });
@@ -296,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- НАДЕЖНАЯ ОТПРАВКА В ЛС ---
     shareToFriendBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
@@ -310,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
     shareToUniverseBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_story');
         }
@@ -415,6 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.collection-share-btn').forEach(btn => {
             btn.addEventListener('click', function() {
+                triggerSoftHaptic();
                 activeSharePath = this.getAttribute('data-path'); 
                 shareOptionsModal.classList.add('active'); 
             });
@@ -430,6 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
             autoHeight: true,
             on: {
                 slideChange: function () {
+                    triggerSelectionHaptic();
                     updateActiveMonthBtn(this.activeIndex, monthSlidesIndex);
                 }
             }
@@ -437,6 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.month-btn').forEach(btn => {
             btn.addEventListener('click', function() {
+                triggerSelectionHaptic();
                 const targetIndex = parseInt(this.getAttribute('data-index'));
                 collectionSwiper.slideTo(targetIndex, 500); 
             });
@@ -500,7 +509,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    resetPracticeBtn.addEventListener('click', resetToStart);
+    resetPracticeBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
+        resetToStart();
+    });
 
     // --- ШАГ 2: АУДИО И ПЕРЕХОД К ФИНАЛЬНОМУ ВИДЕО ---
     const audioPlayer = document.getElementById('audioPlayer');
@@ -532,6 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (nextToAudioBtn) {
         nextToAudioBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
             if (step1Card) step1Card.style.display = 'none';
             if (step2Audio) step2Audio.style.display = 'flex'; 
             startAudioForCurrentCard();
@@ -540,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (shareAudioBtn) {
         shareAudioBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
             const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:\n${BOT_LINK}`;
             openTelegramShare(text);
         });
@@ -631,6 +645,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.video-item').forEach(item => {
         item.addEventListener('click', function() {
+            triggerSoftHaptic();
             const videoId = this.getAttribute('data-id');
             modalVideoWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
             videoModal.classList.add('active');
@@ -852,9 +867,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeSheetBtn = document.getElementById('closeSheetBtn');
 
     function openSacredBottomSheet() {
-        if (window.Telegram?.WebApp?.HapticFeedback?.impactOccurred) {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-        }
+        triggerSoftHaptic();
         try {
             calculateSacredProgress();
         } catch(e) {
