@@ -10,6 +10,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- ТАКТИЛЬНЫЙ ОТКЛИК (HAPTIC FEEDBACK) ---
+    function triggerMysticCardHaptic() {
+        const haptic = window.Telegram?.WebApp?.HapticFeedback;
+        if (!haptic) return;
+
+        haptic.impactOccurred('light');
+
+        setTimeout(() => {
+            haptic.impactOccurred('light');
+        }, 90);
+
+        setTimeout(() => {
+            haptic.impactOccurred('light');
+        }, 180);
+    }
+
     // --- ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ ИЗ INDEX.HTML ---
     const appScriptTag = document.getElementById('appScript');
     const versionLabel = document.getElementById('appVersionLabel');
@@ -31,6 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (window.Telegram?.WebApp?.HapticFeedback?.selectionChanged) {
+                window.Telegram.WebApp.HapticFeedback.selectionChanged();
+            }
             tabBtns.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
@@ -194,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function drawRandomCard() {
         if (!isFlipped && checkTimer()) {
+            triggerMysticCardHaptic();
             window.isCardDrawing = true;
             if (typeof window.hideEventTimer === 'function') {
                 window.hideEventTimer();
@@ -832,6 +852,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeSheetBtn = document.getElementById('closeSheetBtn');
 
     function openSacredBottomSheet() {
+        if (window.Telegram?.WebApp?.HapticFeedback?.impactOccurred) {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        }
         try {
             calculateSacredProgress();
         } catch(e) {
