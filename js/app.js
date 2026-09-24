@@ -75,6 +75,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 4. Синхронизация системных зон (Safe Area Insets)
+        const updateTopPadding = () => {
+            const topSafe = window.Telegram?.WebApp?.safeAreaInset?.top || 0;
+            const topContent = window.Telegram?.WebApp?.contentSafeAreaInset?.top || 0;
+            const totalTop = Math.max(0, (topSafe + topContent) - 10);
+            if (document.body) {
+                document.body.style.paddingTop = `${totalTop}px`;
+            }
+        };
+
         const syncSafeArea = () => {
             try {
                 const root = document.documentElement;
@@ -90,9 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     root.style.setProperty('--tg-content-safe-area-inset-left', `${tg.contentSafeAreaInset.left || 0}px`);
                     root.style.setProperty('--tg-content-safe-area-inset-right', `${tg.contentSafeAreaInset.right || 0}px`);
                 }
-                if (document.body) {
-                    document.body.style.paddingTop = `calc(${tg.safeAreaInset?.top || 0}px + ${tg.contentSafeAreaInset?.top || 0}px)`;
-                }
+                updateTopPadding();
             } catch (err) {
                 console.warn('Не удалось синхронизировать Safe Area:', err);
             }
@@ -104,15 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof tg.onEvent === 'function') {
             try {
                 tg.onEvent('safeAreaChanged', () => {
-                    document.body.style.paddingTop = `calc(${tg.safeAreaInset?.top || 0}px + ${tg.contentSafeAreaInset?.top || 0}px)`;
+                    updateTopPadding();
                     syncSafeArea();
                 });
                 tg.onEvent('contentSafeAreaChanged', () => {
-                    document.body.style.paddingTop = `calc(${tg.safeAreaInset?.top || 0}px + ${tg.contentSafeAreaInset?.top || 0}px)`;
+                    updateTopPadding();
                     syncSafeArea();
                 });
                 tg.onEvent('fullscreenChanged', () => {
-                    document.body.style.paddingTop = `calc(${tg.safeAreaInset?.top || 0}px + ${tg.contentSafeAreaInset?.top || 0}px)`;
+                    updateTopPadding();
                     syncSafeArea();
                 });
             } catch (e) {
