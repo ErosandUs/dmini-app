@@ -1,14 +1,133 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Принудительное разворачивание Mini App при старте
-    if (window.Telegram?.WebApp?.expand) {
-        window.Telegram.WebApp.expand();
-    }
-    window.addEventListener('focus', () => {
-        if (window.Telegram?.WebApp?.expand) {
-            window.Telegram.WebApp.expand();
+    // Инициализация отображения и перехода в нативный полный экран (Bot API 8.0+)
+    if (window.Telegram?.WebApp) {
+        const tg = window.Telegram.WebApp;
+        try {
+            tg.ready();
+        } catch (_) {}
+
+        // Проверка поддержки методов Telegram Bot API 8.0+
+        const isBotApi8 = (() => {
+            try {
+                if (typeof tg.isVersionAtLeast === 'function') {
+                    return tg.isVersionAtLeast('8.0');
+                }
+                const v = parseFloat(tg.version || '0');
+                return v >= 8.0;
+            } catch (_) {
+                return false;
+            }
+        })();
+
+        // 1. Попытка входа в нативный Fullscreen ТОЛЬКО если версия Bot API >= 8.0, иначе expand()
+        try {
+            if (isBotApi8 && typeof tg.requestFullscreen === 'function') {
+                try {
+                    tg.requestFullscreen();
+                } catch (fsErr) {
+                    console.warn('tg.requestFullscreen() вызвал ошибку, откат на expand():', fsErr);
+                    if (typeof tg.expand === 'function') {
+                        tg.expand();
+                    }
+                }
+            } else if (typeof tg.expand === 'function') {
+                tg.expand();
+            }
+        } catch (e) {
+            console.warn('Fullscreen не поддерживается:', e);
+            if (typeof tg.expand === 'function') {
+                try { tg.expand(); } catch (_) {}
+            }
         }
-    });
+
+        // 2. Защита от закрытия шторки случайным свайпом вниз (доступно с Bot API 7.7+)
+        try {
+            const isBotApi77 = (() => {
+                try {
+                    if (typeof tg.isVersionAtLeast === 'function') {
+                        return tg.isVersionAtLeast('7.7');
+                    }
+                    const v = parseFloat(tg.version || '0');
+                    return v >= 7.7;
+                } catch (_) {
+                    return false;
+                }
+            })();
+
+            if (isBotApi77 && typeof tg.disableVerticalSwipes === 'function') {
+                tg.disableVerticalSwipes();
+            }
+        } catch (e) {
+            console.warn('disableVerticalSwipes не поддерживается:', e);
+        }
+
+        // 3. Синхронизация системных цветов Telegram с палитрой приложения
+        try {
+            if (typeof tg.setHeaderColor === 'function') {
+                tg.setHeaderColor('#f6f0fa');
+            }
+            if (typeof tg.setBackgroundColor === 'function') {
+                tg.setBackgroundColor('#f6f0fa');
+            }
+        } catch (e) {
+            console.warn('Цвета системных зон не применились:', e);
+        }
+
+        // 4. Синхронизация системных зон (Safe Area Insets)
+        const syncSafeArea = () => {
+            try {
+                const root = document.documentElement;
+                if (tg.safeAreaInset) {
+                    root.style.setProperty('--tg-safe-area-inset-top', `${tg.safeAreaInset.top || 0}px`);
+                    root.style.setProperty('--tg-safe-area-inset-bottom', `${tg.safeAreaInset.bottom || 0}px`);
+                    root.style.setProperty('--tg-safe-area-inset-left', `${tg.safeAreaInset.left || 0}px`);
+                    root.style.setProperty('--tg-safe-area-inset-right', `${tg.safeAreaInset.right || 0}px`);
+                }
+                if (tg.contentSafeAreaInset) {
+                    root.style.setProperty('--tg-content-safe-area-inset-top', `${tg.contentSafeAreaInset.top || 0}px`);
+                    root.style.setProperty('--tg-content-safe-area-inset-bottom', `${tg.contentSafeAreaInset.bottom || 0}px`);
+                    root.style.setProperty('--tg-content-safe-area-inset-left', `${tg.contentSafeAreaInset.left || 0}px`);
+                    root.style.setProperty('--tg-content-safe-area-inset-right', `${tg.contentSafeAreaInset.right || 0}px`);
+                }
+            } catch (err) {
+                console.warn('Не удалось синхронизировать Safe Area:', err);
+            }
+        };
+
+        syncSafeArea();
+
+        if (typeof tg.onEvent === 'function') {
+            try {
+                tg.onEvent('safeAreaChanged', syncSafeArea);
+                tg.onEvent('contentSafeAreaChanged', syncSafeArea);
+                tg.onEvent('fullscreenChanged', syncSafeArea);
+            } catch (e) {
+                console.warn('Ошибка подписки на события safe area:', e);
+            }
+        }
+
+        window.addEventListener('focus', () => {
+            try {
+                if (isBotApi8 && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+                    try {
+                        tg.requestFullscreen();
+                    } catch (_) {
+                        if (typeof tg.expand === 'function' && !tg.isExpanded) {
+                            tg.expand();
+                        }
+                    }
+                } else if (typeof tg.expand === 'function' && !tg.isExpanded) {
+                    tg.expand();
+                }
+            } catch (e) {
+                if (typeof tg.expand === 'function') {
+                    try { tg.expand(); } catch (_) {}
+                }
+            }
+            syncSafeArea();
+        });
+    }
 
     // --- ТАКТИЛЬНЫЙ ОТКЛИК (HAPTIC FEEDBACK) ---
     // Тройная мягкая вибрация для сакрального вытягивания карты
