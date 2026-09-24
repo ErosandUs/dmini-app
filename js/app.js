@@ -90,6 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     root.style.setProperty('--tg-content-safe-area-inset-left', `${tg.contentSafeAreaInset.left || 0}px`);
                     root.style.setProperty('--tg-content-safe-area-inset-right', `${tg.contentSafeAreaInset.right || 0}px`);
                 }
+                if (document.body) {
+                    document.body.style.paddingTop = `calc(${tg.safeAreaInset?.top || 0}px + ${tg.contentSafeAreaInset?.top || 0}px)`;
+                }
             } catch (err) {
                 console.warn('Не удалось синхронизировать Safe Area:', err);
             }
@@ -97,11 +100,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         syncSafeArea();
 
+        // Слушатели обновления зон безопасности в реальном времени
         if (typeof tg.onEvent === 'function') {
             try {
-                tg.onEvent('safeAreaChanged', syncSafeArea);
-                tg.onEvent('contentSafeAreaChanged', syncSafeArea);
-                tg.onEvent('fullscreenChanged', syncSafeArea);
+                tg.onEvent('safeAreaChanged', () => {
+                    document.body.style.paddingTop = `calc(${tg.safeAreaInset?.top || 0}px + ${tg.contentSafeAreaInset?.top || 0}px)`;
+                    syncSafeArea();
+                });
+                tg.onEvent('contentSafeAreaChanged', () => {
+                    document.body.style.paddingTop = `calc(${tg.safeAreaInset?.top || 0}px + ${tg.contentSafeAreaInset?.top || 0}px)`;
+                    syncSafeArea();
+                });
+                tg.onEvent('fullscreenChanged', () => {
+                    document.body.style.paddingTop = `calc(${tg.safeAreaInset?.top || 0}px + ${tg.contentSafeAreaInset?.top || 0}px)`;
+                    syncSafeArea();
+                });
             } catch (e) {
                 console.warn('Ошибка подписки на события safe area:', e);
             }
