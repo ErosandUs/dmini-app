@@ -108,8 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         syncSafeArea();
 
-        // Слушатели обновления зон безопасности в реальном времени
-        if (typeof tg.onEvent === 'function') {
+        // Слушатели обновления зон безопасности в реальном времени (Bot API 8.0+)
+        if (isBotApi8 && typeof tg.onEvent === 'function') {
             try {
                 tg.onEvent('safeAreaChanged', () => {
                     updateTopPadding();
@@ -178,6 +178,61 @@ document.addEventListener('DOMContentLoaded', () => {
         const vMatch = srcAttr ? srcAttr.match(/\?v=(.+)$/) : null;
         const currentVersion = vMatch ? vMatch[1] : '1';
         versionLabel.innerText = `v${currentVersion}`;
+    }
+
+    // --- ДОБАВЛЕНИЕ ЯРЛЫКА НА РАБОЧИЙ СТОЛ (TELEGRAM WEBAPP SDK) ---
+    let canAddToHomeScreen = false;
+    const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
+
+    const tg = window.Telegram?.WebApp;
+    const isBotApi8OrHigher = (() => {
+        try {
+            if (!tg) return false;
+            if (typeof tg.isVersionAtLeast === 'function') {
+                return tg.isVersionAtLeast('8.0');
+            }
+            const v = parseFloat(tg.version || '0');
+            return !isNaN(v) && v >= 8.0;
+        } catch (_) {
+            return false;
+        }
+    })();
+
+    if (isBotApi8OrHigher && tg) {
+        try {
+            if (typeof tg.checkHomeScreenStatus === 'function') {
+                tg.checkHomeScreenStatus((status) => {
+                    // Статус 'missed' означает, что ярлык еще не добавлен на главный экран
+                    if (status === 'missed') {
+                        canAddToHomeScreen = true;
+                    }
+                });
+            }
+
+            if (typeof tg.onEvent === 'function') {
+                tg.onEvent('homeScreenAdded', () => {
+                    canAddToHomeScreen = false;
+                    if (addToHomeScreenBtn) {
+                        addToHomeScreenBtn.style.display = 'none';
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn('Ошибка при проверке статуса HomeScreen:', err);
+        }
+    }
+
+    if (addToHomeScreenBtn) {
+        addToHomeScreenBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
+            if (isBotApi8OrHigher && tg && typeof tg.addToHomeScreen === 'function') {
+                try {
+                    tg.addToHomeScreen();
+                } catch (err) {
+                    console.warn('addToHomeScreen не поддерживается:', err);
+                }
+            }
+        });
     }
 
     // --- НАСТРОЙКИ ---
@@ -625,6 +680,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.isCardDrawing = false;
         
+        if (addToHomeScreenBtn) {
+            addToHomeScreenBtn.style.display = 'none';
+        }
+        
         if (finalVideoPlayer) {
             finalVideoPlayer.pause();
             finalVideoPlayer.currentTime = 0;
@@ -743,6 +802,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (finalVideoPlayer) {
         finalVideoPlayer.addEventListener('ended', () => {
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
+            if (canAddToHomeScreen && addToHomeScreenBtn) {
+                addToHomeScreenBtn.style.display = 'block';
+            }
             autoResetTimeout = setTimeout(resetToStart, 20000); 
         });
     }
