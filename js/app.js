@@ -108,8 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         syncSafeArea();
 
-        // Слушатели обновления зон безопасности в реальном времени (Bot API 8.0+)
-        if (isBotApi8 && typeof tg.onEvent === 'function') {
+        // Слушатели обновления зон безопасности в реальном времени
+        if (typeof tg.onEvent === 'function') {
             try {
                 tg.onEvent('safeAreaChanged', () => {
                     updateTopPadding();
@@ -178,49 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const vMatch = srcAttr ? srcAttr.match(/\?v=(.+)$/) : null;
         const currentVersion = vMatch ? vMatch[1] : '1';
         versionLabel.innerText = `v${currentVersion}`;
-    }
-
-    // --- ДОБАВЛЕНИЕ ЯРЛЫКА НА РАБОЧИЙ СТОЛ (TELEGRAM WEBAPP SDK) ---
-    let canAddToHomeScreen = false;
-    const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
-
-    if (window.Telegram?.WebApp?.checkHomeScreenStatus) {
-        try {
-            window.Telegram.WebApp.checkHomeScreenStatus((status) => {
-                if (status === 'missed' || status === 'unknown') {
-                    canAddToHomeScreen = true;
-                }
-            });
-        } catch (_) {
-            canAddToHomeScreen = true;
-        }
-    } else {
-        // Включаем симуляцию для тестов в браузере и AI Studio
-        canAddToHomeScreen = true;
-    }
-
-    if (window.Telegram?.WebApp?.onEvent) {
-        try {
-            window.Telegram.WebApp.onEvent('homeScreenAdded', () => {
-                canAddToHomeScreen = false;
-                if (addToHomeScreenBtn) addToHomeScreenBtn.style.display = 'none';
-            });
-        } catch (_) {}
-    }
-
-    if (addToHomeScreenBtn) {
-        addToHomeScreenBtn.addEventListener('click', () => {
-            triggerSoftHaptic();
-            if (window.Telegram?.WebApp?.addToHomeScreen) {
-                try {
-                    window.Telegram.WebApp.addToHomeScreen();
-                } catch (err) {
-                    console.warn('addToHomeScreen error:', err);
-                }
-            } else {
-                alert("В Telegram на смартфоне здесь откроется нативное окно добавления иконки на рабочий стол ✨");
-            }
-        });
     }
 
     // --- НАСТРОЙКИ ---
@@ -668,10 +625,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.isCardDrawing = false;
         
-        if (addToHomeScreenBtn) {
-            addToHomeScreenBtn.style.display = 'none';
-        }
-        
         if (finalVideoPlayer) {
             finalVideoPlayer.pause();
             finalVideoPlayer.currentTime = 0;
@@ -709,15 +662,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentAudioName = "";
     let audioCtx, gainNode, videoSource;
 
-    function preloadFinalVideo() {
-        if (typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0 && finalVideoPlayer) {
-            const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
-            finalVideoPlayer.src = randomFinalVideo;
-            finalVideoPlayer.preload = "auto";
-            finalVideoPlayer.load();
-        }
-    }
-
     function startAudioForCurrentCard() {
         const availableTrackIds = (typeof CARD_TO_AUDIO_MAP !== 'undefined' && CARD_TO_AUDIO_MAP[currentCardNumber]) ? CARD_TO_AUDIO_MAP[currentCardNumber] : [1];
         const targetAudioId = availableTrackIds[Math.floor(Math.random() * availableTrackIds.length)];
@@ -741,23 +685,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nextToAudioBtn) {
         nextToAudioBtn.addEventListener('click', () => {
             triggerSoftHaptic();
-            preloadFinalVideo();
-            try {
-                if (!audioCtx && finalVideoPlayer) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContext();
-                    videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
-                    gainNode = audioCtx.createGain();
-                    gainNode.gain.value = 3.0; 
-                    videoSource.connect(gainNode);
-                    gainNode.connect(audioCtx.destination);
-                }
-                if (audioCtx && audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-            } catch (e) {
-                console.log("AudioContext init info:", e);
-            }
             if (step1Card) step1Card.style.display = 'none';
             if (step2Audio) step2Audio.style.display = 'flex'; 
             startAudioForCurrentCard();
@@ -780,19 +707,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (step2Audio) step2Audio.style.display = 'none';
             if (step3Video) step3Video.style.display = 'block';
             
-            // Если видео по какой-то причине еще не было назначено, подстраховываемся:
-            if (finalVideoPlayer && !finalVideoPlayer.src && typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0) {
-                finalVideoPlayer.src = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
+            // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
+            if (typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0) {
+                const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
+                if (finalVideoPlayer) finalVideoPlayer.src = randomFinalVideo;
             }
-
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
+            
+            try {
+                if (!audioCtx && finalVideoPlayer) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext();
+                    videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
+                    gainNode = audioCtx.createGain();
+                    gainNode.gain.value = 3.0; 
+                    videoSource.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (e) {
+                console.log("Усиление звука не поддерживается", e);
             }
             
             if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
             
             if (finalVideoPlayer) {
-                finalVideoPlayer.currentTime = 0;
                 finalVideoPlayer.play().catch(err => {
                     if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
                 });
@@ -803,9 +743,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (finalVideoPlayer) {
         finalVideoPlayer.addEventListener('ended', () => {
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
-            if (canAddToHomeScreen && addToHomeScreenBtn) {
-                addToHomeScreenBtn.style.display = 'block';
-            }
             autoResetTimeout = setTimeout(resetToStart, 20000); 
         });
     }
