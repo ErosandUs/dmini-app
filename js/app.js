@@ -180,12 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
         versionLabel.innerText = `v${currentVersion}`;
     }
 
-    // --- ДОБАВЛЕНИЕ ЯРЛЫКА НА РАБОЧИЙ СТОЛ (БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ) ---
+    // --- ДОБАВЛЕНИЕ ЯРЛЫКА НА РАБОЧИЙ СТОЛ (БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ ДЛЯ ANDROID И IOS) ---
     let canAddToHomeScreen = false;
     const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
     const tgApp = window.Telegram?.WebApp;
+    const isAlreadyAddedLocally = localStorage.getItem('mystic_home_added') === 'true';
 
-    // Вызываем Telegram метод ТОЛЬКО если версия действительно 8.0+
+    // Жесткий фильтр: вызываем Telegram метод ТОЛЬКО если версия действительно 8.0+
     const isHomeScreenSupported = Boolean(
         tgApp &&
         typeof tgApp.isVersionAtLeast === 'function' &&
@@ -193,9 +194,10 @@ document.addEventListener('DOMContentLoaded', () => {
         typeof tgApp.checkHomeScreenStatus === 'function'
     );
 
-    if (isHomeScreenSupported) {
+    if (isHomeScreenSupported && !isAlreadyAddedLocally) {
         try {
             tgApp.checkHomeScreenStatus((status) => {
+                // 'missed' для Android, 'unknown' для iOS (из-за ограничений WebKit на iPhone)
                 if (status === 'missed' || status === 'unknown') {
                     canAddToHomeScreen = true;
                 }
@@ -204,10 +206,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof tgApp.onEvent === 'function') {
                 tgApp.onEvent('homeScreenAdded', () => {
                     canAddToHomeScreen = false;
+                    localStorage.setItem('mystic_home_added', 'true');
                     if (addToHomeScreenBtn) addToHomeScreenBtn.style.display = 'none';
                 });
             }
         } catch (_) {}
+    } else if (!tgApp || !tgApp.initData) {
+        // Симуляция для тестов в локальном браузере
+        canAddToHomeScreen = true;
     }
 
     if (addToHomeScreenBtn) {
@@ -219,6 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (err) {
                     console.warn('addToHomeScreen error:', err);
                 }
+            } else {
+                alert("На смартфоне в Telegram здесь откроется нативное окно добавления иконки на рабочий стол ✨");
             }
         });
     }
@@ -668,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.isCardDrawing = false;
         
-        // Скрываем кнопку рабочего стола при сбросе
+        // Скрываем кнопку добавления на экран при перезапуске
         if (addToHomeScreenBtn) {
             addToHomeScreenBtn.style.display = 'none';
         }
@@ -792,7 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
         finalVideoPlayer.addEventListener('ended', () => {
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
             
-            // Показываем кнопку добавления на экран смартфона
+            // Показываем кнопку добавления на экран смартфона после видео
             if (canAddToHomeScreen && addToHomeScreenBtn) {
                 addToHomeScreenBtn.style.display = 'block';
             }
@@ -1119,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Первичный расчет сакрального прогресса  при загрузке страницы
+    // Первичный расчет сакрального прогресса при загрузке страницы
     calculateSacredProgress();
 
     // Event popup logic is handled dynamically in eventPopup.js
