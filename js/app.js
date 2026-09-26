@@ -183,39 +183,42 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ДОБАВЛЕНИЕ ЯРЛЫКА НА РАБОЧИЙ СТОЛ (БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ) ---
     let canAddToHomeScreen = false;
     const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
+    const tgApp = window.Telegram?.WebApp;
 
-    // Жесткий фильтр: вызываем метод ТОЛЬКО если версия действительно 8.0+
-    const isBotApi8OrHigher = Boolean(
-        window.Telegram?.WebApp?.isVersionAtLeast &&
-        window.Telegram.WebApp.isVersionAtLeast('8.0')
+    // Жесткий фильтр: вызываем Telegram метод ТОЛЬКО если версия действительно 8.0+
+    const isHomeScreenSupported = Boolean(
+        tgApp &&
+        typeof tgApp.isVersionAtLeast === 'function' &&
+        tgApp.isVersionAtLeast('8.0') &&
+        typeof tgApp.checkHomeScreenStatus === 'function'
     );
 
-    if (isBotApi8OrHigher) {
+    if (isHomeScreenSupported) {
         try {
-            window.Telegram.WebApp.checkHomeScreenStatus((status) => {
-                if (status === 'missed' || status === 'unknown') {
+            tgApp.checkHomeScreenStatus((status) => {
+                if (status === 'missed') {
                     canAddToHomeScreen = true;
                 }
             });
 
-            if (typeof window.Telegram.WebApp.onEvent === 'function') {
-                window.Telegram.WebApp.onEvent('homeScreenAdded', () => {
+            if (typeof tgApp.onEvent === 'function') {
+                tgApp.onEvent('homeScreenAdded', () => {
                     canAddToHomeScreen = false;
                     if (addToHomeScreenBtn) addToHomeScreenBtn.style.display = 'none';
                 });
             }
         } catch (_) {}
-    } else {
-        // Режим симуляции для тестов
+    } else if (!tgApp || !tgApp.initData) {
+        // Симуляция для тестов в локальном Vite и браузере (вне Telegram)
         canAddToHomeScreen = true;
     }
 
     if (addToHomeScreenBtn) {
         addToHomeScreenBtn.addEventListener('click', () => {
             triggerSoftHaptic();
-            if (isBotApi8OrHigher && typeof window.Telegram?.WebApp?.addToHomeScreen === 'function') {
+            if (isHomeScreenSupported && typeof tgApp.addToHomeScreen === 'function') {
                 try {
-                    window.Telegram.WebApp.addToHomeScreen();
+                    tgApp.addToHomeScreen();
                 } catch (err) {
                     console.warn('addToHomeScreen error:', err);
                 }
@@ -794,7 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
         finalVideoPlayer.addEventListener('ended', () => {
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
             
-            // Показываем кнопку добавления на экран смартфона после видео
+            // Показываем кнопку добавления на экран смартфона
             if (canAddToHomeScreen && addToHomeScreenBtn) {
                 addToHomeScreenBtn.style.display = 'block';
             }
