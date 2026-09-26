@@ -180,45 +180,59 @@ document.addEventListener('DOMContentLoaded', () => {
         versionLabel.innerText = `v${currentVersion}`;
     }
 
-    // --- ДОБАВЛЕНИЕ ЯРЛЫКА НА РАБОЧИЙ СТОЛ (БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ) ---
+    // --- ДОБАВЛЕНИЕ ЯРЛЫКА НА РАБОЧИЙ СТОЛ (С ФИКСОМ ДЛЯ IPHONE) ---
     let canAddToHomeScreen = false;
     const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
-    const tgApp = window.Telegram?.WebApp;
 
-    // Жесткий фильтр: вызываем Telegram метод ТОЛЬКО если версия действительно 8.0+
-    const isHomeScreenSupported = Boolean(
-        tgApp &&
-        typeof tgApp.isVersionAtLeast === 'function' &&
-        tgApp.isVersionAtLeast('8.0') &&
-        typeof tgApp.checkHomeScreenStatus === 'function'
+    // Жесткий фильтр: вызываем метод ТОЛЬКО если версия действительно 8.0+
+    const isBotApi8OrHigher = Boolean(
+        window.Telegram?.WebApp?.isVersionAtLeast &&
+        window.Telegram.WebApp.isVersionAtLeast('8.0')
     );
 
-    if (isHomeScreenSupported) {
+    let homeScreenStatusResolved = false;
+
+    if (isBotApi8OrHigher) {
         try {
-            tgApp.checkHomeScreenStatus((status) => {
-                if (status === 'missed') {
+            window.Telegram.WebApp.checkHomeScreenStatus((status) => {
+                homeScreenStatusResolved = true;
+                // ФИКС ДЛЯ IPHONE: показываем кнопку во всех статусах, КРОМЕ "added".
+                // На iOS часто приходит "unsupported" — раньше это молча скрывало кнопку.
+                if (status !== 'added') {
                     canAddToHomeScreen = true;
                 }
             });
 
-            if (typeof tgApp.onEvent === 'function') {
-                tgApp.onEvent('homeScreenAdded', () => {
+            if (typeof window.Telegram.WebApp.onEvent === 'function') {
+                window.Telegram.WebApp.onEvent('homeScreenAdded', () => {
                     canAddToHomeScreen = false;
                     if (addToHomeScreenBtn) addToHomeScreenBtn.style.display = 'none';
                 });
             }
-        } catch (_) {}
-    } else if (!tgApp || !tgApp.initData) {
-        // Симуляция для тестов в локальном Vite и браузере (вне Telegram)
+        } catch (_) {
+            homeScreenStatusResolved = true;
+            canAddToHomeScreen = true;
+        }
+    } else {
+        // Режим симуляции для тестов
+        homeScreenStatusResolved = true;
         canAddToHomeScreen = true;
     }
+
+    // Защитный таймаут: если колбэк так и не сработал (редкий баг в Telegram iOS),
+    // показываем кнопку через 3 секунды на всякий случай.
+    setTimeout(() => {
+        if (!homeScreenStatusResolved) {
+            canAddToHomeScreen = true;
+        }
+    }, 3000);
 
     if (addToHomeScreenBtn) {
         addToHomeScreenBtn.addEventListener('click', () => {
             triggerSoftHaptic();
-            if (isHomeScreenSupported && typeof tgApp.addToHomeScreen === 'function') {
+            if (isBotApi8OrHigher && typeof window.Telegram?.WebApp?.addToHomeScreen === 'function') {
                 try {
-                    tgApp.addToHomeScreen();
+                    window.Telegram.WebApp.addToHomeScreen();
                 } catch (err) {
                     console.warn('addToHomeScreen error:', err);
                 }
@@ -673,6 +687,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.isCardDrawing = false;
         
+        // Снимаем класс паузы анимаций (на случай, если видео не догрузилось корректно)
+        document.body.classList.remove('video-playing');
+
         // Скрываем кнопку добавления на экран при перезапуске
         if (addToHomeScreenBtn) {
             addToHomeScreenBtn.style.display = 'none';
@@ -794,10 +811,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (finalVideoPlayer) {
+        // Пока играет финальное видео — ставим все «дыхания» на паузу ради GPU
+        finalVideoPlayer.addEventListener('play', () => {
+            document.body.classList.add('video-playing');
+        });
+        finalVideoPlayer.addEventListener('pause', () => {
+            document.body.classList.remove('video-playing');
+        });
+
         finalVideoPlayer.addEventListener('ended', () => {
+            document.body.classList.remove('video-playing');
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
             
-            // Показываем кнопку добавления на экран смартфона
+            // Показываем кнопку добавления на экран смартфона после видео
             if (canAddToHomeScreen && addToHomeScreenBtn) {
                 addToHomeScreenBtn.style.display = 'block';
             }
