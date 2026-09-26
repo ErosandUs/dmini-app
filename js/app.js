@@ -180,6 +180,54 @@ document.addEventListener('DOMContentLoaded', () => {
         versionLabel.innerText = `v${currentVersion}`;
     }
 
+    // --- ДОБАВЛЕНИЕ ЯРЛЫКА НА РАБОЧИЙ СТОЛ (БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ) ---
+    let canAddToHomeScreen = false;
+    const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
+    const tgApp = window.Telegram?.WebApp;
+
+    // Жесткий фильтр: вызываем Telegram метод ТОЛЬКО если версия действительно 8.0+
+    const isHomeScreenSupported = Boolean(
+        tgApp &&
+        typeof tgApp.isVersionAtLeast === 'function' &&
+        tgApp.isVersionAtLeast('8.0') &&
+        typeof tgApp.checkHomeScreenStatus === 'function'
+    );
+
+    if (isHomeScreenSupported) {
+        try {
+            tgApp.checkHomeScreenStatus((status) => {
+                if (status === 'missed') {
+                    canAddToHomeScreen = true;
+                }
+            });
+
+            if (typeof tgApp.onEvent === 'function') {
+                tgApp.onEvent('homeScreenAdded', () => {
+                    canAddToHomeScreen = false;
+                    if (addToHomeScreenBtn) addToHomeScreenBtn.style.display = 'none';
+                });
+            }
+        } catch (_) {}
+    } else if (!tgApp || !tgApp.initData) {
+        // Симуляция для тестов в локальном Vite и браузере (вне Telegram)
+        canAddToHomeScreen = true;
+    }
+
+    if (addToHomeScreenBtn) {
+        addToHomeScreenBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
+            if (isHomeScreenSupported && typeof tgApp.addToHomeScreen === 'function') {
+                try {
+                    tgApp.addToHomeScreen();
+                } catch (err) {
+                    console.warn('addToHomeScreen error:', err);
+                }
+            } else {
+                alert("На смартфоне в Telegram здесь откроется нативное окно добавления иконки на рабочий стол ✨");
+            }
+        });
+    }
+
     // --- НАСТРОЙКИ ---
     const BOT_LINK = "https://t.me/Djamiliakha_bot?start=go"; // Ваша актуальная ссылка на бота
     const TOTAL_CARDS = 71; 
@@ -625,6 +673,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.isCardDrawing = false;
         
+        // Скрываем кнопку добавления на экран при перезапуске
+        if (addToHomeScreenBtn) {
+            addToHomeScreenBtn.style.display = 'none';
+        }
+
         if (finalVideoPlayer) {
             finalVideoPlayer.pause();
             finalVideoPlayer.currentTime = 0;
@@ -743,6 +796,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (finalVideoPlayer) {
         finalVideoPlayer.addEventListener('ended', () => {
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
+            
+            // Показываем кнопку добавления на экран смартфона
+            if (canAddToHomeScreen && addToHomeScreenBtn) {
+                addToHomeScreenBtn.style.display = 'block';
+            }
+            
             autoResetTimeout = setTimeout(resetToStart, 20000); 
         });
     }
@@ -1070,4 +1129,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event popup logic is handled dynamically in eventPopup.js
 });
-
