@@ -241,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let countdownInterval; 
 
     // --- НОВЫЙ БЛОК: Проверка VIP-пользователей ---
-    const VIP_USERS = ['Djamilia_Kha', 'atribute']; // Никнеймы без знака @
+    const VIP_USERS = ['Djamilia_Kha', 'atribute', 'ValentinEros']; // Никнеймы без знака @
 
     function isUserVIP() {
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
