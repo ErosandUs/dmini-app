@@ -101,6 +101,11 @@
 
                 <p style="margin-bottom: 20px;">Благодарим за прохождение практики ✨</p>
 
+                <!-- Стационарная кнопка добавления на рабочий стол -->
+                <button class="action-btn share-btn" id="addToHomeScreenBtn" style="display: none; margin-bottom: 15px;">
+                    📲 Добавить иконку на рабочий стол ✨
+                </button>
+
                 <button class="action-btn" id="resetPracticeBtn">Получить новое послание</button>
             </div>
         </div>
@@ -187,23 +192,6 @@
         </div>
     </div>
 
-    <!-- Модальное окно предложения вынести иконку на рабочий стол -->
-    <div id="homeScreenModal" class="modal">
-        <div class="modal-content text-message-container" style="max-width: 90%;">
-            <span class="close-modal" id="closeHomeScreenModal">&times;</span>
-            <h3 style="margin-top: 10px;">Послания всегда под рукой ✨</h3>
-            <p style="margin-bottom: 20px; font-size: 0.95rem; line-height: 1.5; color: #4a3b52;">
-                Добавь иконку на рабочий стол смартфона, чтобы начинать каждое утро с подсказки Вселенной в один клик.
-            </p>
-            <button class="action-btn" id="installHomeScreenBtn" style="margin-bottom: 10px;">
-                📲 Добавить на рабочий стол
-            </button>
-            <button class="action-btn share-btn" id="dismissHomeScreenBtn">
-                Позже
-            </button>
-        </div>
-    </div>
-
     <!-- Модальная шторка (Bottom Sheet) Сакрального прогресса -->
     <div id="sacredBottomSheet" class="sacred-bottom-sheet hidden">
         <div class="sheet-overlay" id="sheetOverlay"></div>
@@ -240,7 +228,8 @@
     
     <script src="js/appData.js?v=1" defer></script> 
     
-    <script id="appScript" src="js/app.js?v=8" defer></script>
+    <!-- Поднята версия скрипта для сброса кэша Telegram -->
+    <script id="appScript" src="js/app.js?v=9" defer></script>
     <script src="js/eventPopup.js?v=01" defer></script>
 </body>
 </html>

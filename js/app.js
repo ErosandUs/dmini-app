@@ -151,7 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- ТАКТИЛЬНЫЙ ОТКЛИК (HAPTIC FEEDBACK) ---
-    // Тройная мягкая вибрация для сакрального вытягивания карты
     function triggerMysticCardHaptic() {
         const haptic = window.Telegram?.WebApp?.HapticFeedback;
         if (!haptic) return;
@@ -160,12 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { haptic.impactOccurred('light'); }, 180);
     }
 
-    // Универсальный мягкий клик для кнопок
     function triggerSoftHaptic() {
         window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
     }
 
-    // Легкий микротик для навигации
     function triggerSelectionHaptic() {
         window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
     }
@@ -180,10 +177,40 @@ document.addEventListener('DOMContentLoaded', () => {
         versionLabel.innerText = `v${currentVersion}`;
     }
 
+    // --- УЧЕТ СЕССИЙ И КНОПКА ДОБАВЛЕНИЯ НА ЭКРАН (БЕЗ ФОНОВЫХ ОПРОСОВ) ---
+    const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
+
+    // Считаем уникальные сессии пользователя
+    let visitCount = parseInt(localStorage.getItem('mystic_app_visits') || '0', 10);
+    if (!sessionStorage.getItem('mystic_session_counted')) {
+        visitCount += 1;
+        localStorage.setItem('mystic_app_visits', visitCount.toString());
+        sessionStorage.setItem('mystic_session_counted', 'true');
+    }
+
+    // Кнопка доступна начиная с 3-го визита, всегда под рукой (Android и iOS)
+    const canShowHomeButton = visitCount >= 3;
+
+    if (addToHomeScreenBtn) {
+        addToHomeScreenBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
+            const tg = window.Telegram?.WebApp;
+            if (tg && typeof tg.addToHomeScreen === 'function') {
+                try {
+                    tg.addToHomeScreen();
+                } catch (err) {
+                    console.warn('addToHomeScreen error:', err);
+                }
+            } else {
+                alert("На смартфоне в Telegram здесь откроется окно добавления иконки на рабочий стол ✨");
+            }
+        });
+    }
+
     // --- НАСТРОЙКИ ---
-    const BOT_LINK = "https://t.me/Djamiliakha_bot?start=go"; // Ваша актуальная ссылка на бота
+    const BOT_LINK = "https://t.me/Djamiliakha_bot?start=go";
     const TOTAL_CARDS = 71; 
-    const STORAGE_KEY = "mystic_collection"; // Ключ для локального хранилища коллекции
+    const STORAGE_KEY = "mystic_collection";
 
     // --- ЛОГИКА ГЛАВНЫХ ВКЛАДОК ---
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -236,12 +263,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCardPath = ""; 
     let currentCardNumber = 1; 
 
-// === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
+    // === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
     const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
     let countdownInterval; 
 
-    // --- НОВЫЙ БЛОК: Проверка VIP-пользователей ---
-    const VIP_USERS = ['Djamilia_Kha', 'atribute']; // Никнеймы без знака @
+    const VIP_USERS = ['Djamilia_Kha', 'atribute'];
 
     function isUserVIP() {
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
@@ -250,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return false;
     }
-    // ----------------------------------------------
 
     function formatTime(ms) {
         const totalSeconds = Math.ceil(ms / 1000);
@@ -264,7 +289,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkTimer() {
-        // Если пользователь VIP, сразу разрешаем получение карты, игнорируя таймер
         if (isUserVIP()) {
             drawBtn.disabled = false;
             return true;
@@ -322,10 +346,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isSameDay) {
                     // В тот же день стрик не увеличиваем
                 } else if (diffHours <= 48) {
-                    // Прошло меньше 48 часов и день другой -> +1
                     streak += 1;
                 } else {
-                    // Прошло больше 48 часов -> сброс на 1
                     streak = 1;
                 }
             }
@@ -379,7 +401,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 saveCardToCollection(randomNum);
 
-                // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Выбор карты ---
                 if (typeof ym !== 'undefined') {
                     ym(110909428, 'reachGoal', 'get_card');
                 }
@@ -438,7 +459,6 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
-    // --- НАДЕЖНАЯ ОТПРАВКА В ЛС ---
     shareToFriendBtn.addEventListener('click', () => {
         triggerSoftHaptic();
         if (typeof ym !== 'undefined') {
@@ -453,7 +473,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
     shareToUniverseBtn.addEventListener('click', () => {
         triggerSoftHaptic();
         if (typeof ym !== 'undefined') {
@@ -612,51 +631,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // МОДАЛЬНОЕ ОКНО ЯРЛЫКА НА РАБОЧИЙ СТОЛ
-    // ==========================================
-    const homeScreenModal = document.getElementById('homeScreenModal');
-    const closeHomeScreenModal = document.getElementById('closeHomeScreenModal');
-    const installHomeScreenBtn = document.getElementById('installHomeScreenBtn');
-    const dismissHomeScreenBtn = document.getElementById('dismissHomeScreenBtn');
-
-    function hideHomeScreenModal() {
-        if (homeScreenModal) homeScreenModal.classList.remove('active');
-    }
-
-    if (closeHomeScreenModal) closeHomeScreenModal.addEventListener('click', hideHomeScreenModal);
-    if (dismissHomeScreenBtn) dismissHomeScreenBtn.addEventListener('click', hideHomeScreenModal);
-
-    if (homeScreenModal) {
-        homeScreenModal.addEventListener('click', (e) => {
-            if (e.target === homeScreenModal) hideHomeScreenModal();
-        });
-    }
-
-    // Клик по кнопке установки ярлыка
-    if (installHomeScreenBtn) {
-        installHomeScreenBtn.addEventListener('click', () => {
-            triggerSoftHaptic();
-            hideHomeScreenModal();
-            localStorage.setItem('mystic_home_prompt_shown', 'true');
-            
-            const tg = window.Telegram?.WebApp;
-            if (tg && typeof tg.addToHomeScreen === 'function') {
-                try {
-                    tg.addToHomeScreen();
-                } catch (err) {
-                    console.warn('addToHomeScreen error:', err);
-                }
-            } else {
-                try {
-                    alert("На смартфоне в Telegram здесь откроется окно добавления иконки на рабочий стол ✨");
-                } catch (_) {
-                    console.log("На смартфоне в Telegram здесь откроется окно добавления иконки на рабочий стол ✨");
-                }
-            }
-        });
-    }
-
-    // ==========================================
     // ЛОГИКА ВОЗВРАТА В НАЧАЛО (СБРОС ПРАКТИКИ)
     // ==========================================
     const resetPracticeBtn = document.getElementById('resetPracticeBtn');
@@ -670,7 +644,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.isCardDrawing = false;
         
-        hideHomeScreenModal();
+        // Скрываем кнопку добавления на экран до следующего завершения видео
+        if (addToHomeScreenBtn) {
+            addToHomeScreenBtn.style.display = 'none';
+        }
         
         if (finalVideoPlayer) {
             finalVideoPlayer.pause();
@@ -791,12 +768,9 @@ document.addEventListener('DOMContentLoaded', () => {
         finalVideoPlayer.addEventListener('ended', () => {
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
             
-            const isPromptShown = localStorage.getItem('mystic_home_prompt_shown') === 'true';
-            if (!isPromptShown && homeScreenModal) {
-                setTimeout(() => {
-                    homeScreenModal.classList.add('active');
-                    localStorage.setItem('mystic_home_prompt_shown', 'true');
-                }, 1200);
+            // Показываем кнопку добавления на экран смартфона начиная с 3-го визита
+            if (canShowHomeButton && addToHomeScreenBtn) {
+                addToHomeScreenBtn.style.display = 'block';
             }
             
             autoResetTimeout = setTimeout(resetToStart, 20000); 
@@ -1123,7 +1097,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Первичный расчет сакрального прогресса при загрузке страницы
     calculateSacredProgress();
-
-    // Event popup logic is handled dynamically in eventPopup.js
 });
-
