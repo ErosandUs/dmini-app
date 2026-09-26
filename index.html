@@ -8,9 +8,9 @@
     
     <!-- Preconnect & Preload Optimization -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://telegram.org">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://mc.yandex.ru">
     <link rel="dns-prefetch" href="https://telegram.org">
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
@@ -61,7 +61,6 @@
                     </div>
                 </div>
             </div>
-            
             <button class="action-btn" id="drawCardBtn">Получить послание</button>
             
             <button class="action-btn share-btn event-timer-btn" id="eventFloatingTimer" style="display: none;">
@@ -102,10 +101,6 @@
 
                 <p style="margin-bottom: 20px;">Благодарим за прохождение практики ✨</p>
 
-                <!-- Стационарная кнопка рядом с кнопкой сброса практики -->
-                <button class="action-btn share-btn" id="addToHomeScreenBtn" style="margin-bottom: 12px;">
-                    📲 Добавить иконку на рабочий стол ✨
-                </button>
                 <button class="action-btn" id="resetPracticeBtn">Получить новое послание</button>
             </div>
         </div>
@@ -228,8 +223,7 @@
     
     <script src="js/appData.js?v=1" defer></script> 
     
-    <!-- Версия v=11 для сброса кэша -->
-    <script id="appScript" src="js/app.js?v=11" defer></script>
+    <script id="appScript" src="js/app.js?v=07" defer></script>
     <script src="js/eventPopup.js?v=01" defer></script>
 </body>
 </html>

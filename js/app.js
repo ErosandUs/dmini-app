@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateTopPadding = () => {
             const topSafe = window.Telegram?.WebApp?.safeAreaInset?.top || 0;
             const topContent = window.Telegram?.WebApp?.contentSafeAreaInset?.top || 0;
+            // Сумма зон безопасности + 4px микрозазора
             const totalTop = topSafe + topContent + 4;
             if (document.body) {
                 document.body.style.paddingTop = `${totalTop}px`;
@@ -107,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         syncSafeArea();
 
+        // Слушатели обновления зон безопасности в реальном времени
         if (typeof tg.onEvent === 'function') {
             try {
                 tg.onEvent('safeAreaChanged', () => {
@@ -149,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- ТАКТИЛЬНЫЙ ОТКЛИК (HAPTIC FEEDBACK) ---
+    // Тройная мягкая вибрация для сакрального вытягивания карты
     function triggerMysticCardHaptic() {
         const haptic = window.Telegram?.WebApp?.HapticFeedback;
         if (!haptic) return;
@@ -157,10 +160,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { haptic.impactOccurred('light'); }, 180);
     }
 
+    // Универсальный мягкий клик для кнопок
     function triggerSoftHaptic() {
         window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
     }
 
+    // Легкий микротик для навигации
     function triggerSelectionHaptic() {
         window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
     }
@@ -175,29 +180,10 @@ document.addEventListener('DOMContentLoaded', () => {
         versionLabel.innerText = `v${currentVersion}`;
     }
 
-    // --- СТАТИЧНАЯ КНОПКА В КОНЦЕ МЕДИТАЦИИ (БЕЗ ФОНОВЫХ ОПРОСОВ) ---
-    const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
-
-    if (addToHomeScreenBtn) {
-        addToHomeScreenBtn.addEventListener('click', () => {
-            triggerSoftHaptic();
-            const tg = window.Telegram?.WebApp;
-            if (tg && typeof tg.addToHomeScreen === 'function') {
-                try {
-                    tg.addToHomeScreen();
-                } catch (err) {
-                    console.warn('addToHomeScreen error:', err);
-                }
-            } else {
-                alert("На смартфоне в Telegram здесь откроется окно добавления иконки на рабочий стол ✨");
-            }
-        });
-    }
-
     // --- НАСТРОЙКИ ---
-    const BOT_LINK = "https://t.me/Djamiliakha_bot?start=go";
+    const BOT_LINK = "https://t.me/Djamiliakha_bot?start=go"; // Ваша актуальная ссылка на бота
     const TOTAL_CARDS = 71; 
-    const STORAGE_KEY = "mystic_collection";
+    const STORAGE_KEY = "mystic_collection"; // Ключ для локального хранилища коллекции
 
     // --- ЛОГИКА ГЛАВНЫХ ВКЛАДОК ---
     const tabBtns = document.querySelectorAll('.tab-btn');
@@ -250,11 +236,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCardPath = ""; 
     let currentCardNumber = 1; 
 
-    // === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
+// === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
     const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
     let countdownInterval; 
 
-    const VIP_USERS = ['Djamilia_Kha', 'atribute'];
+    // --- НОВЫЙ БЛОК: Проверка VIP-пользователей ---
+    const VIP_USERS = ['Djamilia_Kha', 'atribute']; // Никнеймы без знака @
 
     function isUserVIP() {
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
@@ -263,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return false;
     }
+    // ----------------------------------------------
 
     function formatTime(ms) {
         const totalSeconds = Math.ceil(ms / 1000);
@@ -276,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkTimer() {
+        // Если пользователь VIP, сразу разрешаем получение карты, игнорируя таймер
         if (isUserVIP()) {
             drawBtn.disabled = false;
             return true;
@@ -333,8 +322,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (isSameDay) {
                     // В тот же день стрик не увеличиваем
                 } else if (diffHours <= 48) {
+                    // Прошло меньше 48 часов и день другой -> +1
                     streak += 1;
                 } else {
+                    // Прошло больше 48 часов -> сброс на 1
                     streak = 1;
                 }
             }
@@ -388,12 +379,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 saveCardToCollection(randomNum);
 
+                // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Выбор карты ---
                 if (typeof ym !== 'undefined') {
                     ym(110909428, 'reachGoal', 'get_card');
                 }
                 
                 if (drawBtn) drawBtn.style.display = 'none';
-                
                 if (typeof window.updateEventTimer === 'function') {
                     window.updateEventTimer();
                 }
@@ -447,6 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
+    // --- НАДЕЖНАЯ ОТПРАВКА В ЛС ---
     shareToFriendBtn.addEventListener('click', () => {
         triggerSoftHaptic();
         if (typeof ym !== 'undefined') {
@@ -461,6 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
     shareToUniverseBtn.addEventListener('click', () => {
         triggerSoftHaptic();
         if (typeof ym !== 'undefined') {
@@ -667,6 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareAudioBtn = document.getElementById('shareAudioBtn'); 
     
     let currentAudioName = "";
+    let audioCtx, gainNode, videoSource;
 
     function startAudioForCurrentCard() {
         const availableTrackIds = (typeof CARD_TO_AUDIO_MAP !== 'undefined' && CARD_TO_AUDIO_MAP[currentCardNumber]) ? CARD_TO_AUDIO_MAP[currentCardNumber] : [1];
@@ -713,17 +707,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (step2Audio) step2Audio.style.display = 'none';
             if (step3Video) step3Video.style.display = 'block';
             
-            // Назначаем видео Джамили напрямую
+            // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
             if (typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0) {
                 const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
                 if (finalVideoPlayer) finalVideoPlayer.src = randomFinalVideo;
             }
             
+            try {
+                if (!audioCtx && finalVideoPlayer) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext();
+                    videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
+                    gainNode = audioCtx.createGain();
+                    gainNode.gain.value = 3.0; 
+                    videoSource.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (e) {
+                console.log("Усиление звука не поддерживается", e);
+            }
+            
             if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
             
-            // Чистое нативное воспроизведение без зависающих AudioContext
             if (finalVideoPlayer) {
-                finalVideoPlayer.currentTime = 0;
                 finalVideoPlayer.play().catch(err => {
                     if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
                 });
@@ -759,6 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = document.getElementById('closeModal');
     const modalVideoWrap = document.getElementById('modalVideoWrap');
     
+    // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
     YOUTUBE_GALLERY_DATA.forEach(video => {
         const thumbUrl = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
         const videoHtml = `
@@ -846,6 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (item.count) count = item.count;
                 else isModified = true;
             } else {
+                // Старейший формат
                 const match = String(item).match(/(\d+)/);
                 if (match) {
                     id = parseInt(match[1]);
@@ -858,6 +869,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        // Перезаписываем хранилище в новом виде
         if (isModified) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
         }
@@ -889,6 +901,7 @@ document.addEventListener('DOMContentLoaded', () => {
         collection.forEach(item => uniqueSet.add(item.id));
         const uniqueCardsCount = uniqueSet.size;
 
+        // Расчет текущего ранга и прогресса
         let currentRank = null;
         let rankName = "Искательница смыслов ✦";
         let fieldText = "✨ Твоё намерение мягко вливается в общий круг";
@@ -920,9 +933,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Подсчет открытых печатей (ачивок)
         const unlockedBadges = SACRED_SEALS.filter(seal => uniqueCardsCount >= seal.count);
         const unlockedCount = unlockedBadges.length;
 
+        // Обновление DOM-элементов виджета в секции #collection
         const fieldTextEl = document.getElementById('fieldContributionText');
         const badgesCountEl = document.getElementById('unlockedBadgesCount');
         const progressFillEl = document.getElementById('sacredProgressFill');
@@ -933,6 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (progressFillEl) progressFillEl.style.width = `${progressPercent}%`;
         if (rankTextEl) rankTextEl.innerText = rankName;
 
+        // Обновление элементов модальной шторки (Bottom Sheet)
         const sheetFieldDescEl = document.getElementById('sheetFieldDesc');
         const sheetCardsCountEl = document.getElementById('sheetCardsCount');
         const sheetBadgesFractionEl = document.getElementById('sheetBadgesFraction');
@@ -948,6 +964,7 @@ document.addEventListener('DOMContentLoaded', () => {
             streakDisplayEl.innerText = `Ритм осознанности: ${currentStreak} ${getDaysDeclension(currentStreak)} в потоке ✨`;
         }
 
+        // Генерация карточек печатей
         if (achievementsGridEl) {
             achievementsGridEl.innerHTML = '';
             SACRED_SEALS.forEach(seal => {
@@ -983,6 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Обработчики открытия и закрытия модальной шторки (Bottom Sheet)
     const sacredProgressWidget = document.getElementById('sacredProgressWidget');
     const sacredBottomSheet = document.getElementById('sacredBottomSheet');
     const sheetOverlay = document.getElementById('sheetOverlay');
@@ -1001,10 +1019,11 @@ document.addEventListener('DOMContentLoaded', () => {
             sacredBottomSheet.classList.add('active');
             document.body.style.overflow = 'hidden';
 
+            // Запуск односекундного светодиодного луча по контуру плашки стрика
             const streakBar = document.getElementById('sheetStreakBar');
             if (streakBar) {
                 streakBar.classList.remove('led-pulse');
-                void streakBar.offsetWidth;
+                void streakBar.offsetWidth; // Принудительный reflow для перезапуска
                 streakBar.classList.add('led-pulse');
             }
         }
@@ -1046,5 +1065,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Первичный расчет сакрального прогресса при загрузке страницы
     calculateSacredProgress();
+
+    // Event popup logic is handled dynamically in eventPopup.js
 });
+
