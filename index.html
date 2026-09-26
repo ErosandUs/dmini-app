@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://telegram.org">
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://mc.yandex.ru">
     <link rel="dns-prefetch" href="https://telegram.org">
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
@@ -93,7 +93,7 @@
                 
                 <!-- Telegram-кружочек -->
                 <div class="telegram-circle-video" id="finalVideoContainer">
-                    <video id="finalVideoPlayer" playsinline></video>
+                    <video id="finalVideoPlayer" playsinline preload="metadata"></video>
                     <div class="play-overlay" id="replayFinalVideo" style="display: none;">
                         <div class="play-icon"></div>
                     </div>
@@ -101,7 +101,7 @@
 
                 <p style="margin-bottom: 20px;">Благодарим за прохождение практики ✨</p>
 
-                <!-- Кнопка выноса на экран смартфона -->
+                <!-- Кнопка добавления на рабочий стол -->
                 <button class="action-btn share-btn" id="addToHomeScreenBtn" style="display: none; margin-bottom: 15px;">
                     📲 Добавить иконку на рабочий стол ✨
                 </button>
@@ -228,7 +228,8 @@
     
     <script src="js/appData.js?v=1" defer></script> 
     
-    <script id="appScript" src="js/app.js?v=09" defer></script>
+    <!-- Поднята версия скрипта для сброса кэша Telegram на смартфонах -->
+    <script id="appScript" src="js/app.js?v=10" defer></script>
     <script src="js/eventPopup.js?v=01" defer></script>
 </body>
 </html>
