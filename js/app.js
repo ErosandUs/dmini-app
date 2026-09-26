@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => { localStorage.clear();
     
     // Инициализация отображения и перехода в нативный полный экран (Bot API 8.0+)
     if (window.Telegram?.WebApp) {
