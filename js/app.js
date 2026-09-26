@@ -612,6 +612,51 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
+    // МОДАЛЬНОЕ ОКНО ЯРЛЫКА НА РАБОЧИЙ СТОЛ
+    // ==========================================
+    const homeScreenModal = document.getElementById('homeScreenModal');
+    const closeHomeScreenModal = document.getElementById('closeHomeScreenModal');
+    const installHomeScreenBtn = document.getElementById('installHomeScreenBtn');
+    const dismissHomeScreenBtn = document.getElementById('dismissHomeScreenBtn');
+
+    function hideHomeScreenModal() {
+        if (homeScreenModal) homeScreenModal.classList.remove('active');
+    }
+
+    if (closeHomeScreenModal) closeHomeScreenModal.addEventListener('click', hideHomeScreenModal);
+    if (dismissHomeScreenBtn) dismissHomeScreenBtn.addEventListener('click', hideHomeScreenModal);
+
+    if (homeScreenModal) {
+        homeScreenModal.addEventListener('click', (e) => {
+            if (e.target === homeScreenModal) hideHomeScreenModal();
+        });
+    }
+
+    // Клик по кнопке установки ярлыка
+    if (installHomeScreenBtn) {
+        installHomeScreenBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
+            hideHomeScreenModal();
+            localStorage.setItem('mystic_home_prompt_shown', 'true');
+            
+            const tg = window.Telegram?.WebApp;
+            if (tg && typeof tg.addToHomeScreen === 'function') {
+                try {
+                    tg.addToHomeScreen();
+                } catch (err) {
+                    console.warn('addToHomeScreen error:', err);
+                }
+            } else {
+                try {
+                    alert("На смартфоне в Telegram здесь откроется окно добавления иконки на рабочий стол ✨");
+                } catch (_) {
+                    console.log("На смартфоне в Telegram здесь откроется окно добавления иконки на рабочий стол ✨");
+                }
+            }
+        });
+    }
+
+    // ==========================================
     // ЛОГИКА ВОЗВРАТА В НАЧАЛО (СБРОС ПРАКТИКИ)
     // ==========================================
     const resetPracticeBtn = document.getElementById('resetPracticeBtn');
@@ -624,6 +669,8 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(autoResetTimeout);
         }
         window.isCardDrawing = false;
+        
+        hideHomeScreenModal();
         
         if (finalVideoPlayer) {
             finalVideoPlayer.pause();
@@ -743,6 +790,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (finalVideoPlayer) {
         finalVideoPlayer.addEventListener('ended', () => {
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
+            
+            const isPromptShown = localStorage.getItem('mystic_home_prompt_shown') === 'true';
+            if (!isPromptShown && homeScreenModal) {
+                setTimeout(() => {
+                    homeScreenModal.classList.add('active');
+                    localStorage.setItem('mystic_home_prompt_shown', 'true');
+                }, 1200);
+            }
+            
             autoResetTimeout = setTimeout(resetToStart, 20000); 
         });
     }
