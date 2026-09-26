@@ -1119,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Первичный расчет сакрального прогресса при загрузке страницы
+    // Первичный расчет сакрального прогресса  при загрузке страницы
     calculateSacredProgress();
 
     // Event popup logic is handled dynamically in eventPopup.js
