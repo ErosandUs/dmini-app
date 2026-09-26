@@ -78,7 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const updateTopPadding = () => {
             const topSafe = window.Telegram?.WebApp?.safeAreaInset?.top || 0;
             const topContent = window.Telegram?.WebApp?.contentSafeAreaInset?.top || 0;
-            // Сумма зон безопасности + 4px микрозазора
             const totalTop = topSafe + topContent + 4;
             if (document.body) {
                 document.body.style.paddingTop = `${totalTop}px`;
@@ -108,7 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         syncSafeArea();
 
-        // Слушатели обновления зон безопасности в реальном времени
         if (typeof tg.onEvent === 'function') {
             try {
                 tg.onEvent('safeAreaChanged', () => {
@@ -177,19 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
         versionLabel.innerText = `v${currentVersion}`;
     }
 
-    // --- УЧЕТ СЕССИЙ И КНОПКА ДОБАВЛЕНИЯ НА ЭКРАН (БЕЗ ФОНОВЫХ ОПРОСОВ) ---
+    // --- СТАТИЧНАЯ КНОПКА В КОНЦЕ МЕДИТАЦИИ (БЕЗ ФОНОВЫХ ОПРОСОВ) ---
     const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
-
-    // Считаем уникальные сессии пользователя
-    let visitCount = parseInt(localStorage.getItem('mystic_app_visits') || '0', 10);
-    if (!sessionStorage.getItem('mystic_session_counted')) {
-        visitCount += 1;
-        localStorage.setItem('mystic_app_visits', visitCount.toString());
-        sessionStorage.setItem('mystic_session_counted', 'true');
-    }
-
-    // Кнопка доступна начиная с 3-го визита, всегда под рукой (Android и iOS)
-    const canShowHomeButton = visitCount >= 3;
 
     if (addToHomeScreenBtn) {
         addToHomeScreenBtn.addEventListener('click', () => {
@@ -406,6 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (drawBtn) drawBtn.style.display = 'none';
+                
                 if (typeof window.updateEventTimer === 'function') {
                     window.updateEventTimer();
                 }
@@ -644,11 +632,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.isCardDrawing = false;
         
-        // Скрываем кнопку добавления на экран до следующего завершения видео
-        if (addToHomeScreenBtn) {
-            addToHomeScreenBtn.style.display = 'none';
-        }
-        
         if (finalVideoPlayer) {
             finalVideoPlayer.pause();
             finalVideoPlayer.currentTime = 0;
@@ -684,7 +667,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareAudioBtn = document.getElementById('shareAudioBtn'); 
     
     let currentAudioName = "";
-    let audioCtx, gainNode, videoSource;
 
     function startAudioForCurrentCard() {
         const availableTrackIds = (typeof CARD_TO_AUDIO_MAP !== 'undefined' && CARD_TO_AUDIO_MAP[currentCardNumber]) ? CARD_TO_AUDIO_MAP[currentCardNumber] : [1];
@@ -731,32 +713,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (step2Audio) step2Audio.style.display = 'none';
             if (step3Video) step3Video.style.display = 'block';
             
-            // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
+            // Назначаем видео Джамили напрямую
             if (typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0) {
                 const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
                 if (finalVideoPlayer) finalVideoPlayer.src = randomFinalVideo;
             }
             
-            try {
-                if (!audioCtx && finalVideoPlayer) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContext();
-                    videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
-                    gainNode = audioCtx.createGain();
-                    gainNode.gain.value = 3.0; 
-                    videoSource.connect(gainNode);
-                    gainNode.connect(audioCtx.destination);
-                }
-                if (audioCtx && audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-            } catch (e) {
-                console.log("Усиление звука не поддерживается", e);
-            }
-            
             if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
             
+            // Чистое нативное воспроизведение без зависающих AudioContext
             if (finalVideoPlayer) {
+                finalVideoPlayer.currentTime = 0;
                 finalVideoPlayer.play().catch(err => {
                     if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
                 });
@@ -767,12 +734,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (finalVideoPlayer) {
         finalVideoPlayer.addEventListener('ended', () => {
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
-            
-            // Показываем кнопку добавления на экран смартфона начиная с 3-го визита
-            if (canShowHomeButton && addToHomeScreenBtn) {
-                addToHomeScreenBtn.style.display = 'block';
-            }
-            
             autoResetTimeout = setTimeout(resetToStart, 20000); 
         });
     }
@@ -798,7 +759,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = document.getElementById('closeModal');
     const modalVideoWrap = document.getElementById('modalVideoWrap');
     
-    // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
     YOUTUBE_GALLERY_DATA.forEach(video => {
         const thumbUrl = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
         const videoHtml = `
@@ -886,7 +846,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (item.count) count = item.count;
                 else isModified = true;
             } else {
-                // Старейший формат
                 const match = String(item).match(/(\d+)/);
                 if (match) {
                     id = parseInt(match[1]);
@@ -899,7 +858,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Перезаписываем хранилище в новом виде
         if (isModified) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
         }
@@ -931,7 +889,6 @@ document.addEventListener('DOMContentLoaded', () => {
         collection.forEach(item => uniqueSet.add(item.id));
         const uniqueCardsCount = uniqueSet.size;
 
-        // Расчет текущего ранга и прогресса
         let currentRank = null;
         let rankName = "Искательница смыслов ✦";
         let fieldText = "✨ Твоё намерение мягко вливается в общий круг";
@@ -963,11 +920,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Подсчет открытых печатей (ачивок)
         const unlockedBadges = SACRED_SEALS.filter(seal => uniqueCardsCount >= seal.count);
         const unlockedCount = unlockedBadges.length;
 
-        // Обновление DOM-элементов виджета в секции #collection
         const fieldTextEl = document.getElementById('fieldContributionText');
         const badgesCountEl = document.getElementById('unlockedBadgesCount');
         const progressFillEl = document.getElementById('sacredProgressFill');
@@ -978,7 +933,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (progressFillEl) progressFillEl.style.width = `${progressPercent}%`;
         if (rankTextEl) rankTextEl.innerText = rankName;
 
-        // Обновление элементов модальной шторки (Bottom Sheet)
         const sheetFieldDescEl = document.getElementById('sheetFieldDesc');
         const sheetCardsCountEl = document.getElementById('sheetCardsCount');
         const sheetBadgesFractionEl = document.getElementById('sheetBadgesFraction');
@@ -994,7 +948,6 @@ document.addEventListener('DOMContentLoaded', () => {
             streakDisplayEl.innerText = `Ритм осознанности: ${currentStreak} ${getDaysDeclension(currentStreak)} в потоке ✨`;
         }
 
-        // Генерация карточек печатей
         if (achievementsGridEl) {
             achievementsGridEl.innerHTML = '';
             SACRED_SEALS.forEach(seal => {
@@ -1030,7 +983,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Обработчики открытия и закрытия модальной шторки (Bottom Sheet)
     const sacredProgressWidget = document.getElementById('sacredProgressWidget');
     const sacredBottomSheet = document.getElementById('sacredBottomSheet');
     const sheetOverlay = document.getElementById('sheetOverlay');
@@ -1049,11 +1001,10 @@ document.addEventListener('DOMContentLoaded', () => {
             sacredBottomSheet.classList.add('active');
             document.body.style.overflow = 'hidden';
 
-            // Запуск односекундного светодиодного луча по контуру плашки стрика
             const streakBar = document.getElementById('sheetStreakBar');
             if (streakBar) {
                 streakBar.classList.remove('led-pulse');
-                void streakBar.offsetWidth; // Принудительный reflow для перезапуска
+                void streakBar.offsetWidth;
                 streakBar.classList.add('led-pulse');
             }
         }
@@ -1095,6 +1046,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Первичный расчет сакрального прогресса при загрузке страницы
     calculateSacredProgress();
 });
