@@ -108,12 +108,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         syncSafeArea();
 
-        // Циклические слушатели Safe Area отключены для исключения постоянного reflow и лагов анимации
-        // if (typeof tg.onEvent === 'function') {
-        //     tg.onEvent('safeAreaChanged', ...);
-        //     tg.onEvent('contentSafeAreaChanged', ...);
-        //     tg.onEvent('fullscreenChanged', ...);
-        // }
+        // Слушатели обновления зон безопасности в реальном времени
+        if (typeof tg.onEvent === 'function') {
+            try {
+                tg.onEvent('safeAreaChanged', () => {
+                    updateTopPadding();
+                    syncSafeArea();
+                });
+                tg.onEvent('contentSafeAreaChanged', () => {
+                    updateTopPadding();
+                    syncSafeArea();
+                });
+                tg.onEvent('fullscreenChanged', () => {
+                    updateTopPadding();
+                    syncSafeArea();
+                });
+            } catch (e) {
+                console.warn('Ошибка подписки на события safe area:', e);
+            }
+        }
 
         window.addEventListener('focus', () => {
             try {
@@ -138,11 +151,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- ТАКТИЛЬНЫЙ ОТКЛИК (HAPTIC FEEDBACK) ---
-    // Одиночный легкий тактильный отклик для вытягивания карты без перегрузки WebView
+    // Тройная мягкая вибрация для сакрального вытягивания карты
     function triggerMysticCardHaptic() {
         const haptic = window.Telegram?.WebApp?.HapticFeedback;
         if (!haptic) return;
         haptic.impactOccurred('light');
+        setTimeout(() => { haptic.impactOccurred('light'); }, 90);
+        setTimeout(() => { haptic.impactOccurred('light'); }, 180);
     }
 
     // Универсальный мягкий клик для кнопок
@@ -698,9 +713,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (finalVideoPlayer) finalVideoPlayer.src = randomFinalVideo;
             }
             
-            // Web Audio API закомментирован: на мобильных устройствах new AudioContext() блокирует нативный видеопоток (серый кружок и зависание 00:00:00)
-            // Плеер воспроизводит видео нативно и плавно
-            /*
             try {
                 if (!audioCtx && finalVideoPlayer) {
                     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -717,7 +729,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 console.log("Усиление звука не поддерживается", e);
             }
-            */
             
             if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
             
