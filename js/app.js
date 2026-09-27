@@ -1,29 +1,173 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Принудительное разворачивание Mini App при старте
-    if (window.Telegram?.WebApp?.expand) {
-        window.Telegram.WebApp.expand();
-    }
-    window.addEventListener('focus', () => {
-        if (window.Telegram?.WebApp?.expand) {
-            window.Telegram.WebApp.expand();
+    // Инициализация отображения и перехода в нативный полный экран (Bot API 8.0+)
+    if (window.Telegram?.WebApp) {
+        const tg = window.Telegram.WebApp;
+        try {
+            tg.ready();
+        } catch (_) {}
+
+        // Проверка поддержки методов Telegram Bot API 8.0+
+        const isBotApi8 = (() => {
+            try {
+                if (typeof tg.isVersionAtLeast === 'function') {
+                    return tg.isVersionAtLeast('8.0');
+                }
+                const v = parseFloat(tg.version || '0');
+                return v >= 8.0;
+            } catch (_) {
+                return false;
+            }
+        })();
+
+        // 1. Попытка входа в нативный Fullscreen ТОЛЬКО если версия Bot API >= 8.0, иначе expand()
+        try {
+            if (isBotApi8 && typeof tg.requestFullscreen === 'function') {
+                try {
+                    tg.requestFullscreen();
+                } catch (fsErr) {
+                    console.warn('tg.requestFullscreen() вызвал ошибку, откат на expand():', fsErr);
+                    if (typeof tg.expand === 'function') {
+                        tg.expand();
+                    }
+                }
+            } else if (typeof tg.expand === 'function') {
+                tg.expand();
+            }
+        } catch (e) {
+            console.warn('Fullscreen не поддерживается:', e);
+            if (typeof tg.expand === 'function') {
+                try { tg.expand(); } catch (_) {}
+            }
         }
-    });
+
+        // 2. Защита от закрытия шторки случайным свайпом вниз (доступно с Bot API 7.7+)
+        try {
+            const isBotApi77 = (() => {
+                try {
+                    if (typeof tg.isVersionAtLeast === 'function') {
+                        return tg.isVersionAtLeast('7.7');
+                    }
+                    const v = parseFloat(tg.version || '0');
+                    return v >= 7.7;
+                } catch (_) {
+                    return false;
+                }
+            })();
+
+            if (isBotApi77 && typeof tg.disableVerticalSwipes === 'function') {
+                tg.disableVerticalSwipes();
+            }
+        } catch (e) {
+            console.warn('disableVerticalSwipes не поддерживается:', e);
+        }
+
+        // 3. Синхронизация системных цветов Telegram с палитрой приложения
+        try {
+            if (typeof tg.setHeaderColor === 'function') {
+                tg.setHeaderColor('#f6f0fa');
+            }
+            if (typeof tg.setBackgroundColor === 'function') {
+                tg.setBackgroundColor('#f6f0fa');
+            }
+        } catch (e) {
+            console.warn('Цвета системных зон не применились:', e);
+        }
+
+        // 4. Синхронизация системных зон (Safe Area Insets)
+        const updateTopPadding = () => {
+            const topSafe = window.Telegram?.WebApp?.safeAreaInset?.top || 0;
+            const topContent = window.Telegram?.WebApp?.contentSafeAreaInset?.top || 0;
+            // Сумма зон безопасности + 4px микрозазора
+            const totalTop = topSafe + topContent + 4;
+            if (document.body) {
+                document.body.style.paddingTop = `${totalTop}px`;
+            }
+        };
+
+        const syncSafeArea = () => {
+            try {
+                const root = document.documentElement;
+                if (tg.safeAreaInset) {
+                    root.style.setProperty('--tg-safe-area-inset-top', `${tg.safeAreaInset.top || 0}px`);
+                    root.style.setProperty('--tg-safe-area-inset-bottom', `${tg.safeAreaInset.bottom || 0}px`);
+                    root.style.setProperty('--tg-safe-area-inset-left', `${tg.safeAreaInset.left || 0}px`);
+                    root.style.setProperty('--tg-safe-area-inset-right', `${tg.safeAreaInset.right || 0}px`);
+                }
+                if (tg.contentSafeAreaInset) {
+                    root.style.setProperty('--tg-content-safe-area-inset-top', `${tg.contentSafeAreaInset.top || 0}px`);
+                    root.style.setProperty('--tg-content-safe-area-inset-bottom', `${tg.contentSafeAreaInset.bottom || 0}px`);
+                    root.style.setProperty('--tg-content-safe-area-inset-left', `${tg.contentSafeAreaInset.left || 0}px`);
+                    root.style.setProperty('--tg-content-safe-area-inset-right', `${tg.contentSafeAreaInset.right || 0}px`);
+                }
+                updateTopPadding();
+            } catch (err) {
+                console.warn('Не удалось синхронизировать Safe Area:', err);
+            }
+        };
+
+        syncSafeArea();
+
+        // Слушатели обновления зон безопасности в реальном времени
+        if (typeof tg.onEvent === 'function') {
+            try {
+                tg.onEvent('safeAreaChanged', () => {
+                    updateTopPadding();
+                    syncSafeArea();
+                });
+                tg.onEvent('contentSafeAreaChanged', () => {
+                    updateTopPadding();
+                    syncSafeArea();
+                });
+                tg.onEvent('fullscreenChanged', () => {
+                    updateTopPadding();
+                    syncSafeArea();
+                });
+            } catch (e) {
+                console.warn('Ошибка подписки на события safe area:', e);
+            }
+        }
+
+        window.addEventListener('focus', () => {
+            try {
+                if (isBotApi8 && typeof tg.requestFullscreen === 'function' && !tg.isFullscreen) {
+                    try {
+                        tg.requestFullscreen();
+                    } catch (_) {
+                        if (typeof tg.expand === 'function' && !tg.isExpanded) {
+                            tg.expand();
+                        }
+                    }
+                } else if (typeof tg.expand === 'function' && !tg.isExpanded) {
+                    tg.expand();
+                }
+            } catch (e) {
+                if (typeof tg.expand === 'function') {
+                    try { tg.expand(); } catch (_) {}
+                }
+            }
+            syncSafeArea();
+        });
+    }
 
     // --- ТАКТИЛЬНЫЙ ОТКЛИК (HAPTIC FEEDBACK) ---
+    // Тройная мягкая вибрация для сакрального вытягивания карты
     function triggerMysticCardHaptic() {
         const haptic = window.Telegram?.WebApp?.HapticFeedback;
         if (!haptic) return;
-
         haptic.impactOccurred('light');
+        setTimeout(() => { haptic.impactOccurred('light'); }, 90);
+        setTimeout(() => { haptic.impactOccurred('light'); }, 180);
+    }
 
-        setTimeout(() => {
-            haptic.impactOccurred('light');
-        }, 90);
+    // Универсальный мягкий клик для кнопок
+    function triggerSoftHaptic() {
+        window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    }
 
-        setTimeout(() => {
-            haptic.impactOccurred('light');
-        }, 180);
+    // Легкий микротик для навигации
+    function triggerSelectionHaptic() {
+        window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
     }
 
     // --- ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ ИЗ INDEX.HTML ---
@@ -47,9 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            if (window.Telegram?.WebApp?.HapticFeedback?.selectionChanged) {
-                window.Telegram.WebApp.HapticFeedback.selectionChanged();
-            }
+            triggerSelectionHaptic();
             tabBtns.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
@@ -67,6 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     vTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            triggerSelectionHaptic();
             vTabBtns.forEach(b => b.classList.remove('active'));
             vTabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
@@ -286,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     shareCardBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
         activeSharePath = currentCardPath;
         shareOptionsModal.classList.add('active');
     });
@@ -296,6 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- НАДЕЖНАЯ ОТПРАВКА В ЛС ---
     shareToFriendBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
@@ -310,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
     shareToUniverseBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_story');
         }
@@ -415,6 +561,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.collection-share-btn').forEach(btn => {
             btn.addEventListener('click', function() {
+                triggerSoftHaptic();
                 activeSharePath = this.getAttribute('data-path'); 
                 shareOptionsModal.classList.add('active'); 
             });
@@ -430,6 +577,7 @@ document.addEventListener('DOMContentLoaded', () => {
             autoHeight: true,
             on: {
                 slideChange: function () {
+                    triggerSelectionHaptic();
                     updateActiveMonthBtn(this.activeIndex, monthSlidesIndex);
                 }
             }
@@ -437,6 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.month-btn').forEach(btn => {
             btn.addEventListener('click', function() {
+                triggerSelectionHaptic();
                 const targetIndex = parseInt(this.getAttribute('data-index'));
                 collectionSwiper.slideTo(targetIndex, 500); 
             });
@@ -500,7 +649,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    resetPracticeBtn.addEventListener('click', resetToStart);
+    resetPracticeBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
+        resetToStart();
+    });
 
     // --- ШАГ 2: АУДИО И ПЕРЕХОД К ФИНАЛЬНОМУ ВИДЕО ---
     const audioPlayer = document.getElementById('audioPlayer');
@@ -532,6 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (nextToAudioBtn) {
         nextToAudioBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
             if (step1Card) step1Card.style.display = 'none';
             if (step2Audio) step2Audio.style.display = 'flex'; 
             startAudioForCurrentCard();
@@ -540,6 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (shareAudioBtn) {
         shareAudioBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
             const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:\n${BOT_LINK}`;
             openTelegramShare(text);
         });
@@ -631,6 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.video-item').forEach(item => {
         item.addEventListener('click', function() {
+            triggerSoftHaptic();
             const videoId = this.getAttribute('data-id');
             modalVideoWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
             videoModal.classList.add('active');
@@ -852,9 +1007,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeSheetBtn = document.getElementById('closeSheetBtn');
 
     function openSacredBottomSheet() {
-        if (window.Telegram?.WebApp?.HapticFeedback?.impactOccurred) {
-            window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-        }
+        triggerSoftHaptic();
         try {
             calculateSacredProgress();
         } catch(e) {
