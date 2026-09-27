@@ -195,27 +195,50 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSenderPromo = localStorage.getItem(getEventKey('event_sender_promo')) || '';
     let fomoInterval = null;
 
+    // Кэшированные ссылки на стабильные элементы DOM для мгновенного доступа без повторных query-запросов
+    const dailyTab = document.getElementById('daily');
+    const step1Card = document.getElementById('step1-card');
+    const mysticCard = document.getElementById('mysticCard');
+    const drawCardBtn = document.getElementById('drawCardBtn');
+    const nextToAudioBtn = document.getElementById('nextToAudioBtn');
+    const shareCardBtn = document.getElementById('shareCardBtn');
+    const videoModal = document.getElementById('videoModal');
+    const shareOptionsModal = document.getElementById('shareOptionsModal');
+
     function isDailyTabActive() {
-        const activeTab = document.getElementById('daily');
-        return activeTab && activeTab.classList.contains('active');
+        return Boolean(dailyTab && dailyTab.classList.contains('active'));
     }
 
+    /**
+     * Оптимизированная проверка начального состояния экрана с картой.
+     * Полностью исключены синхронные вызовы getComputedStyle(), устраняя Layout Thrashing (принудительный reflow).
+     * Проверки выполняются мгновенно через свойства inline-стилей и наличие CSS-классов.
+     */
     function isInitialCardState() {
+        // 1. Если прямо сейчас идёт анимация вытягивания карты
         if (window.isCardDrawing) return false;
-        const step1Card = document.getElementById('step1-card');
-        if (!step1Card || getComputedStyle(step1Card).display === 'none') return false;
-        const card = document.getElementById('card');
-        if (card && card.classList.contains('flipped')) return false;
-        const drawBtn = document.getElementById('drawCardBtn');
-        if (drawBtn && getComputedStyle(drawBtn).display === 'none') return false;
-        const nextToAudioBtn = document.getElementById('nextToAudioBtn');
-        if (nextToAudioBtn && getComputedStyle(nextToAudioBtn).display !== 'none') return false;
-        const shareCardBtn = document.getElementById('shareCardBtn');
-        if (shareCardBtn && getComputedStyle(shareCardBtn).display !== 'none') return false;
-        const isModalActive = (document.getElementById('videoModal') && getComputedStyle(document.getElementById('videoModal')).display !== 'none') ||
-            (document.getElementById('shareOptionsModal') && getComputedStyle(document.getElementById('shareOptionsModal')).display !== 'none') ||
-            (document.getElementById('eventPromoModal') && document.getElementById('eventPromoModal').classList.contains('active'));
+
+        // 2. Шаг 1 должен существовать и не быть скрытым через inline-стиль
+        if (!step1Card || step1Card.style.display === 'none') return false;
+
+        // 3. Исправленный селектор: проверка карты по фактическому ID 'mysticCard'
+        if (mysticCard && mysticCard.classList.contains('flipped')) return false;
+
+        // 4. Кнопка получения карты не должна быть скрыта
+        if (drawCardBtn && drawCardBtn.style.display === 'none') return false;
+
+        // 5. Кнопки следующих шагов не должны отображаться на начальном экране
+        if (nextToAudioBtn && nextToAudioBtn.style.display && nextToAudioBtn.style.display !== 'none') return false;
+        if (shareCardBtn && shareCardBtn.style.display && shareCardBtn.style.display !== 'none') return false;
+
+        // 6. Проверка активности модальных окон через быстрый classList.contains('active')
+        const isModalActive = Boolean(
+            (videoModal && videoModal.classList.contains('active')) ||
+            (shareOptionsModal && shareOptionsModal.classList.contains('active')) ||
+            (modal && modal.classList.contains('active'))
+        );
         if (isModalActive) return false;
+
         return true;
     }
 
@@ -246,10 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateTimer();
     setInterval(updateTimer, 3000);
-
-    document.addEventListener('click', () => {
-        updateTimer();
-    });
 
     function openModal() { if (modal) modal.classList.add('active'); }
     function closeModal() { if (modal) modal.classList.remove('active'); }

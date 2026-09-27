@@ -74,17 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Цвета системных зон не применились:', e);
         }
 
-        // 4. Синхронизация системных зон (Safe Area Insets)
-        const updateTopPadding = () => {
-            const topSafe = window.Telegram?.WebApp?.safeAreaInset?.top || 0;
-            const topContent = window.Telegram?.WebApp?.contentSafeAreaInset?.top || 0;
-            // Сумма зон безопасности + 4px микрозазора
-            const totalTop = topSafe + topContent + 4;
-            if (document.body) {
-                document.body.style.paddingTop = `${totalTop}px`;
-            }
-        };
-
+        // 4. Синхронизация системных зон (Safe Area Insets) исключительно через CSS-переменные на :root
         const syncSafeArea = () => {
             try {
                 const root = document.documentElement;
@@ -100,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     root.style.setProperty('--tg-content-safe-area-inset-left', `${tg.contentSafeAreaInset.left || 0}px`);
                     root.style.setProperty('--tg-content-safe-area-inset-right', `${tg.contentSafeAreaInset.right || 0}px`);
                 }
-                updateTopPadding();
             } catch (err) {
                 console.warn('Не удалось синхронизировать Safe Area:', err);
             }
@@ -111,18 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Слушатели обновления зон безопасности в реальном времени
         if (typeof tg.onEvent === 'function') {
             try {
-                tg.onEvent('safeAreaChanged', () => {
-                    updateTopPadding();
-                    syncSafeArea();
-                });
-                tg.onEvent('contentSafeAreaChanged', () => {
-                    updateTopPadding();
-                    syncSafeArea();
-                });
-                tg.onEvent('fullscreenChanged', () => {
-                    updateTopPadding();
-                    syncSafeArea();
-                });
+                tg.onEvent('safeAreaChanged', syncSafeArea);
+                tg.onEvent('contentSafeAreaChanged', syncSafeArea);
+                tg.onEvent('fullscreenChanged', syncSafeArea);
             } catch (e) {
                 console.warn('Ошибка подписки на события safe area:', e);
             }
@@ -199,6 +179,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if(btn.dataset.tab === 'collection') {
                 renderCollection();
+            }
+            if (typeof window.updateEventTimer === 'function') {
+                window.updateEventTimer();
             }
         });
     });
@@ -688,6 +671,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (step1Card) step1Card.style.display = 'none';
             if (step2Audio) step2Audio.style.display = 'flex'; 
             startAudioForCurrentCard();
+            if (typeof window.updateEventTimer === 'function') {
+                window.updateEventTimer();
+            }
         });
     }
 
