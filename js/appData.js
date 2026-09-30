@@ -9,6 +9,14 @@ const FINAL_VIDEOS_DATA = [
     "video/final_5.mp4",
     "video/final_6.mp4",
     "video/final_7.mp4",
+    "video/final_8.mp4",
+    "video/final_9.mp4",
+    "video/final_10.mp4",
+    "video/final_11.mp4",
+    "video/final_12.mp4",
+    "video/final_13.mp4",
+    "video/final_14.mp4",
+    "video/final_15.mp4",
 ];
 
 // 2. Полная база аудиопосланий
