@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const isPromoClaimed = (localStorage.getItem(getEventKey('event_promo_claimed')) || localStorage.getItem('event_promo_claimed')) === 'true';
     const savedPromo = localStorage.getItem(getEventKey('event_sender_promo')) || localStorage.getItem('event_sender_promo');
 
-    if (savedShareTime && savedPromo) {
+    if (EVENT_CONFIG.isPromoActive && savedShareTime && savedPromo) {
         const secondsPassed = Math.floor((nowMs - parseInt(savedShareTime)) / 1000);
         const remainingSeconds = (24 * 3600) - secondsPassed;
 
@@ -470,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('event_promo_auto_shown_count');
     }
 
-    if (!isPromoClaimed && !savedShareTime) {
+    if (!EVENT_CONFIG.isPromoActive || (!isPromoClaimed && !savedShareTime)) {
         const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
         const isFirstShown = localStorage.getItem(getEventKey('event_popup_first'));
         const isLastDayShown = localStorage.getItem(getEventKey('event_popup_last'));
@@ -507,7 +507,9 @@ document.addEventListener('DOMContentLoaded', () => {
         shareBtn.addEventListener('click', () => {
             window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
             const senderId = getSenderId();
-            const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
+            const directLinkWithPromo = (EVENT_CONFIG.isPromoActive && EVENT_CONFIG.promoReceiver)
+                ? `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`
+                : EVENT_CONFIG.registrationLink;
             
             let shareText = '';
             if (EVENT_CONFIG.shareMessage) {
@@ -529,6 +531,12 @@ document.addEventListener('DOMContentLoaded', () => {
             openLinkSafe(shareUrl, true);
             if (window.Telegram?.WebApp?.expand) {
                 window.Telegram.WebApp.expand();
+            }
+
+            if (!EVENT_CONFIG.isPromoActive) {
+                // Промокоды отключены: закрываем модальное окно и не делаем запрос к таблице
+                closeModal();
+                return;
             }
 
             if (step1) step1.style.display = 'none';
