@@ -49,22 +49,61 @@ document.addEventListener('DOMContentLoaded', () => {
             text-align: center;
         }
         
+        /* Модальное окно с учётом Safe Area системных кнопок Telegram */
         .event-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(246, 240, 250, 0.95); z-index: 10000;
-            display: flex; align-items: center; justify-content: center;
-            padding: 15px; opacity: 0; visibility: hidden; transition: 0.3s ease;
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            height: 100dvh;
+            background: rgba(246, 240, 250, 0.95); 
+            z-index: 10000;
+            display: flex; 
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: calc(var(--tg-safe-top, 0px) + 14px);
+            padding-bottom: max(20px, calc(var(--tg-safe-bottom, 0px) + 16px));
+            padding-left: max(15px, calc(var(--tg-safe-left, 0px) + 15px));
+            padding-right: max(15px, calc(var(--tg-safe-right, 0px) + 15px));
+            box-sizing: border-box;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            opacity: 0; visibility: hidden; transition: 0.3s ease;
         }
         .event-modal-overlay.active { opacity: 1; visibility: visible; }
         .event-modal-content {
             background: #fff; width: 100%; max-width: 380px;
-            border-radius: 15px; border: 1px solid #d3bce6;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; overflow: hidden; text-align: center;
+            border-radius: 16px; border: 1px solid #d3bce6;
+            box-shadow: 0 10px 30px rgba(156, 122, 187, 0.2); 
+            position: relative; 
+            overflow: hidden; 
+            text-align: center;
+            margin: auto 0;
+            box-sizing: border-box;
         }
+        /* Контрастная круглая кнопка закрытия */
         .event-close-btn {
-            position: absolute; top: 10px; right: 15px;
-            font-size: 30px; color: #fff; cursor: pointer; line-height: 1;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 2;
+            position: absolute; 
+            top: 12px; 
+            right: 12px;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: rgba(49, 34, 59, 0.55);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            font-size: 22px; 
+            cursor: pointer; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            z-index: 10;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .event-close-btn:active {
+            transform: scale(0.92);
+            background: rgba(49, 34, 59, 0.75);
         }
         .event-banner-wrap {
             width: 100%;
@@ -110,6 +149,23 @@ document.addEventListener('DOMContentLoaded', () => {
             font-size: 1.15rem;
             font-weight: 700;
         }
+        .event-dismiss-link {
+            background: none;
+            border: none;
+            color: #8a7a94;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            margin-top: 14px;
+            cursor: pointer;
+            padding: 8px;
+            display: inline-block;
+            transition: color 0.2s;
+        }
+        .event-dismiss-link:active {
+            color: #4a3b52;
+        }
         @keyframes urgentBlink {
             0%, 100% { opacity: 1; color: #ff4d4d; transform: scale(1); }
             50% { opacity: 0.6; color: #9c7abb; transform: scale(0.98); }
@@ -148,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     eventContainer.innerHTML = `
         <div class="event-modal-overlay" id="eventPromoModal">
             <div class="event-modal-content">
-                <span class="event-close-btn" id="closeEventModal">&times;</span>
+                <button class="event-close-btn" id="closeEventModal" aria-label="Закрыть">&times;</button>
                 <div class="event-banner-wrap">
                     <img src="${EVENT_CONFIG.imagePath}" id="eventModalImg" alt="Анонс" class="event-banner-img">
                 </div>
@@ -161,6 +217,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="event-warning">❗️ Нажми кнопку, чтобы отправить подруге приглашение и сразу забрать свой промокод!</span>
                         <button class="action-btn" id="eventShareBtn">Отправить приглашение 💌</button>
                         <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
+                        <div>
+                            <button class="event-dismiss-link" id="dismissEventModalBtn">Вернуться к посланию дня</button>
+                        </div>
                     </div>
 
                     <!-- Шаг 2: Персональная награда -->
@@ -172,6 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             Скидка сгорит через: <span class="event-reward-timer-val" id="rewardTimer">23:59:59</span>
                         </div>
                         <button class="action-btn" id="eventApplyPromoBtn">Скопировать и применить</button>
+                        <div>
+                            <button class="event-dismiss-link" id="dismissEventStep2Btn">Вернуться к посланию дня</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -182,6 +244,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const countdownText = document.getElementById('eventCountdownText');
     const modal = document.getElementById('eventPromoModal');
     const closeEventModal = document.getElementById('closeEventModal');
+    const dismissEventModalBtn = document.getElementById('dismissEventModalBtn');
+    const dismissEventStep2Btn = document.getElementById('dismissEventStep2Btn');
     const step1 = document.getElementById('eventStep1');
     const step2 = document.getElementById('eventStep2');
     const step2Desc = document.getElementById('eventStep2Desc');
@@ -195,7 +259,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSenderPromo = localStorage.getItem(getEventKey('event_sender_promo')) || '';
     let fomoInterval = null;
 
-    // Кэшированные ссылки на стабильные элементы DOM для мгновенного доступа без повторных query-запросов
     const dailyTab = document.getElementById('daily');
     const step1Card = document.getElementById('step1-card');
     const mysticCard = document.getElementById('mysticCard');
@@ -209,29 +272,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return Boolean(dailyTab && dailyTab.classList.contains('active'));
     }
 
-    /**
-     * Оптимизированная проверка начального состояния экрана с картой.
-     * Полностью исключены синхронные вызовы getComputedStyle(), устраняя Layout Thrashing (принудительный reflow).
-     * Проверки выполняются мгновенно через свойства inline-стилей и наличие CSS-классов.
-     */
     function isInitialCardState() {
-        // 1. Если прямо сейчас идёт анимация вытягивания карты
         if (window.isCardDrawing) return false;
-
-        // 2. Шаг 1 должен существовать и не быть скрытым через inline-стиль
         if (!step1Card || step1Card.style.display === 'none') return false;
-
-        // 3. Исправленный селектор: проверка карты по фактическому ID 'mysticCard'
         if (mysticCard && mysticCard.classList.contains('flipped')) return false;
-
-        // 4. Кнопка получения карты не должна быть скрыта
         if (drawCardBtn && drawCardBtn.style.display === 'none') return false;
-
-        // 5. Кнопки следующих шагов не должны отображаться на начальном экране
         if (nextToAudioBtn && nextToAudioBtn.style.display && nextToAudioBtn.style.display !== 'none') return false;
         if (shareCardBtn && shareCardBtn.style.display && shareCardBtn.style.display !== 'none') return false;
 
-        // 6. Проверка активности модальных окон через быстрый classList.contains('active')
         const isModalActive = Boolean(
             (videoModal && videoModal.classList.contains('active')) ||
             (shareOptionsModal && shareOptionsModal.classList.contains('active')) ||
@@ -270,10 +318,33 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTimer();
     setInterval(updateTimer, 3000);
 
-    function openModal() { if (modal) modal.classList.add('active'); }
-    function closeModal() { if (modal) modal.classList.remove('active'); }
+    // Управление модальным окном и нативной кнопкой BackButton Telegram
+    function openModal() { 
+        if (modal) modal.classList.add('active'); 
+        const tg = window.Telegram?.WebApp;
+        if (tg?.BackButton) {
+            try {
+                tg.BackButton.show();
+                tg.BackButton.onClick(closeModal);
+            } catch (_) {}
+        }
+    }
+
+    function closeModal() { 
+        if (modal) modal.classList.remove('active'); 
+        const tg = window.Telegram?.WebApp;
+        if (tg?.BackButton) {
+            try {
+                tg.BackButton.offClick(closeModal);
+                tg.BackButton.hide();
+            } catch (_) {}
+        }
+    }
 
     if (closeEventModal) closeEventModal.addEventListener('click', closeModal);
+    if (dismissEventModalBtn) dismissEventModalBtn.addEventListener('click', closeModal);
+    if (dismissEventStep2Btn) dismissEventStep2Btn.addEventListener('click', closeModal);
+
     if (timerBanner) {
         timerBanner.addEventListener('click', () => {
             window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
@@ -322,7 +393,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rewardTimerBox) rewardTimerBox.style.display = 'block';
         if (applyPromoBtn) applyPromoBtn.style.display = 'block';
 
-        // Логика срочности (< 3 часов)
         const clickedTimeVal = localStorage.getItem(getEventKey('event_share_clicked_time')) || localStorage.getItem('event_share_clicked_time');
         const currentRemaining = remainingSeconds !== null ? remainingSeconds : ((24 * 3600) - Math.floor((new Date().getTime() - (parseInt(clickedTimeVal) || new Date().getTime())) / 1000));
         
@@ -352,19 +422,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rewardTimerBox) rewardTimerBox.style.display = 'none';
         if (applyPromoBtn) applyPromoBtn.style.display = 'none';
         
-        // НОВОЕ: Сбрасываем метки, чтобы при перезаходе пользователь снова оказался на Шаге 1 и мог попробовать получить код заново
         localStorage.removeItem(getEventKey('event_share_clicked_time'));
         localStorage.removeItem('event_share_clicked_time');
         localStorage.removeItem(getEventKey('event_sender_promo'));
         localStorage.removeItem('event_sender_promo');
     }
 
-    // 4. Восстановление состояния при загрузке страницы
+    // Восстановление состояния при загрузке страницы
     const savedShareTime = localStorage.getItem(getEventKey('event_share_clicked_time')) || localStorage.getItem('event_share_clicked_time');
     const isPromoClaimed = (localStorage.getItem(getEventKey('event_promo_claimed')) || localStorage.getItem('event_promo_claimed')) === 'true';
     const savedPromo = localStorage.getItem(getEventKey('event_sender_promo')) || localStorage.getItem('event_sender_promo');
 
-    // Проверяем: таймер восстанавливаем ТОЛЬКО если есть и время, и реальный промокод
     if (savedShareTime && savedPromo) {
         const secondsPassed = Math.floor((nowMs - parseInt(savedShareTime)) / 1000);
         const remainingSeconds = (24 * 3600) - secondsPassed;
@@ -388,7 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             showStep2(savedPromo, remainingSeconds);
         } else {
-            // Время истекло
             localStorage.removeItem(getEventKey('event_share_clicked_time'));
             localStorage.removeItem('event_share_clicked_time');
             localStorage.removeItem(getEventKey('event_promo_auto_shown_count'));
@@ -397,7 +464,6 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('event_sender_promo');
         }
     } else if (savedShareTime && !savedPromo) {
-        // Битый стейт (время записано, а промокода нет) — полностью зачищаем
         localStorage.removeItem(getEventKey('event_share_clicked_time'));
         localStorage.removeItem('event_share_clicked_time');
         localStorage.removeItem(getEventKey('event_promo_auto_shown_count'));
@@ -443,7 +509,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const senderId = getSenderId();
             const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
             
-            // ВОССТАНОВЛЕННЫЙ ТЁПЛЫЙ ТЕКСТ:
             const shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — промокод на скидку ${EVENT_CONFIG.promoReceiver} на первое участие.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
             
             const shareUrl = `https://t.me/share/url?url=&text=${encodeURIComponent(shareText)}`;
@@ -453,7 +518,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.Telegram.WebApp.expand();
             }
 
-            // Переключаем UI на мгновенную загрузку (БЕЗ поллинга)
             if (step1) step1.style.display = 'none';
             if (step2) step2.style.display = 'block';
             if (step2Desc) step2Desc.innerText = 'Получаем твой персональный промокод...';
@@ -464,7 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (rewardTimerBox) rewardTimerBox.style.display = 'none';
             if (applyPromoBtn) applyPromoBtn.style.display = 'none';
 
-            // Мгновенный запрос к Google Таблице за кодом
             if (EVENT_CONFIG.appsScriptUrl) {
                 fetch(EVENT_CONFIG.appsScriptUrl, {
                     method: 'POST',
