@@ -213,10 +213,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <!-- Шаг 1: Инвайт -->
                     <div id="eventStep1">
                         <h3 class="event-title">${EVENT_CONFIG.title}</h3>
-                        <p class="event-desc">Поделись приглашением с близкой подругой, которая ещё не была на наших практиках. Вы обе получите <b>промокод на скидку</b> для участия! ✨</p>
-                        <span class="event-warning">❗️ Нажми кнопку, чтобы отправить подруге приглашение и сразу забрать свой промокод!</span>
-                        <button class="action-btn" id="eventShareBtn">Отправить приглашение 💌</button>
-                        <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">Подробнее о медитации</button>
+                        <p class="event-desc">${EVENT_CONFIG.description || 'Поделись приглашением с близкой подругой. Вы обе получите промокод на скидку для участия! ✨'}</p>
+                        ${EVENT_CONFIG.warningText ? `<span class="event-warning">${EVENT_CONFIG.warningText}</span>` : ''}
+                        <button class="action-btn" id="eventShareBtn">${EVENT_CONFIG.shareButtonText || 'Отправить приглашение 💌'}</button>
+                        <button class="action-btn share-btn" id="eventDirectRegisterBtn" style="margin-top: 10px;">${EVENT_CONFIG.directButtonText || 'Подробнее о медитации'}</button>
                         <div>
                             <button class="event-dismiss-link" id="dismissEventModalBtn">Вернуться к посланию дня</button>
                         </div>
@@ -509,7 +509,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const senderId = getSenderId();
             const directLinkWithPromo = `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`;
             
-            const shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — промокод на скидку ${EVENT_CONFIG.promoReceiver} на первое участие.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
+            let shareText = '';
+            if (EVENT_CONFIG.shareMessage) {
+                shareText = EVENT_CONFIG.shareMessage
+                    .replace(/\{title\}/g, EVENT_CONFIG.title || '')
+                    .replace(/\{promo\}/g, EVENT_CONFIG.promoReceiver || '');
+
+                if (shareText.includes('{link}')) {
+                    shareText = shareText.replace(/\{link\}/g, directLinkWithPromo);
+                } else {
+                    shareText = `${shareText}\n\nСсылка для участия: ${directLinkWithPromo}`;
+                }
+            } else {
+                shareText = `Привет! Увидела анонс медитации «${EVENT_CONFIG.title}» и сразу подумала о тебе ✨\nДержи от меня тёплый подарок — промокод на скидку ${EVENT_CONFIG.promoReceiver} на первое участие.\nСсылка для участия: ${directLinkWithPromo}\n\nЕсли сейчас откликается — присоединяйся, пойдём вместе! А если знаешь, кому это тоже принесёт ресурс, смело делись с ними. 💫`;
+            }
             
             const shareUrl = `https://t.me/share/url?url=&text=${encodeURIComponent(shareText)}`;
             
