@@ -1,15 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    // ==========================================
-    // 1. ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP & SAFE AREA
-    // ==========================================
+    // Инициализация отображения и перехода в нативный полный экран (Bot API 8.0+)
     if (window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
         try {
             tg.ready();
         } catch (_) {}
 
-        // Проверка поддержки Bot API 8.0+
+        // Проверка поддержки методов Telegram Bot API 8.0+
         const isBotApi8 = (() => {
             try {
                 if (typeof tg.isVersionAtLeast === 'function') {
@@ -22,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         })();
 
-        // Вход в нативный Fullscreen ТОЛЬКО если версия Bot API >= 8.0, иначе fallback на expand()
+        // 1. Попытка входа в нативный Fullscreen ТОЛЬКО если версия Bot API >= 8.0, иначе expand()
         try {
             if (isBotApi8 && typeof tg.requestFullscreen === 'function') {
                 try {
@@ -43,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Защита от закрытия шторки случайным свайпом вниз (Bot API 7.7+)
+        // 2. Защита от закрытия шторки случайным свайпом вниз (доступно с Bot API 7.7+)
         try {
             const isBotApi77 = (() => {
                 try {
@@ -64,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('disableVerticalSwipes не поддерживается:', e);
         }
 
-        // Синхронизация системных цветов Telegram с палитрой приложения
+        // 3. Синхронизация системных цветов Telegram с палитрой приложения
         try {
             if (typeof tg.setHeaderColor === 'function') {
                 tg.setHeaderColor('#f6f0fa');
@@ -76,16 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Цвета системных зон не применились:', e);
         }
 
-        // Синхронизация зон безопасности (Safe Area Insets)
-        const updateTopPadding = () => {
-            const topSafe = window.Telegram?.WebApp?.safeAreaInset?.top || 0;
-            const topContent = window.Telegram?.WebApp?.contentSafeAreaInset?.top || 0;
-            const totalTop = topSafe + topContent + 4;
-            if (document.body) {
-                document.body.style.paddingTop = `${totalTop}px`;
-            }
-        };
-
+        // 4. Синхронизация системных зон (Safe Area Insets) исключительно через CSS-переменные на :root
         const syncSafeArea = () => {
             try {
                 const root = document.documentElement;
@@ -101,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     root.style.setProperty('--tg-content-safe-area-inset-left', `${tg.contentSafeAreaInset.left || 0}px`);
                     root.style.setProperty('--tg-content-safe-area-inset-right', `${tg.contentSafeAreaInset.right || 0}px`);
                 }
-                updateTopPadding();
             } catch (err) {
                 console.warn('Не удалось синхронизировать Safe Area:', err);
             }
@@ -109,20 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         syncSafeArea();
 
+        // Слушатели обновления зон безопасности в реальном времени
         if (typeof tg.onEvent === 'function') {
             try {
-                tg.onEvent('safeAreaChanged', () => {
-                    updateTopPadding();
-                    syncSafeArea();
-                });
-                tg.onEvent('contentSafeAreaChanged', () => {
-                    updateTopPadding();
-                    syncSafeArea();
-                });
-                tg.onEvent('fullscreenChanged', () => {
-                    updateTopPadding();
-                    syncSafeArea();
-                });
+                tg.onEvent('safeAreaChanged', syncSafeArea);
+                tg.onEvent('contentSafeAreaChanged', syncSafeArea);
+                tg.onEvent('fullscreenChanged', syncSafeArea);
             } catch (e) {
                 console.warn('Ошибка подписки на события safe area:', e);
             }
@@ -150,63 +130,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ==========================================
-    // 2. ТАКТИЛЬНАЯ АРХИТЕКТУРА (HAPTIC FEEDBACK)
-    // ==========================================
-    const getHaptic = () => window.Telegram?.WebApp?.HapticFeedback;
-
-    // Первичное касание карты: мягкий бархатный импульс «вдоха»
-    function triggerCardTouchHaptic() {
-        const haptic = getHaptic();
+    // --- ТАКТИЛЬНЫЙ ОТКЛИК (HAPTIC FEEDBACK) ---
+    // Тройная мягкая вибрация для сакрального вытягивания карты
+    function triggerMysticCardHaptic() {
+        const haptic = window.Telegram?.WebApp?.HapticFeedback;
         if (!haptic) return;
-        try {
-            haptic.impactOccurred('soft');
-        } catch (_) {
-            try { haptic.impactOccurred('light'); } catch (_) {}
-        }
+        haptic.impactOccurred('light');
+        setTimeout(() => { haptic.impactOccurred('light'); }, 90);
+        setTimeout(() => { haptic.impactOccurred('light'); }, 180);
     }
 
-    // Синхронизированная тактильная симфония переворота карты (1350 мс)
-    function triggerCardFlipSymphony() {
-        const haptic = getHaptic();
-        if (!haptic) return;
-
-        // 420 мс: прохождение экватора 90° — легкий шелест грани карты
-        setTimeout(() => {
-            try { haptic.selectionChanged(); } catch (_) {}
-        }, 420);
-
-        // 1150 мс: фиксация и раскрытие карты — мягкий двойной резонанс (поющая чаша)
-        setTimeout(() => {
-            try {
-                haptic.notificationOccurred('success');
-            } catch (_) {
-                try { haptic.impactOccurred('medium'); } catch (_) {}
-            }
-        }, 1150);
-    }
-
-    // Универсальный мягкий отклик для кнопок интерфейса
+    // Универсальный мягкий клик для кнопок
     function triggerSoftHaptic() {
-        const haptic = getHaptic();
-        if (!haptic) return;
-        try {
-            haptic.impactOccurred('soft');
-        } catch (_) {
-            try { haptic.impactOccurred('light'); } catch (_) {}
-        }
+        window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
     }
 
-    // Легкий микротик для навигации по табам, слайдерам и фильтрам
+    // Легкий микротик для навигации
     function triggerSelectionHaptic() {
-        try {
-            getHaptic()?.selectionChanged();
-        } catch (_) {}
+        window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
     }
 
-    // ==========================================
-    // 3. ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ
-    // ==========================================
+    // --- ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ ИЗ INDEX.HTML ---
     const appScriptTag = document.getElementById('appScript');
     const versionLabel = document.getElementById('appVersionLabel');
     if (appScriptTag && versionLabel) {
@@ -216,32 +160,12 @@ document.addEventListener('DOMContentLoaded', () => {
         versionLabel.innerText = `v${currentVersion}`;
     }
 
-    // Кнопка добавления на рабочий стол (безопасная инициализация)
-    const addToHomeScreenBtn = document.getElementById('addToHomeScreenBtn');
-    if (addToHomeScreenBtn) {
-        addToHomeScreenBtn.addEventListener('click', () => {
-            triggerSoftHaptic();
-            const tg = window.Telegram?.WebApp;
-            if (tg && typeof tg.addToHomeScreen === 'function') {
-                try {
-                    tg.addToHomeScreen();
-                } catch (err) {
-                    console.warn('addToHomeScreen error:', err);
-                }
-            } else {
-                alert("На смартфоне в Telegram здесь откроется окно добавления иконки на рабочий стол ✨");
-            }
-        });
-    }
-
-    // ==========================================
-    // 4. КОНСТАНТЫ И НАСТРОЙКИ
-    // ==========================================
-    const BOT_LINK = "https://t.me/Djamiliakha_bot?start=go";
+    // --- НАСТРОЙКИ ---
+    const BOT_LINK = "https://t.me/Djamiliakha_bot?start=go"; // Ваша актуальная ссылка на бота
     const TOTAL_CARDS = 71; 
-    const STORAGE_KEY = "mystic_collection";
+    const STORAGE_KEY = "mystic_collection"; // Ключ для локального хранилища коллекции
 
-    // Главные вкладки
+    // --- ЛОГИКА ГЛАВНЫХ ВКЛАДОК ---
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -253,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('active');
             document.getElementById(btn.dataset.tab).classList.add('active');
             
-            if (btn.dataset.tab === 'collection') {
+            if(btn.dataset.tab === 'collection') {
                 renderCollection();
             }
             if (typeof window.updateEventTimer === 'function') {
@@ -262,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Внутренние вкладки видеотеки
+    // --- ЛОГИКА ВНУТРЕННИХ ВКЛАДОК ВИДЕОТЕКИ ---
     const vTabBtns = document.querySelectorAll('.v-tab-btn');
     const vTabContents = document.querySelectorAll('.v-tab-content');
 
@@ -277,8 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // 5. РИТУАЛ ВЫТЯГИВАНИЯ КАРТЫ И ТАЙМЕР
+    // ЛОГИКА ПОТОКА И СОХРАНЕНИЯ В КОЛЛЕКЦИЮ
     // ==========================================
+
     const step1Card = document.getElementById('step1-card');
     const step2Audio = document.getElementById('step2-audio');
     const step3Video = document.getElementById('step3-video'); 
@@ -294,19 +219,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentCardPath = ""; 
     let currentCardNumber = 1; 
 
-    // Таймер кулдауна (12 часов)
+// === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) ===
     const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
     let countdownInterval; 
 
-    const VIP_USERS = ['Djamilia_Kha', 'atribute'];
+    // --- НОВЫЙ БЛОК: Проверка VIP-пользователей ---
+    const VIP_USERS = ['Djamilia_Kha', 'atribute']; // Никнеймы без знака @
 
     function isUserVIP() {
-        if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
             const username = window.Telegram.WebApp.initDataUnsafe.user.username;
             return VIP_USERS.includes(username);
         }
         return false;
     }
+    // ----------------------------------------------
 
     function formatTime(ms) {
         const totalSeconds = Math.ceil(ms / 1000);
@@ -320,22 +247,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkTimer() {
+        // Если пользователь VIP, сразу разрешаем получение карты, игнорируя таймер
         if (isUserVIP()) {
-            if (drawBtn) drawBtn.disabled = false;
+            drawBtn.disabled = false;
             return true;
         }
 
         const lastDraw = localStorage.getItem('lastDrawTime');
         if (lastDraw) {
-            const elapsed = Date.now() - parseInt(lastDraw, 10);
+            const elapsed = Date.now() - parseInt(lastDraw);
             if (elapsed < COOLDOWN_MS) {
-                if (drawBtn) drawBtn.disabled = true;
+                drawBtn.disabled = true;
                 const remaining = COOLDOWN_MS - elapsed;
                 startCountdown(remaining);
                 return false; 
             }
         }
-        if (drawBtn) drawBtn.disabled = false;
         return true; 
     }
 
@@ -347,18 +274,14 @@ document.addEventListener('DOMContentLoaded', () => {
             remain -= 1000;
             if (remain <= 0) {
                 clearInterval(countdownInterval);
-                if (drawBtn) {
-                    drawBtn.disabled = false;
-                    drawBtn.innerText = "Получить послание";
-                }
-            } else if (drawBtn) {
+                drawBtn.disabled = false;
+                drawBtn.innerText = "Получить послание";
+            } else {
                 drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
             }
         }, 1000);
         
-        if (drawBtn) {
-            drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
-        }
+        drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
     }
 
     function updatePracticeStreak() {
@@ -379,12 +302,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const diffHours = (now - lastTime) / (1000 * 60 * 60);
                 const isSameDay = new Date(now).toDateString() === new Date(lastTime).toDateString();
 
-                if (!isSameDay) {
-                    if (diffHours <= 48) {
-                        streak += 1;
-                    } else {
-                        streak = 1;
-                    }
+                if (isSameDay) {
+                    // В тот же день стрик не увеличиваем
+                } else if (diffHours <= 48) {
+                    // Прошло меньше 48 часов и день другой -> +1
+                    streak += 1;
+                } else {
+                    // Прошло больше 48 часов -> сброс на 1
+                    streak = 1;
                 }
             }
         }
@@ -413,34 +338,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawRandomCard() {
-        if (!isFlipped && !window.isCardDrawing && checkTimer()) {
-            triggerCardTouchHaptic(); // Мягкий тактильный вдох
+        if (!isFlipped && checkTimer()) {
+            triggerMysticCardHaptic();
             window.isCardDrawing = true;
-
             if (typeof window.hideEventTimer === 'function') {
                 window.hideEventTimer();
             }
-
-            // Мягкое угасание кнопки без резкого исчезновения из DOM
-            if (drawBtn) {
-                drawBtn.style.opacity = '0';
-                drawBtn.style.pointerEvents = 'none';
-            }
-            if (addToHomeScreenBtn) {
-                addToHomeScreenBtn.style.opacity = '0';
-                addToHomeScreenBtn.style.pointerEvents = 'none';
-            }
-
-            // Фаза предвкушения: легкая левитация карты навстречу пальцу
-            if (card) {
-                card.classList.add('awakening');
-            }
-
-            localStorage.setItem('lastDrawTime', Date.now().toString()); 
-
-            setTimeout(() => {
-                setNewCard();
-            }, 180);
+            localStorage.setItem('lastDrawTime', Date.now()); 
+            setNewCard();
         }
     }
 
@@ -448,60 +353,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const randomNum = Math.floor(Math.random() * TOTAL_CARDS) + 1;
         currentCardNumber = randomNum;
         currentCardPath = `images/${randomNum}.jpeg`; 
-
         if (cardResultImg) {
             cardResultImg.src = currentCardPath; 
             cardResultImg.onload = () => {
-                if (card) {
-                    card.classList.remove('awakening');
-                    card.classList.add('flipped');
-                }
+                if (card) card.classList.add('flipped');
                 isFlipped = true;
                 window.isCardDrawing = false;
                 
-                // Запуск тактильной партитуры в резонанс с CSS-кривой 1350 мс
-                triggerCardFlipSymphony();
-
                 saveCardToCollection(randomNum);
 
-                // Фиксация цели в Яндекс.Метрике
+                // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Выбор карты ---
                 if (typeof ym !== 'undefined') {
                     ym(110909428, 'reachGoal', 'get_card');
                 }
                 
-                if (drawBtn) {
-                    drawBtn.style.display = 'none';
-                    drawBtn.style.opacity = '';
-                    drawBtn.style.pointerEvents = '';
-                }
-                if (addToHomeScreenBtn) {
-                    addToHomeScreenBtn.style.display = 'none';
-                    addToHomeScreenBtn.style.opacity = '';
-                    addToHomeScreenBtn.style.pointerEvents = '';
-                }
-
+                if (drawBtn) drawBtn.style.display = 'none';
                 if (typeof window.updateEventTimer === 'function') {
                     window.updateEventTimer();
                 }
 
-                // Каскадное проявление кнопок после завершения разворота карты (1500 мс)
                 setTimeout(() => { 
-                    if (nextToAudioBtn) {
-                        nextToAudioBtn.style.display = 'block';
-                        nextToAudioBtn.classList.add('ritual-btn-reveal');
+                    if (nextToAudioBtn) nextToAudioBtn.style.display = 'block';
+                    if (shareCardBtn) shareCardBtn.style.display = 'block'; 
+                    if (typeof window.updateEventTimer === 'function') {
+                        window.updateEventTimer();
                     }
-                    triggerSelectionHaptic();
-
-                    setTimeout(() => {
-                        if (shareCardBtn) {
-                            shareCardBtn.style.display = 'block';
-                            shareCardBtn.classList.add('ritual-btn-reveal');
-                        }
-                        if (typeof window.updateEventTimer === 'function') {
-                            window.updateEventTimer();
-                        }
-                    }, 180);
-                }, 1500);
+                }, 500);
             };
         }
     }
@@ -510,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (card) card.addEventListener('click', drawRandomCard);
 
     // ==========================================
-    // 6. ЛОГИКА ШЕРИНГА (ЛИЧНЫЕ СООБЩЕНИЯ & STORIES)
+    // ЛОГИКА ШЕРИНГА И МЕНЮ ВЫБОРА (ОБЩАЯ)
     // ==========================================
     const shareOptionsModal = document.getElementById('shareOptionsModal');
     const closeShareModal = document.getElementById('closeShareModal');
@@ -534,53 +411,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    if (shareCardBtn) {
-        shareCardBtn.addEventListener('click', () => {
-            triggerSoftHaptic();
-            activeSharePath = currentCardPath;
-            if (shareOptionsModal) shareOptionsModal.classList.add('active');
-        });
-    }
+    shareCardBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
+        activeSharePath = currentCardPath;
+        shareOptionsModal.classList.add('active');
+    });
 
-    if (closeShareModal) {
-        closeShareModal.addEventListener('click', () => {
-            triggerSelectionHaptic();
-            if (shareOptionsModal) shareOptionsModal.classList.remove('active');
-        });
-    }
+    closeShareModal.addEventListener('click', () => {
+        shareOptionsModal.classList.remove('active');
+    });
 
-    if (shareToFriendBtn) {
-        shareToFriendBtn.addEventListener('click', () => {
-            triggerSoftHaptic();
-            if (typeof ym !== 'undefined') {
-                ym(110909428, 'reachGoal', 'share_direct');
-            }
+    // --- НАДЕЖНАЯ ОТПРАВКА В ЛС ---
+    shareToFriendBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
+        if (typeof ym !== 'undefined') {
+            ym(110909428, 'reachGoal', 'share_direct');
+        }
 
-            const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\nhttps://clck.ru/3VB8wu\n\nЗаходи в приложение: ${BOT_LINK}`;
-            openTelegramShare(shareText);
+        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\nhttps://clck.ru/3VB8wu\n\nЗаходи в приложение: ${BOT_LINK}`;
+        openTelegramShare(shareText);
 
-            if (shareOptionsModal) {
-                shareOptionsModal.classList.remove('active');
-            }
-        });
-    }
+        if (shareOptionsModal) {
+            shareOptionsModal.classList.remove('active');
+        }
+    });
 
-    if (shareToUniverseBtn) {
-        shareToUniverseBtn.addEventListener('click', () => {
-            triggerSoftHaptic();
-            if (typeof ym !== 'undefined') {
-                ym(110909428, 'reachGoal', 'share_story');
-            }
+    // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
+    shareToUniverseBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
+        if (typeof ym !== 'undefined') {
+            ym(110909428, 'reachGoal', 'share_story');
+        }
 
-            shareToStories(activeSharePath); 
-            if (shareOptionsModal) {
-                shareOptionsModal.classList.remove('active');
-            }
-        });
-    }
+        shareToStories(activeSharePath); 
+        shareOptionsModal.classList.remove('active');
+    });
 
     function shareToStories(imagePath) {
-        if (!window.Telegram?.WebApp) {
+        if (!window.Telegram || !window.Telegram.WebApp) {
             alert("Поделиться в Stories можно только внутри Telegram ✨");
             return;
         }
@@ -609,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 7. КОЛЛЕКЦИЯ И СВАЙПЕР МЕСЯЦЕВ
+    // ЛОГИКА ОТРИСОВКИ КОЛЛЕКЦИИ (СВАЙПЕР)
     // ==========================================
     let collectionSwiper = null; 
 
@@ -624,18 +492,18 @@ document.addEventListener('DOMContentLoaded', () => {
         collection.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         if (collection.length === 0) {
-            if (emptyMsg) emptyMsg.style.display = 'block';
-            if (swiperContainer) swiperContainer.style.display = 'none';
-            if (timelineNav) timelineNav.style.display = 'none';
+            emptyMsg.style.display = 'block';
+            swiperContainer.style.display = 'none';
+            timelineNav.style.display = 'none';
             return;
         }
 
-        if (emptyMsg) emptyMsg.style.display = 'none';
-        if (swiperContainer) swiperContainer.style.display = 'block';
-        if (timelineNav) timelineNav.style.display = 'flex';
+        emptyMsg.style.display = 'none';
+        swiperContainer.style.display = 'block';
+        timelineNav.style.display = 'flex';
         
-        if (wrapper) wrapper.innerHTML = '';
-        if (timelineNav) timelineNav.innerHTML = '';
+        wrapper.innerHTML = '';
+        timelineNav.innerHTML = '';
 
         let monthsSet = new Set();
         let monthSlidesIndex = {}; 
@@ -666,19 +534,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="action-btn share-btn collection-share-btn" data-path="${imgPath}">Поделиться картой 💫</button>
                 </div>
             `;
-            if (wrapper) wrapper.insertAdjacentHTML('beforeend', slideHtml);
+            wrapper.insertAdjacentHTML('beforeend', slideHtml);
         });
 
         monthsSet.forEach((month, idx) => {
             const btnHtml = `<button class="month-btn ${idx === 0 ? 'active' : ''}" data-index="${monthSlidesIndex[month]}">${month}</button>`;
-            if (timelineNav) timelineNav.insertAdjacentHTML('beforeend', btnHtml);
+            timelineNav.insertAdjacentHTML('beforeend', btnHtml);
         });
 
         document.querySelectorAll('.collection-share-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 triggerSoftHaptic();
                 activeSharePath = this.getAttribute('data-path'); 
-                if (shareOptionsModal) shareOptionsModal.classList.add('active'); 
+                shareOptionsModal.classList.add('active'); 
             });
         });
 
@@ -701,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.month-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 triggerSelectionHaptic();
-                const targetIndex = parseInt(this.getAttribute('data-index'), 10);
+                const targetIndex = parseInt(this.getAttribute('data-index'));
                 collectionSwiper.slideTo(targetIndex, 500); 
             });
         });
@@ -727,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 8. СБРОС И ВОЗВРАТ В НАЧАЛО
+    // ЛОГИКА ВОЗВРАТА В НАЧАЛО (СБРОС ПРАКТИКИ)
     // ==========================================
     const resetPracticeBtn = document.getElementById('resetPracticeBtn');
     const finalVideoPlayer = document.getElementById('finalVideoPlayer');
@@ -747,46 +615,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
         
-        if (step3Video) {
-            step3Video.style.display = 'none';
-            step3Video.classList.remove('step-fade-in');
-        }
-        if (step2Audio) {
-            step2Audio.style.display = 'none';
-            step2Audio.classList.remove('step-fade-in');
-        }
-        if (step1Card) {
-            step1Card.style.display = 'block';
-            step1Card.classList.remove('step-fade-out');
-            step1Card.classList.add('step-fade-in');
-        }
+        if (step3Video) step3Video.style.display = 'none';
+        if (step1Card) step1Card.style.display = 'block';
         
-        if (card) {
-            card.classList.remove('flipped');
-            card.classList.remove('awakening');
-        }
+        if (card) card.classList.remove('flipped');
         isFlipped = false;
         
-        if (nextToAudioBtn) {
-            nextToAudioBtn.style.display = 'none';
-            nextToAudioBtn.classList.remove('ritual-btn-reveal');
-        }
-        if (shareCardBtn) {
-            shareCardBtn.style.display = 'none';
-            shareCardBtn.classList.remove('ritual-btn-reveal');
-        }
+        if (nextToAudioBtn) nextToAudioBtn.style.display = 'none';
+        if (shareCardBtn) shareCardBtn.style.display = 'none';
         
-        if (drawBtn) {
-            drawBtn.style.display = 'block';
-            drawBtn.style.opacity = '';
-            drawBtn.style.pointerEvents = '';
-        }
-        if (addToHomeScreenBtn) {
-            addToHomeScreenBtn.style.display = 'block';
-            addToHomeScreenBtn.style.opacity = '';
-            addToHomeScreenBtn.style.pointerEvents = '';
-        }
-        
+        if (drawBtn) drawBtn.style.display = 'block';
         checkTimer();
 
         if (typeof window.updateEventTimer === 'function') {
@@ -794,26 +632,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    if (resetPracticeBtn) {
-        resetPracticeBtn.addEventListener('click', () => {
-            triggerSoftHaptic();
-            resetToStart();
-        });
-    }
+    resetPracticeBtn.addEventListener('click', () => {
+        triggerSoftHaptic();
+        resetToStart();
+    });
 
-    // ==========================================
-    // 9. ШАГ 2: АУДИОПОСЛАНИЕ И ПЕРЕХОДЫ
-    // ==========================================
+    // --- ШАГ 2: АУДИО И ПЕРЕХОД К ФИНАЛЬНОМУ ВИДЕО ---
     const audioPlayer = document.getElementById('audioPlayer');
     const audioTitle = document.getElementById('audioTitle');
     const shareAudioBtn = document.getElementById('shareAudioBtn'); 
     
     let currentAudioName = "";
+    let audioCtx, gainNode, videoSource;
 
     function startAudioForCurrentCard() {
-        const availableTrackIds = (typeof CARD_TO_AUDIO_MAP !== 'undefined' && CARD_TO_AUDIO_MAP[currentCardNumber]) 
-            ? CARD_TO_AUDIO_MAP[currentCardNumber] 
-            : [1];
+        const availableTrackIds = (typeof CARD_TO_AUDIO_MAP !== 'undefined' && CARD_TO_AUDIO_MAP[currentCardNumber]) ? CARD_TO_AUDIO_MAP[currentCardNumber] : [1];
         const targetAudioId = availableTrackIds[Math.floor(Math.random() * availableTrackIds.length)];
         const selectedAudio = AUDIO_TRACKS_DATA.find(track => track.id === targetAudioId) || AUDIO_TRACKS_DATA[0];
 
@@ -832,29 +665,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (shareAudioBtn) shareAudioBtn.style.display = 'block';
     }
 
-    // Плавный переход Шаг 1 -> Шаг 2 с микро-паузой 500 мс перед звуком
     if (nextToAudioBtn) {
         nextToAudioBtn.addEventListener('click', () => {
             triggerSoftHaptic();
-            if (step1Card) {
-                step1Card.classList.add('step-fade-out');
-                setTimeout(() => {
-                    step1Card.style.display = 'none';
-                    step1Card.classList.remove('step-fade-out');
-
-                    if (step2Audio) {
-                        step2Audio.style.display = 'flex';
-                        step2Audio.classList.add('step-fade-in');
-                    }
-                    if (typeof window.updateEventTimer === 'function') {
-                        window.updateEventTimer();
-                    }
-
-                    // Пауза тишины для настройки внимания
-                    setTimeout(() => {
-                        startAudioForCurrentCard();
-                    }, 500);
-                }, 400);
+            if (step1Card) step1Card.style.display = 'none';
+            if (step2Audio) step2Audio.style.display = 'flex'; 
+            startAudioForCurrentCard();
+            if (typeof window.updateEventTimer === 'function') {
+                window.updateEventTimer();
             }
         });
     }
@@ -867,41 +685,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Автопереход Шаг 2 -> Шаг 3 с сакральной тишиной (1.2 сек)
+    // Автопереход к третьему шагу (Финальное Видео)
     const finalVideoContainer = document.getElementById('finalVideoContainer');
 
     if (audioPlayer) {
         audioPlayer.addEventListener('ended', () => {
-            setTimeout(() => {
-                triggerSoftHaptic();
-                if (step2Audio) {
-                    step2Audio.classList.add('step-fade-out');
+            if (step2Audio) step2Audio.style.display = 'none';
+            if (step3Video) step3Video.style.display = 'block';
+            
+            // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
+            if (typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0) {
+                const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
+                if (finalVideoPlayer) finalVideoPlayer.src = randomFinalVideo;
+            }
+            
+            try {
+                if (!audioCtx && finalVideoPlayer) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContext();
+                    videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
+                    gainNode = audioCtx.createGain();
+                    gainNode.gain.value = 3.0; 
+                    videoSource.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
                 }
-                setTimeout(() => {
-                    if (step2Audio) {
-                        step2Audio.style.display = 'none';
-                        step2Audio.classList.remove('step-fade-out');
-                    }
-                    if (step3Video) {
-                        step3Video.style.display = 'block';
-                        step3Video.classList.add('step-fade-in');
-                    }
-                    
-                    if (typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0) {
-                        const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
-                        if (finalVideoPlayer) finalVideoPlayer.src = randomFinalVideo;
-                    }
-                    
-                    if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
-                    
-                    if (finalVideoPlayer) {
-                        finalVideoPlayer.currentTime = 0;
-                        finalVideoPlayer.play().catch(err => {
-                            if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
-                        });
-                    }
-                }, 400);
-            }, 1200); // 1.2 секунды чистого послевкусия
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (e) {
+                console.log("Усиление звука не поддерживается", e);
+            }
+            
+            if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
+            
+            if (finalVideoPlayer) {
+                finalVideoPlayer.play().catch(err => {
+                    if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
+                });
+            }
         });
     }
 
@@ -927,62 +748,52 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ==========================================
-    // 10. ГАЛЕРЕЯ YOUTUBE И МОДАЛЬНОЕ ОКНО
-    // ==========================================
+    // --- ЛОГИКА ВИДЕОГАЛЕРЕИ (YouTube) ---
     const videoGallery = document.getElementById('videoGallery');
     const videoModal = document.getElementById('videoModal');
     const closeModal = document.getElementById('closeModal');
     const modalVideoWrap = document.getElementById('modalVideoWrap');
     
-    if (typeof YOUTUBE_GALLERY_DATA !== 'undefined' && videoGallery) {
-        YOUTUBE_GALLERY_DATA.forEach(video => {
-            const thumbUrl = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
-            const videoHtml = `
-                <div class="video-item" data-id="${video.id}">
-                    <div class="video-thumb">
-                        <img src="${thumbUrl}" alt="Обложка">
-                        <div class="play-icon"></div>
-                    </div>
-                    <div class="video-title">${video.title}</div>
+    // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
+    YOUTUBE_GALLERY_DATA.forEach(video => {
+        const thumbUrl = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+        const videoHtml = `
+            <div class="video-item" data-id="${video.id}">
+                <div class="video-thumb">
+                    <img src="${thumbUrl}" alt="Обложка">
+                    <div class="play-icon"></div>
                 </div>
-            `;
-            videoGallery.insertAdjacentHTML('beforeend', videoHtml);
-        });
-    }
+                <div class="video-title">${video.title}</div>
+            </div>
+        `;
+        videoGallery.insertAdjacentHTML('beforeend', videoHtml);
+    });
 
     document.querySelectorAll('.video-item').forEach(item => {
         item.addEventListener('click', function() {
             triggerSoftHaptic();
             const videoId = this.getAttribute('data-id');
-            if (modalVideoWrap) {
-                modalVideoWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-            }
-            if (videoModal) videoModal.classList.add('active');
+            modalVideoWrap.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+            videoModal.classList.add('active');
         });
     });
 
-    if (closeModal) {
-        closeModal.addEventListener('click', () => {
-            triggerSelectionHaptic();
-            if (videoModal) videoModal.classList.remove('active');
-            if (modalVideoWrap) modalVideoWrap.innerHTML = ''; 
-        });
-    }
+    closeModal.addEventListener('click', () => {
+        videoModal.classList.remove('active');
+        modalVideoWrap.innerHTML = ''; 
+    });
 
-    if (videoModal) {
-        videoModal.addEventListener('click', (e) => {
-            if (e.target === videoModal) {
-                triggerSelectionHaptic();
-                videoModal.classList.remove('active');
-                if (modalVideoWrap) modalVideoWrap.innerHTML = '';
-            }
-        });
-    }
+    videoModal.addEventListener('click', (e) => {
+        if (e.target === videoModal) {
+            videoModal.classList.remove('active');
+            modalVideoWrap.innerHTML = '';
+        }
+    });
 
     // ==========================================
-    // 11. САКРАЛЬНЫЙ ПРОГРЕСС И ДОСТИЖЕНИЯ
+    // МОДУЛЬ: САКРАЛЬНЫЙ ПРОГРЕСС И ДОСТИЖЕНИЯ
     // ==========================================
+
     const SACRED_RANKS = [
         { min: 1, max: 4, rank: "Искательница смыслов ✦", text: "✨ Твоё намерение мягко вливается в общий круг" },
         { min: 5, max: 14, rank: "Хранительница знаков ✦", text: "🌿 Твоя практика звучит в унисон со всем полем" },
@@ -1021,7 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (item.id !== undefined) id = item.id;
                 else if (item.path !== undefined) {
                     const m = String(item.path).match(/(\d+)/);
-                    if (m) id = parseInt(m[1], 10);
+                    if (m) id = parseInt(m[1]);
                     isModified = true;
                 }
                 
@@ -1031,18 +842,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (item.count) count = item.count;
                 else isModified = true;
             } else {
+                // Старейший формат
                 const match = String(item).match(/(\d+)/);
                 if (match) {
-                    id = parseInt(match[1], 10);
+                    id = parseInt(match[1]);
                     isModified = true;
                 }
             }
 
-            if (id !== null && !isNaN(parseInt(id, 10))) {
-                normalized.push({ id: parseInt(id, 10), date: date, count: count });
+            if (id !== null && !isNaN(parseInt(id))) {
+                normalized.push({ id: parseInt(id), date: date, count: count });
             }
         });
 
+        // Перезаписываем хранилище в новом виде
         if (isModified) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
         }
@@ -1074,6 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
         collection.forEach(item => uniqueSet.add(item.id));
         const uniqueCardsCount = uniqueSet.size;
 
+        // Расчет текущего ранга и прогресса
         let currentRank = null;
         let rankName = "Искательница смыслов ✦";
         let fieldText = "✨ Твоё намерение мягко вливается в общий круг";
@@ -1105,9 +919,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Подсчет открытых печатей (ачивок)
         const unlockedBadges = SACRED_SEALS.filter(seal => uniqueCardsCount >= seal.count);
         const unlockedCount = unlockedBadges.length;
 
+        // Обновление DOM-элементов виджета в секции #collection
         const fieldTextEl = document.getElementById('fieldContributionText');
         const badgesCountEl = document.getElementById('unlockedBadgesCount');
         const progressFillEl = document.getElementById('sacredProgressFill');
@@ -1118,6 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (progressFillEl) progressFillEl.style.width = `${progressPercent}%`;
         if (rankTextEl) rankTextEl.innerText = rankName;
 
+        // Обновление элементов модальной шторки (Bottom Sheet)
         const sheetFieldDescEl = document.getElementById('sheetFieldDesc');
         const sheetCardsCountEl = document.getElementById('sheetCardsCount');
         const sheetBadgesFractionEl = document.getElementById('sheetBadgesFraction');
@@ -1128,11 +945,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sheetCardsCountEl) sheetCardsCountEl.innerText = `${uniqueCardsCount} ${getCardsDeclension(uniqueCardsCount)}`;
         if (sheetBadgesFractionEl) sheetBadgesFractionEl.innerText = `${unlockedCount} / ${SACRED_SEALS.length}`;
 
-        const currentStreak = parseInt(localStorage.getItem('practice_streak_count') || '1', 10);
+        const currentStreak = parseInt(localStorage.getItem('practice_streak_count') || '1');
         if (streakDisplayEl) {
             streakDisplayEl.innerText = `Ритм осознанности: ${currentStreak} ${getDaysDeclension(currentStreak)} в потоке ✨`;
         }
 
+        // Генерация карточек печатей
         if (achievementsGridEl) {
             achievementsGridEl.innerHTML = '';
             SACRED_SEALS.forEach(seal => {
@@ -1168,6 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Обработчики открытия и закрытия модальной шторки (Bottom Sheet)
     const sacredProgressWidget = document.getElementById('sacredProgressWidget');
     const sacredBottomSheet = document.getElementById('sacredBottomSheet');
     const sheetOverlay = document.getElementById('sheetOverlay');
@@ -1186,22 +1005,17 @@ document.addEventListener('DOMContentLoaded', () => {
             sacredBottomSheet.classList.add('active');
             document.body.style.overflow = 'hidden';
 
-            // Тактильная фиксация после завершения анимации открытия шторки (320 мс)
-            setTimeout(() => {
-                triggerSelectionHaptic();
-            }, 320);
-
+            // Запуск односекундного светодиодного луча по контуру плашки стрика
             const streakBar = document.getElementById('sheetStreakBar');
             if (streakBar) {
                 streakBar.classList.remove('led-pulse');
-                void streakBar.offsetWidth;
+                void streakBar.offsetWidth; // Принудительный reflow для перезапуска
                 streakBar.classList.add('led-pulse');
             }
         }
     }
 
     function closeSacredBottomSheet() {
-        triggerSelectionHaptic();
         if (sacredBottomSheet) {
             sacredBottomSheet.classList.remove('active');
             setTimeout(() => {
@@ -1237,5 +1051,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Первичный расчет сакрального прогресса при загрузке страницы
     calculateSacredProgress();
+
+    // Event popup logic is handled dynamically in eventPopup.js
 });
+
