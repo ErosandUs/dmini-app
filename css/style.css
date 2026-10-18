@@ -20,6 +20,13 @@
     --tg-safe-bottom: max(var(--tg-safe-area-inset-bottom, 0px), var(--tg-content-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
     --tg-safe-left: max(var(--tg-safe-area-inset-left, 0px), var(--tg-content-safe-area-inset-left, 0px), env(safe-area-inset-left, 0px));
     --tg-safe-right: max(var(--tg-safe-area-inset-right, 0px), var(--tg-content-safe-area-inset-right, 0px), env(safe-area-inset-right, 0px));
+
+    /* Переменные интерактивного параллакса и золотого блика карты */
+    --tilt-x: 0deg;
+    --tilt-y: 0deg;
+    --glare-x: 50%;
+    --glare-y: 50%;
+    --glare-opacity: 0;
 }
 
 * {
@@ -52,6 +59,8 @@ body {
     display: flex;
     justify-content: space-around;
     background: rgba(246, 240, 250, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     margin-top: 2px;
     margin-bottom: 12px;
     padding: 15px 5px;
@@ -61,7 +70,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
 }
 
 .tab-btn {
@@ -72,12 +81,18 @@ body {
     font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: 0.3s ease;
+    transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                text-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.2s ease;
+}
+
+.tab-btn:active {
+    transform: scale(0.96);
 }
 
 .tab-btn.active {
     color: #9c7abb;
-    text-shadow: 0 0 8px rgba(156, 122, 187, 0.3);
+    text-shadow: 0 0 10px rgba(156, 122, 187, 0.35);
 }
 
 .tab-content {
@@ -88,7 +103,7 @@ body {
     margin: 0 auto;
     flex-grow: 1;
     box-sizing: border-box;
-    animation: fadeIn 0.5s ease;
+    animation: fadeIn 0.65s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 #collection.tab-content {
@@ -104,7 +119,9 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Стили кнопок */
+/* ==========================================
+   КИНЕТИКА И МИКРОАНИМАЦИИ КНОПОК (TACTILE UX)
+   ========================================== */
 .action-btn {
     display: block;
     width: 100%;
@@ -114,21 +131,39 @@ body {
     background: linear-gradient(135deg, #d3bce6, #bba0d6);
     color: #31223b;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-family: 'Montserrat', sans-serif;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(187, 160, 214, 0.4);
-    transition: 0.3s;
+    box-shadow: 0 6px 20px rgba(187, 160, 214, 0.38);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.35s ease,
+                color 0.35s ease;
     text-align: center;
-    /* Добавлено мягкое дыхание */
-    animation: buttonSoftPulse 3.5s ease-in-out infinite;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+    /* Размеренное пранаяма-дыхание (6.5 секунд на цикл) */
+    animation: buttonSoftPulse 6.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
+/* Мягкое вязкое погружение при нажатии */
 .action-btn:active {
-    transform: scale(0.96);
+    transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1),
+                box-shadow 0.15s cubic-bezier(0.2, 0, 0, 1);
+    transform: translateY(2px) scale(0.982);
+    box-shadow: 0 2px 8px rgba(156, 122, 187, 0.25);
+}
+
+/* Состояние накопления намерения при удержании кнопки (0.6s) */
+.action-btn.charging {
+    transform: translateY(1px) scale(0.986);
+    box-shadow: 0 0 24px rgba(212, 175, 55, 0.45), 0 4px 16px rgba(156, 122, 187, 0.5);
+    background: linear-gradient(135deg, #dfccf0, #c5aadf);
 }
 
 /* Состояние заблокированной кнопки (таймер) */
@@ -138,32 +173,31 @@ body {
     box-shadow: none;
     cursor: not-allowed;
     transform: none;
-    animation: none; /* Убираем анимацию у заблокированных кнопок */
+    animation: none;
 }
 
-/* Медленная тёмно-лавандовая пульсация для залитых кнопок */
+/* Глубокая медленная пульсация для залитых кнопок */
 @keyframes buttonSoftPulse {
     0%, 100% {
-        box-shadow: 0 4px 15px rgba(187, 160, 214, 0.4);
+        box-shadow: 0 5px 16px rgba(187, 160, 214, 0.35);
     }
     50% {
-        box-shadow: 0 4px 20px rgba(156, 122, 187, 0.7), 0 0 12px rgba(156, 122, 187, 0.3);
+        box-shadow: 0 6px 24px rgba(156, 122, 187, 0.62), 0 0 14px rgba(212, 175, 55, 0.18);
     }
 }
 
 .share-btn {
     background: transparent;
-    border: 2px solid #bba0d6;
+    border: 1.5px solid #bba0d6;
     color: #9c7abb;
     box-shadow: none;
-    /* Мягкое дыхание для прозрачных кнопок */
-    animation: shareBtnSoftPulse 3.5s ease-in-out infinite !important;
+    animation: shareBtnSoftPulse 6.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite !important;
 }
 
 .share-btn:active {
-    background: #bba0d6;
-    color: #fff;
-    animation: none !important;
+    background: rgba(187, 160, 214, 0.22);
+    color: #4a3b52;
+    transform: translateY(2px) scale(0.982);
 }
 
 @keyframes shareBtnSoftPulse {
@@ -172,7 +206,7 @@ body {
         border-color: #bba0d6;
     }
     50% {
-        box-shadow: 0 0 15px rgba(156, 122, 187, 0.35), inset 0 0 8px rgba(156, 122, 187, 0.15);
+        box-shadow: 0 0 16px rgba(156, 122, 187, 0.28), inset 0 0 8px rgba(156, 122, 187, 0.12);
         border-color: #9c7abb;
     }
 }
@@ -182,26 +216,123 @@ body {
     color: #fff;
 }
 
-/* Адаптивная 3D Карта */
+/* Каскадное проявление кнопок после раскрытия карты */
+.ritual-btn-reveal {
+    animation: ritualBtnFadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes ritualBtnFadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Плавные переходы между шагами (Карта -> Аудио -> Видео) */
+.step-fade-out {
+    opacity: 0 !important;
+    transform: translateY(-6px) scale(0.99);
+    transition: opacity 0.42s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.step-fade-in {
+    animation: sacredStepAppear 0.72s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes sacredStepAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================
+   САКРАЛЬНАЯ 3D КАРТА, ПАРАЛЛАКС И ЗАРЯД НАМЕРЕНИЯ
+   ========================================== */
 .card-container {
-    perspective: 1000px;
+    perspective: 1400px;
     width: 100%;
     max-width: 320px;
     height: 420px;
     margin: 20px auto;
+    position: relative;
+    touch-action: manipulation;
+}
+
+/* Мягкий световой ореол вокруг карты при удержании намерения */
+.card-container::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    border-radius: 22px;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.38) 0%, rgba(156, 122, 187, 0.25) 45%, transparent 72%);
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.card-container.charging-aura::before {
+    opacity: 1;
+    transform: scale(1.06);
 }
 
 .card {
     width: 100%;
     height: 100%;
     position: relative;
-    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 1;
     transform-style: preserve-3d;
     cursor: pointer;
+    will-change: transform;
+    user-select: none;
+    -webkit-user-select: none;
+    /* В состоянии покоя карта мягко отзывается на микро-параллакс (--tilt-x, --tilt-y) */
+    transform: rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Фаза удержания намерения (0.6s): левитация навстречу пальцу */
+.card.charging {
+    transform: translateZ(26px) translateY(-4px) scale(1.022) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Сакральный 3D-разворот (1.35s с левитацией и плавным замедлением без отскока) */
 .card.flipped {
-    transform: rotateY(180deg);
+    animation: sacredCardFlip 1.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* После завершения переворота сохраняем легкий живой параллакс открытой карты */
+.card.flipped.flip-complete {
+    animation: none;
+    transform: rotateY(180deg) rotateX(calc(var(--tilt-x, 0deg) * -0.6)) rotateZ(calc(var(--tilt-y, 0deg) * 0.25));
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes sacredCardFlip {
+    0% {
+        transform: translateZ(22px) translateY(-3px) rotateY(0deg);
+    }
+    42% {
+        /* В пиковой точке вращения карта парит над экраном */
+        transform: translateZ(52px) translateY(-8px) rotateY(92deg);
+    }
+    100% {
+        transform: translateZ(0) translateY(0) rotateY(180deg);
+    }
 }
 
 .card-face {
@@ -209,10 +340,41 @@ body {
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    -webkit-backface-visibility: hidden;
+    border-radius: 14px;
+    box-shadow: 0 12px 28px rgba(74, 59, 82, 0.15);
     overflow: hidden;
     border: 3px solid #f6f0fa;
+    transition: box-shadow 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.6s ease;
+}
+
+/* Золотистый интерактивный блик по граням Цветка Жизни и открытой карты */
+.card-face::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        circle at var(--glare-x, 50%) var(--glare-y, 50%),
+        rgba(255, 244, 214, 0.55) 0%,
+        rgba(212, 175, 55, 0.22) 28%,
+        rgba(187, 160, 214, 0.08) 55%,
+        transparent 78%
+    );
+    mix-blend-mode: soft-light;
+    opacity: var(--glare-opacity, 0);
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.card.charging .card-front {
+    border-color: rgba(212, 175, 55, 0.75);
+    box-shadow: 0 18px 40px rgba(156, 122, 187, 0.35), 0 0 22px rgba(212, 175, 55, 0.32);
+}
+
+.card.flipped .card-back {
+    box-shadow: 0 16px 38px rgba(156, 122, 187, 0.26), 0 0 18px rgba(212, 175, 55, 0.14);
 }
 
 .card-face img {
@@ -220,13 +382,16 @@ body {
     height: 100%;
     object-fit: contain;
     background-color: transparent;
+    pointer-events: none;
 }
 
 .card-back {
     transform: rotateY(180deg);
 }
 
-/* Строгая вертикальная центровка для аудио */
+/* ==========================================
+   ШАГ 2 (АУДИО) И ШАГ 3 (ФИНАЛЬНОЕ ВИДЕО)
+   ========================================== */
 .audio-container {
     display: flex;
     flex-direction: column;
@@ -249,6 +414,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    transform: translateZ(0);
 }
 
 .video-avatar video {
@@ -285,7 +451,7 @@ audio {
     width: 100%;
     max-width: 400px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    animation: fadeIn 0.8s ease;
+    animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .text-message-container h3 {
@@ -301,7 +467,7 @@ audio {
     color: #4a3b52;
 }
 
-/* Telegram Кружочек Видео */
+/* Telegram Кружочек Видео (изолирован на GPU-слое для плавности) */
 .telegram-circle-video {
     width: 240px;
     height: 240px;
@@ -314,6 +480,8 @@ audio {
     background-color: #f6f0fa;
     cursor: pointer;
     -webkit-mask-image: -webkit-radial-gradient(white, black);
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 .telegram-circle-video video {
@@ -348,7 +516,11 @@ audio {
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
-    transition: 0.3s;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.v-tab-btn:active {
+    transform: translateY(1px) scale(0.98);
 }
 
 .v-tab-btn.active {
@@ -359,7 +531,7 @@ audio {
 
 .v-tab-content {
     display: none;
-    animation: fadeIn 0.4s ease;
+    animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .v-tab-content.active {
@@ -380,11 +552,13 @@ audio {
     border: 1px solid #d3bce6;
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    transition: transform 0.2s;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .video-item:active {
-    transform: scale(0.95);
+    transition: transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+    transform: translateY(2px) scale(0.975);
 }
 
 .video-thumb {
@@ -404,7 +578,7 @@ audio {
     position: absolute;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
     width: 40px; height: 40px;
-    background: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.85);
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     border: 2px solid #9c7abb;
@@ -443,12 +617,14 @@ audio {
     padding: 15px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     border: 1px solid #e8dcf5;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     color: #4a3b52;
 }
 
 .premium-btn:active {
-    transform: scale(0.97);
+    transition: transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+    transform: translateY(2px) scale(0.982);
 }
 
 .premium-btn.featured {
@@ -502,13 +678,18 @@ audio {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(246, 240, 250, 0.95);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     z-index: 9999;
     align-items: center;
     justify-content: center;
     padding: 10px;
 }
 
-.modal.active { display: flex; }
+.modal.active {
+    display: flex;
+    animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
 .modal-content {
     width: 100%;
@@ -569,7 +750,11 @@ audio {
     line-height: 1.2;
     white-space: nowrap;
     cursor: pointer;
-    transition: 0.3s;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.month-btn:active {
+    transform: scale(0.95);
 }
 
 .month-btn.active {
@@ -666,15 +851,18 @@ audio {
     cursor: pointer;
     border: 1px solid rgba(211, 188, 230, 0.5);
     box-shadow: 0 4px 18px rgba(156, 122, 187, 0.14);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.3s ease;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    /* Мягкое дыхание для виджета */
-    animation: sacredWidgetPulse 3.5s ease-in-out infinite;
+    /* Размеренное пранаяма-дыхание для виджета (6.5s) */
+    animation: sacredWidgetPulse 6.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
 .sacred-widget:active {
-    transform: scale(0.985);
+    transition: transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+    transform: translateY(1.5px) scale(0.985);
     box-shadow: 0 2px 10px rgba(156, 122, 187, 0.1);
 }
 
@@ -684,8 +872,8 @@ audio {
         border-color: rgba(211, 188, 230, 0.5);
     }
     50% {
-        box-shadow: 0 4px 25px rgba(156, 122, 187, 0.35), inset 0 0 10px rgba(156, 122, 187, 0.1);
-        border-color: rgba(156, 122, 187, 0.7);
+        box-shadow: 0 4px 25px rgba(156, 122, 187, 0.32), inset 0 0 10px rgba(156, 122, 187, 0.08);
+        border-color: rgba(156, 122, 187, 0.68);
     }
 }
 
@@ -742,7 +930,7 @@ audio {
     background: linear-gradient(90deg, #d4af37 0%, #bba0d6 55%, #9c7abb 100%);
     border-radius: 2px;
     box-shadow: 0 0 8px rgba(212, 175, 55, 0.45);
-    transition: width 0.5s ease;
+    transition: width 0.65s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sacred-rank-row {
@@ -780,7 +968,8 @@ audio {
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                visibility 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sacred-bottom-sheet.active {
@@ -824,7 +1013,7 @@ audio {
     padding: max(16px, calc(16px + var(--tg-safe-top))) calc(18px + var(--tg-safe-right)) max(32px, calc(20px + var(--tg-safe-bottom))) calc(18px + var(--tg-safe-left));
     box-shadow: none;
     transform: translateY(100%);
-    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
     box-sizing: border-box;
 }
 
@@ -944,11 +1133,9 @@ audio {
 
 /* Запуск мягкого пульсирующего свечения при открытии шторки */
 .sheet-streak-bar.led-pulse {
-    /* Анимация длится 3 секунды и повторяется 2 раза (итого 6 секунд мягкого фокуса) */
-    animation: softStreakPulse 3s ease-in-out 2 forwards;
+    animation: softStreakPulse 3.5s ease-in-out 2 forwards;
 }
 
-/* Плавная и ненапряжная пульсация плашки (эффект "глубокого дыхания") */
 @keyframes softStreakPulse {
     0% {
         border-color: rgba(211, 188, 230, 0.45);
