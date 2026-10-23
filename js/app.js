@@ -177,6 +177,14 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('active');
             document.getElementById(btn.dataset.tab).classList.add('active');
             
+            if (btn.dataset.tab !== 'daily') {
+                if (avatarVideo && !avatarVideo.paused) {
+                    avatarVideo.pause();
+                }
+            } else if (step2Audio && step2Audio.style.display !== 'none' && avatarVideo && avatarVideo.src) {
+                avatarVideo.play().catch(() => {});
+            }
+
             if(btn.dataset.tab === 'collection') {
                 renderCollection();
             }
@@ -249,39 +257,60 @@ document.addEventListener('DOMContentLoaded', () => {
     function checkTimer() {
         // Если пользователь VIP, сразу разрешаем получение карты, игнорируя таймер
         if (isUserVIP()) {
-            drawBtn.disabled = false;
+            if (countdownInterval) clearInterval(countdownInterval);
+            if (drawBtn) {
+                drawBtn.disabled = false;
+                drawBtn.innerText = "Получить послание";
+            }
             return true;
         }
 
         const lastDraw = localStorage.getItem('lastDrawTime');
         if (lastDraw) {
-            const elapsed = Date.now() - parseInt(lastDraw);
-            if (elapsed < COOLDOWN_MS) {
-                drawBtn.disabled = true;
-                const remaining = COOLDOWN_MS - elapsed;
-                startCountdown(remaining);
-                return false; 
+            const lastDrawTs = parseInt(lastDraw, 10);
+            if (!isNaN(lastDrawTs)) {
+                const elapsed = Date.now() - lastDrawTs;
+                if (elapsed >= 0 && elapsed < COOLDOWN_MS) {
+                    if (drawBtn) drawBtn.disabled = true;
+                    const remaining = COOLDOWN_MS - elapsed;
+                    startCountdown(remaining, lastDrawTs + COOLDOWN_MS);
+                    return false; 
+                } else if (elapsed < 0) {
+                    // Защита от перевода системных часов назад: корректируем точку отсчета
+                    const nowTs = Date.now();
+                    localStorage.setItem('lastDrawTime', nowTs.toString());
+                    if (drawBtn) drawBtn.disabled = true;
+                    startCountdown(COOLDOWN_MS, nowTs + COOLDOWN_MS);
+                    return false;
+                }
             }
+        }
+        if (countdownInterval) clearInterval(countdownInterval);
+        if (drawBtn) {
+            drawBtn.disabled = false;
+            drawBtn.innerText = "Получить послание";
         }
         return true; 
     }
 
-    function startCountdown(duration) {
+    function startCountdown(duration, targetEndTime = Date.now() + duration) {
         if (countdownInterval) clearInterval(countdownInterval); 
-        let remain = duration;
         
-        countdownInterval = setInterval(() => {
-            remain -= 1000;
+        const updateTick = () => {
+            const remain = targetEndTime - Date.now();
             if (remain <= 0) {
                 clearInterval(countdownInterval);
-                drawBtn.disabled = false;
-                drawBtn.innerText = "Получить послание";
-            } else {
+                if (drawBtn) {
+                    drawBtn.disabled = false;
+                    drawBtn.innerText = "Получить послание";
+                }
+            } else if (drawBtn) {
                 drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
             }
-        }, 1000);
-        
-        drawBtn.innerText = `Ожидайте: ${formatTime(remain)}`;
+        };
+
+        updateTick();
+        countdownInterval = setInterval(updateTick, 1000);
     }
 
     function updatePracticeStreak() {
@@ -338,13 +367,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function drawRandomCard() {
-        if (!isFlipped && checkTimer()) {
+        if (!isFlipped && !window.isCardDrawing && checkTimer()) {
             triggerMysticCardHaptic();
             window.isCardDrawing = true;
             if (typeof window.hideEventTimer === 'function') {
                 window.hideEventTimer();
             }
-            localStorage.setItem('lastDrawTime', Date.now()); 
             setNewCard();
         }
     }
@@ -354,8 +382,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentCardNumber = randomNum;
         currentCardPath = `images/${randomNum}.jpeg`; 
         if (cardResultImg) {
-            cardResultImg.src = currentCardPath; 
             cardResultImg.onload = () => {
+                localStorage.setItem('lastDrawTime', Date.now().toString());
                 if (card) card.classList.add('flipped');
                 isFlipped = true;
                 window.isCardDrawing = false;
@@ -380,6 +408,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }, 500);
             };
+            cardResultImg.onerror = () => {
+                window.isCardDrawing = false;
+                if (drawBtn) {
+                    drawBtn.disabled = false;
+                    drawBtn.innerText = "Получить послание";
+                }
+                if (typeof window.updateEventTimer === 'function') {
+                    window.updateEventTimer();
+                }
+                alert("Не удалось загрузить карту. Пожалуйста, проверьте соединение с интернетом и попробуйте снова ✨");
+            };
+            cardResultImg.src = currentCardPath; 
         }
     }
 
@@ -600,6 +640,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetPracticeBtn = document.getElementById('resetPracticeBtn');
     const finalVideoPlayer = document.getElementById('finalVideoPlayer');
     const replayFinalVideo = document.getElementById('replayFinalVideo');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const audioTitle = document.getElementById('audioTitle');
+    const shareAudioBtn = document.getElementById('shareAudioBtn'); 
     let autoResetTimeout;
 
     function resetToStart() {
@@ -608,6 +651,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.isCardDrawing = false;
         
+        if (avatarVideo) {
+            avatarVideo.pause();
+        }
+        if (audioPlayer) {
+            audioPlayer.pause();
+            audioPlayer.currentTime = 0;
+        }
         if (finalVideoPlayer) {
             finalVideoPlayer.pause();
             finalVideoPlayer.currentTime = 0;
@@ -615,6 +665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
         
+        if (step2Audio) step2Audio.style.display = 'none';
         if (step3Video) step3Video.style.display = 'none';
         if (step1Card) step1Card.style.display = 'block';
         
@@ -638,12 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- ШАГ 2: АУДИО И ПЕРЕХОД К ФИНАЛЬНОМУ ВИДЕО ---
-    const audioPlayer = document.getElementById('audioPlayer');
-    const audioTitle = document.getElementById('audioTitle');
-    const shareAudioBtn = document.getElementById('shareAudioBtn'); 
-    
     let currentAudioName = "";
-    let audioCtx, gainNode, videoSource;
 
     function startAudioForCurrentCard() {
         const availableTrackIds = (typeof CARD_TO_AUDIO_MAP !== 'undefined' && CARD_TO_AUDIO_MAP[currentCardNumber]) ? CARD_TO_AUDIO_MAP[currentCardNumber] : [1];
@@ -688,41 +734,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // Автопереход к третьему шагу (Финальное Видео)
     const finalVideoContainer = document.getElementById('finalVideoContainer');
 
-    if (audioPlayer) {
-        audioPlayer.addEventListener('ended', () => {
-            if (step2Audio) step2Audio.style.display = 'none';
-            if (step3Video) step3Video.style.display = 'block';
-            
-            // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
-            if (typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0) {
-                const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
-                if (finalVideoPlayer) finalVideoPlayer.src = randomFinalVideo;
-            }
-            
-            try {
-                if (!audioCtx && finalVideoPlayer) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContext();
-                    videoSource = audioCtx.createMediaElementSource(finalVideoPlayer);
-                    gainNode = audioCtx.createGain();
-                    gainNode.gain.value = 3.0; 
-                    videoSource.connect(gainNode);
-                    gainNode.connect(audioCtx.destination);
-                }
-                if (audioCtx && audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-            } catch (e) {
-                console.log("Усиление звука не поддерживается", e);
-            }
-            
-            if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
-            
+    function transitionToStep3() {
+        if (!step2Audio || step2Audio.style.display === 'none') return;
+
+        if (avatarVideo) {
+            avatarVideo.pause();
+        }
+
+        step2Audio.style.display = 'none';
+        if (step3Video) step3Video.style.display = 'block';
+        
+        // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
+        if (typeof FINAL_VIDEOS_DATA !== 'undefined' && FINAL_VIDEOS_DATA.length > 0) {
+            const randomFinalVideo = FINAL_VIDEOS_DATA[Math.floor(Math.random() * FINAL_VIDEOS_DATA.length)];
             if (finalVideoPlayer) {
-                finalVideoPlayer.play().catch(err => {
-                    if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
-                });
+                finalVideoPlayer.src = randomFinalVideo;
+                finalVideoPlayer.volume = 1.0;
             }
+        }
+        
+        if (replayFinalVideo) replayFinalVideo.style.display = 'none'; 
+        
+        if (finalVideoPlayer) {
+            finalVideoPlayer.play().catch(() => {
+                if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
+            });
+        }
+    }
+
+    if (audioPlayer) {
+        audioPlayer.addEventListener('ended', transitionToStep3);
+        audioPlayer.addEventListener('error', () => {
+            console.warn("Ошибка загрузки аудиопослания, переход к завершающему шагу.");
+            transitionToStep3();
         });
     }
 
