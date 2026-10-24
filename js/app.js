@@ -673,6 +673,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (step2Audio) step2Audio.style.display = 'none';
         if (step3Video) step3Video.style.display = 'none';
         if (step1Card) step1Card.style.display = 'block';
+        const fcReset = document.getElementById('dailyFieldCounter');
+        if (fcReset) fcReset.style.display = 'flex';
         
         if (card) card.classList.remove('flipped');
         isFlipped = false;
@@ -723,6 +725,8 @@ document.addEventListener('DOMContentLoaded', () => {
         nextToAudioBtn.addEventListener('click', () => {
             triggerSoftHaptic();
             if (step1Card) step1Card.style.display = 'none';
+            const fcStep2 = document.getElementById('dailyFieldCounter');
+            if (fcStep2) fcStep2.style.display = 'none';
             if (step2Audio) step2Audio.style.display = 'flex'; 
             startAudioForCurrentCard();
             if (typeof window.updateEventTimer === 'function') {

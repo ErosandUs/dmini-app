@@ -31,7 +31,7 @@
 
 body {
     background: linear-gradient(135deg, #f6f0fa 0%, #e8dcf5 100%);
-    color: #4a3b52; 
+    color: #5a4a6e; 
     font-family: 'Montserrat', sans-serif;
     /* CSS — единственный источник правды для отступов */
     padding-top: 0;
@@ -53,7 +53,7 @@ body {
     justify-content: space-around;
     background: rgba(246, 240, 250, 0.95);
     margin-top: 0;
-    margin-bottom: 12px;
+    margin-bottom: 0;
     padding-top: calc(var(--app-header-padding-top) + 15px);
     padding-bottom: 15px;
     padding-left: calc(5px + var(--tg-safe-left));
@@ -83,13 +83,17 @@ body {
 
 .tab-content {
     display: none;
-    padding: 20px calc(15px + var(--tg-safe-right)) 20px calc(15px + var(--tg-safe-left));
+    padding: 14px calc(15px + var(--tg-safe-right)) 20px calc(15px + var(--tg-safe-left));
     width: 100%;
     max-width: 480px;
     margin: 0 auto;
     flex-grow: 1;
     box-sizing: border-box;
     animation: fadeIn 0.5s ease;
+}
+
+#daily.tab-content {
+    padding-top: 30px;
 }
 
 #collection.tab-content {
@@ -110,8 +114,8 @@ body {
     display: block;
     width: 100%;
     max-width: 300px;
-    margin: 15px auto;
-    padding: 15px;
+    margin: 10px auto;
+    padding: 13px 15px;
     background: linear-gradient(135deg, #d3bce6, #bba0d6);
     color: #31223b;
     border: none;
@@ -156,36 +160,71 @@ body {
     color: #fff;
 }
 
-/* Динамический счётчик «Общее поле» на Шаге 1 */
+/* Динамический счётчик «Общее поле» в виде органичной «чёлки» под шапкой */
 .daily-field-counter {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translate(-50%, 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 7px;
     width: fit-content;
     max-width: 90%;
-    margin: 0 auto 16px auto;
-    padding: 6px 14px;
-    background: rgba(246, 240, 250, 0.75);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(211, 188, 230, 0.5);
-    border-radius: 20px;
-    box-shadow: 0 2px 10px rgba(156, 122, 187, 0.08);
+    padding: 3px 18px 5px 18px;
+    background: rgba(246, 240, 250, 0.95);
+    border-left: 1px solid #d3bce6;
+    border-right: 1px solid #d3bce6;
+    border-bottom: 1px solid #d3bce6;
+    border-top: none;
+    border-radius: 0 0 16px 16px;
     font-family: 'Montserrat', sans-serif;
-    font-size: 0.82rem;
+    font-size: 0.77rem;
     font-weight: 500;
-    color: #4a3b52;
+    color: #5a4a6e;
     letter-spacing: 0.2px;
     line-height: 1.2;
     text-align: center;
+    white-space: nowrap;
     user-select: none;
     -webkit-user-select: none;
+    box-shadow: 0 4px 12px rgba(156, 122, 187, 0.08);
+    z-index: 10;
+}
+
+/* Маскируем верхнюю линию шапки непосредственно над чёлкой */
+.daily-field-counter::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(246, 240, 250, 0.95);
+    pointer-events: none;
+}
+
+/* Векторные ушки (плавный переход от горизонтальной линии к чёлке) */
+.notch-ear {
+    position: absolute;
+    top: -1px;
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+}
+
+.notch-ear-left {
+    left: -13.5px;
+}
+
+.notch-ear-right {
+    right: -13.5px;
 }
 
 .field-pulse-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background-color: #9c7abb;
     flex-shrink: 0;
@@ -205,13 +244,19 @@ body {
     }
 }
 
+/* Компактный таймер события */
+.event-timer-btn {
+    margin: 8px auto !important;
+    padding: 10px 14px !important;
+}
+
 /* Адаптивная 3D Карта */
 .card-container {
     perspective: 1000px;
     width: 100%;
     max-width: 320px;
     height: 420px;
-    margin: 20px auto;
+    margin: 6px auto 12px auto;
 }
 
 .card {
