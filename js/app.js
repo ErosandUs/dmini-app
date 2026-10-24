@@ -385,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof window.hideEventTimer === 'function') {
                 window.hideEventTimer();
             }
+            localStorage.setItem('lastDrawTime', Date.now().toString());
             setNewCard();
         }
     }
@@ -394,39 +395,16 @@ document.addEventListener('DOMContentLoaded', () => {
         currentCardNumber = randomNum;
         currentCardPath = `images/${randomNum}.jpeg`; 
         if (cardResultImg) {
-            cardResultImg.onload = () => {
-                localStorage.setItem('lastDrawTime', Date.now().toString());
-                if (card) card.classList.add('flipped');
-                isFlipped = true;
+            let loadFailed = false;
+            cardResultImg.onerror = () => {
+                loadFailed = true;
                 window.isCardDrawing = false;
                 if (typeof syncFieldCounterVisibility === 'function') {
                     syncFieldCounterVisibility();
                 };
-                
-                saveCardToCollection(randomNum);
-
-                // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Выбор карты ---
-                if (typeof ym !== 'undefined') {
-                    ym(110909428, 'reachGoal', 'get_card');
-                }
-                
-                if (drawBtn) drawBtn.style.display = 'none';
-                if (typeof window.updateEventTimer === 'function') {
-                    window.updateEventTimer();
-                }
-
-                setTimeout(() => { 
-                    if (nextToAudioBtn) nextToAudioBtn.style.display = 'block';
-                    if (shareCardBtn) shareCardBtn.style.display = 'block'; 
-                    if (typeof window.updateEventTimer === 'function') {
-                        window.updateEventTimer();
-                    }
-                }, 500);
-            };
-            cardResultImg.onerror = () => {
-                window.isCardDrawing = false;
                 if (drawBtn) {
                     drawBtn.disabled = false;
+                    drawBtn.style.display = 'block';
                     drawBtn.innerText = "Получить послание";
                 }
                 if (typeof window.updateEventTimer === 'function') {
@@ -434,8 +412,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 alert("Не удалось загрузить карту. Пожалуйста, проверьте соединение с интернетом и попробуйте снова ✨");
             };
+
             cardResultImg.src = currentCardPath; 
+            // Декодируем картинку до переворота, чтобы анимация не подвисала посередине
+            const imageReady = typeof cardResultImg.decode === 'function'
+                ? cardResultImg.decode().catch(() => {})
+                : new Promise(resolve => { cardResultImg.onload = resolve; });
+
+            imageReady.then(() => {
+                if (loadFailed) return;
+
+                const flipRevealed = window.playCardFlip
+                    ? window.playCardFlip(card)
+                    : (card.classList.add('flipped'), new Promise(resolve => setTimeout(resolve, 500)));
+                isFlipped = true;
+
+                saveCardToCollection(randomNum);
+
+                // --- ОТПРАВКА ЦЕЛИ В ЯНДЕКС МЕТРИКУ: Выбор карты ---
+                if (typeof ym !== 'undefined') {
+                    ym(110909428, 'reachGoal', 'get_card');
+                }
+
+                if (drawBtn) fadeOutButton(drawBtn);
+                if (typeof window.updateEventTimer === 'function') {
+                    window.updateEventTimer();
+                }
+
+                flipRevealed.then(() => {
+                    window.isCardDrawing = false;
+                    if (typeof syncFieldCounterVisibility === 'function') {
+                        syncFieldCounterVisibility();
+                    };
+                    if (nextToAudioBtn) revealButton(nextToAudioBtn, 0);
+                    if (shareCardBtn) revealButton(shareCardBtn, 110);
+                    if (typeof window.updateEventTimer === 'function') {
+                        window.updateEventTimer();
+                    }
+                });
+            });
         }
+    }
+
+    // Мягкое появление/исчезновение кнопок вокруг переворота карты
+    const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function revealButton(btn, delay) {
+        btn.style.display = 'block';
+        if (typeof btn.animate !== 'function') return;
+        const shift = prefersReducedMotion() ? 'none' : 'translateY(10px)';
+        btn.animate([
+            { opacity: 0, transform: shift },
+            { opacity: 1, transform: 'none' }
+        ], { duration: 520, delay, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'backwards' });
+    }
+
+    function fadeOutButton(btn) {
+        if (typeof btn.animate !== 'function') {
+            btn.style.display = 'none';
+            return;
+        }
+        btn.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: 'ease-in' })
+            .finished.then(() => { btn.style.display = 'none'; });
     }
 
     if (drawBtn) drawBtn.addEventListener('click', drawRandomCard);

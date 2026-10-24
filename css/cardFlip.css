@@ -1,0 +1,164 @@
+/* Кинематографичный переворот карты: золотое сияние, световые ленты, вспышка и искры.
+   Анимируются только transform и opacity — плавно на iPhone. */
+
+.card-container {
+    position: relative;
+    isolation: isolate;
+    perspective: 1100px;
+}
+
+.card {
+    z-index: 1;
+    /* Возврат к рубашке — без «отскока» */
+    transition: transform 0.9s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.card-face {
+    overflow: visible; /* иначе обрежется золотое свечение */
+    -webkit-backface-visibility: hidden;
+}
+
+.card-face img {
+    border-radius: 9px;
+}
+
+/* Свечение рисуется один раз, анимируется только его прозрачность */
+.card-face::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 12px;
+    box-shadow:
+        0 0 0 2px rgba(252, 222, 160, 1),
+        0 0 18px 5px rgba(234, 176, 78, 0.9),
+        0 0 54px 16px rgba(248, 204, 128, 0.7);
+    opacity: 0;
+    transition: opacity 0.7s cubic-bezier(0.33, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.card.is-glowing .card-face::after {
+    opacity: 1;
+    transition-duration: 0.45s;
+}
+
+/* --- Слои эффектов: сзади карты и перед ней --- */
+.flip-fx {
+    display: none;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.card-container.is-flipping .flip-fx { display: block; }
+
+.flip-fx--back { z-index: 0; }
+.flip-fx--front { z-index: 2; }
+
+/* Эллиптическая орбита: круг, наклонённый и сплющенный по вертикали.
+   Задняя половина орбиты лежит под картой, передняя — над ней. */
+.flip-orbit {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 125%;
+    aspect-ratio: 1;
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-18deg) scaleY(0.32);
+}
+
+.flip-orbit--b {
+    top: 44%;
+    width: 112%;
+    transform: translate(-50%, -50%) rotate(24deg) scaleY(0.26);
+}
+
+.flip-orbit--back { clip-path: inset(0 0 50% 0); }
+.flip-orbit--front { clip-path: inset(50% 0 0 0); }
+
+/* Светящаяся «комета» с затухающим хвостом */
+.flip-comet {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(
+        from 0deg,
+        rgba(205, 145, 50, 0) 0deg 170deg,
+        rgba(205, 145, 50, 0.7) 270deg,
+        rgba(230, 172, 76, 1) 325deg,
+        #ffe9b8 348deg,
+        #fff 357deg,
+        rgba(255, 214, 140, 0) 360deg
+    );
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 26px), rgba(0, 0, 0, 0.22) calc(100% - 14px), rgba(0, 0, 0, 0.7) calc(100% - 7px), #000 calc(100% - 4px), #000 calc(100% - 1px), transparent 100%);
+    mask: radial-gradient(farthest-side, transparent calc(100% - 26px), rgba(0, 0, 0, 0.22) calc(100% - 14px), rgba(0, 0, 0, 0.7) calc(100% - 7px), #000 calc(100% - 4px), #000 calc(100% - 1px), transparent 100%);
+}
+
+/* Тёплая аура за картой: карта «пробуждается» перед поворотом */
+.flip-aura {
+    position: absolute;
+    inset: -18% -22%;
+    border-radius: 50%;
+    background: radial-gradient(closest-side,
+        rgba(252, 214, 146, 1) 0%,
+        rgba(246, 196, 112, 0.65) 45%,
+        rgba(246, 196, 112, 0) 100%);
+    opacity: 0;
+}
+
+/* Вспышка в момент, когда карта стоит ребром */
+.flip-burst {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 360px;
+    height: 360px;
+    margin: -180px 0 0 -180px;
+    border-radius: 50%;
+    background: radial-gradient(circle,
+        #fff 0%,
+        rgba(255, 249, 232, 0.95) 12%,
+        rgba(255, 228, 170, 0.55) 30%,
+        rgba(255, 214, 140, 0.18) 50%,
+        rgba(255, 214, 140, 0) 68%);
+    opacity: 0;
+}
+
+/* Лучи-блики */
+.flip-flare {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 460px;
+    height: 4px;
+    margin: -2px 0 0 -230px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, rgba(255, 226, 166, 0), #fff 50%, rgba(255, 226, 166, 0));
+    opacity: 0;
+}
+
+.flip-flare--v {
+    width: 3px;
+    height: 320px;
+    margin: -160px 0 0 -1.5px;
+    background: linear-gradient(180deg, rgba(255, 226, 166, 0), #fff 50%, rgba(255, 226, 166, 0));
+}
+
+/* Искры */
+.flip-spark {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0 22%, rgba(255, 230, 172, 0.95) 42%, rgba(255, 210, 130, 0) 70%);
+    opacity: 0;
+}
+
+/* Меньше движения: без 3D-поворота и полётов — только мягкая смена прозрачности */
+@media (prefers-reduced-motion: reduce) {
+    .card { transition: none; }
+    .card-container.is-flipping .flip-fx { display: none; }
+}
