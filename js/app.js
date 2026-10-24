@@ -185,6 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 avatarVideo.play().catch(() => {});
             }
 
+            if (btn.dataset.tab === 'daily') {
+                if (typeof updateDailyFieldCounter === 'function') {
+                    updateDailyFieldCounter();
+                }
+            }
             if(btn.dataset.tab === 'collection') {
                 renderCollection();
             }
@@ -677,6 +682,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (drawBtn) drawBtn.style.display = 'block';
         checkTimer();
+        if (typeof updateDailyFieldCounter === 'function') {
+            updateDailyFieldCounter();
+        }
 
         if (typeof window.updateEventTimer === 'function') {
             window.updateEventTimer();
@@ -1097,6 +1105,145 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Первичный расчет сакрального прогресса при загрузке страницы
     calculateSacredProgress();
+
+    // ==========================================
+    // ДИНАМИЧЕСКИЙ СЧЁТЧИК «ОБЩЕЕ ПОЛЕ» (МСК / UTC+3)
+    // ==========================================
+
+    const fieldCounterContainer = document.getElementById('dailyFieldCounter');
+    const fieldCounterText = document.getElementById('dailyFieldCounterText');
+
+    // 1. Расчет московского времени (UTC+3) независимо от локального пояса устройства
+    function getMskDateInfo() {
+        const MSK_OFFSET_MS = 3 * 60 * 60 * 1000;
+        const mskDate = new Date(Date.now() + MSK_OFFSET_MS);
+        const year = mskDate.getUTCFullYear();
+        const month = String(mskDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(mskDate.getUTCDate()).padStart(2, '0');
+        const dateKey = `${year}-${month}-${day}`;
+        const hours = mskDate.getUTCHours();
+        const minutes = mskDate.getUTCMinutes();
+        const seconds = mskDate.getUTCSeconds();
+        const totalMinutes = hours * 60 + minutes + (seconds / 60);
+        return { dateKey, totalMinutes };
+    }
+
+    // 2. Детерминированный целевой суточный лимит (240..295) от даты
+    function getDailyTarget(dateKey) {
+        let hash = 0;
+        for (let i = 0; i < dateKey.length; i++) {
+            hash = ((hash << 5) - hash) + dateKey.charCodeAt(i);
+            hash |= 0;
+        }
+        const seed = Math.abs(hash);
+        return 240 + (seed % 56);
+    }
+
+    // 3. Грамматически корректное склонение слова «женщина»
+    function getWomenDeclension(count) {
+        const absN = Math.abs(count) % 100;
+        const lastDigit = absN % 10;
+        if (absN >= 11 && absN <= 19) {
+            return 'женщин';
+        }
+        if (lastDigit === 1) {
+            return 'женщина';
+        }
+        if (lastDigit >= 2 && lastDigit <= 4) {
+            return 'женщины';
+        }
+        return 'женщин';
+    }
+
+    // 4. Прогрессивная суточная шкала с кусочно-линейной интерполяцией
+    function calculateFieldBaseCount(totalMinutes, target) {
+        const targetFactor = Math.min(Math.max((target - 240) / 55, 0), 1);
+
+        const schedule = [
+            { t: 0,    min: 38,  max: 47 },
+            { t: 240,  min: 48,  max: 58 },
+            { t: 420,  min: 62,  max: 75 },
+            { t: 690,  min: 162, max: 190 },
+            { t: 1080, min: 210, max: 235 },
+            { t: 1350, min: 232, max: 280 },
+            { t: 1440, min: target, max: target }
+        ];
+
+        const milestones = schedule.map(pt => {
+            let val;
+            if (pt.t === 1440) {
+                val = target;
+            } else if (pt.t === 1350) {
+                // Для 22:30: ~96% от суточного таргета, не превышая target - 2
+                const raw = Math.round(pt.min + targetFactor * (pt.max - pt.min));
+                val = Math.min(raw, target - 2);
+            } else {
+                val = Math.round(pt.min + targetFactor * (pt.max - pt.min));
+            }
+            return { t: pt.t, v: val };
+        });
+
+        const m = Math.min(Math.max(totalMinutes, 0), 1439.99);
+
+        let pA = milestones[0];
+        let pB = milestones[milestones.length - 1];
+
+        for (let i = 0; i < milestones.length - 1; i++) {
+            if (m >= milestones[i].t && m <= milestones[i + 1].t) {
+                pA = milestones[i];
+                pB = milestones[i + 1];
+                break;
+            }
+        }
+
+        const span = pB.t - pA.t;
+        const progress = span > 0 ? (m - pA.t) / span : 0;
+        const calculated = pA.v + progress * (pB.v - pA.v);
+
+        return Math.floor(calculated);
+    }
+
+    // 5. Обновление счётчика с защитой монотонности и учётом личного вклада (+1)
+    function updateDailyFieldCounter() {
+        if (!fieldCounterText) return;
+
+        const { dateKey, totalMinutes } = getMskDateInfo();
+        const target = getDailyTarget(dateKey);
+        const baseCount = calculateFieldBaseCount(totalMinutes, target);
+
+        const storedDate = localStorage.getItem('mystic_field_date');
+        let storedCount = parseInt(localStorage.getItem('mystic_field_count') || '0', 10);
+        if (isNaN(storedCount)) storedCount = 0;
+
+        const userContributedDate = localStorage.getItem('mystic_field_user_today');
+
+        // Смена суток (00:00 по Москве): мягкий переход на новый день
+        if (storedDate !== dateKey) {
+            storedCount = 0;
+            localStorage.setItem('mystic_field_date', dateKey);
+        }
+
+        // Личный вклад: при первом визите за сегодня добавляется +1
+        let userOffset = 1;
+        if (userContributedDate !== dateKey) {
+            localStorage.setItem('mystic_field_user_today', dateKey);
+        }
+
+        // Монотонность: значение может только расти или оставаться неизменным
+        const effectiveCount = baseCount + userOffset;
+        const finalCount = Math.max(effectiveCount, storedCount);
+
+        localStorage.setItem('mystic_field_count', finalCount.toString());
+
+        const declension = getWomenDeclension(finalCount);
+        fieldCounterText.innerText = `Сегодня ${finalCount} ${declension} в потоке ✨`;
+    }
+
+    window.updateDailyFieldCounter = updateDailyFieldCounter;
+
+    // Первичная инициализация счетчика Общего поля и запуск минутного таймера синхронизации
+    updateDailyFieldCounter();
+    setInterval(updateDailyFieldCounter, 60000);
 
     // Event popup logic is handled dynamically in eventPopup.js
 });
