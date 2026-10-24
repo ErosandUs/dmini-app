@@ -1223,25 +1223,104 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.floor(calculated);
     }
 
-    // Жесткая синхронизация видимости счётчика
-    // Счётчик отображается ИСКЛЮЧИТЕЛЬНО на вкладке "Послание на день", на Шаге 1 и только ДО переворота карты
-    function syncFieldCounterVisibility() {
+    // 5. Единый непрерывный SVG-контур нижней границы шапки и чёлки
+    function updateTabsNotch() {
+        const svg = document.getElementById('tabsNotchSvg');
+        const fillPath = document.getElementById('tabsNotchFillPath');
+        const linePath = document.getElementById('tabsNotchLinePath');
         const fc = document.getElementById('dailyFieldCounter');
-        if (!fc) return;
+        const tabs = document.querySelector('.tabs');
+        const textSpan = document.getElementById('dailyFieldCounterText');
+
+        if (!svg || !linePath || !tabs) return;
+
+        const W = tabs.offsetWidth || window.innerWidth || 390;
 
         const dailyTab = document.getElementById('daily');
         const isDailyTab = dailyTab && dailyTab.classList.contains('active');
         const isStep1 = step1Card && step1Card.style.display !== 'none';
-        
-        if (isDailyTab && isStep1 && !isFlipped && !window.isCardDrawing) {
-            fc.style.display = 'flex';
-        } else {
-            fc.style.display = 'none';
+        const shouldShow = isDailyTab && isStep1 && !isFlipped && !window.isCardDrawing;
+
+        if (!shouldShow) {
+            if (fc) fc.style.display = 'none';
+            svg.setAttribute('viewBox', `0 0 ${W} 30`);
+            linePath.setAttribute('d', `M 0,0.5 H ${W}`);
+            if (fillPath) fillPath.setAttribute('d', '');
+            return;
         }
+
+        if (fc) fc.style.display = 'flex';
+
+        const textWidth = textSpan ? textSpan.offsetWidth : 160;
+        // Ширина чёлки подстраивается под текст с комфортными полями
+        const w = Math.max(textWidth + 36, 190);
+        const cx = W / 2;
+        const hw = w / 2;
+        const r = 13;
+        const h = 26;
+        const k = Math.round(0.55228 * r * 100) / 100; // ~7.18 для идеального кругового сопряжения Безье
+
+        const x0 = 0;
+        const x1 = Math.round((cx - hw - r) * 10) / 10;
+        const x2 = Math.round((cx - hw) * 10) / 10;
+        const x3 = Math.round((cx - hw + r) * 10) / 10;
+        const x4 = Math.round((cx + hw - r) * 10) / 10;
+        const x5 = Math.round((cx + hw) * 10) / 10;
+        const x6 = Math.round((cx + hw + r) * 10) / 10;
+        const x7 = W;
+
+        const yTop = 0.5;
+        const yBot = h + 0.5;
+        const yMid1 = r + 0.5;
+        const yMid2 = h + 0.5 - r;
+
+        // Контрольные точки кубических кривых Безье (касательные строго горизонтальны/вертикальны)
+        const c1x_top = Math.round((x1 + k) * 10) / 10;
+        const c2y_top = Math.round((yMid1 - k) * 10) / 10;
+
+        const c1y_bot = Math.round((yMid2 + k) * 10) / 10;
+        const c2x_bot = Math.round((x3 - k) * 10) / 10;
+
+        const c1x_bot_r = Math.round((x4 + k) * 10) / 10;
+        const c2y_bot_r = Math.round((yMid2 + k) * 10) / 10;
+
+        const c1y_top_r = Math.round((yMid1 - k) * 10) / 10;
+        const c2x_top_r = Math.round((x6 - k) * 10) / 10;
+
+        let lineD = `M ${x0},${yTop} H ${x1} ` +
+                    `C ${c1x_top},${yTop} ${x2},${c2y_top} ${x2},${yMid1} `;
+        if (yMid2 > yMid1) {
+            lineD += `V ${yMid2} `;
+        }
+        lineD += `C ${x2},${c1y_bot} ${c2x_bot},${yBot} ${x3},${yBot} ` +
+                 `H ${x4} ` +
+                 `C ${c1x_bot_r},${yBot} ${x5},${c2y_bot_r} ${x5},${yMid2} `;
+        if (yMid2 > yMid1) {
+            lineD += `V ${yMid1} `;
+        }
+        lineD += `C ${x5},${c1y_top_r} ${c2x_top_r},${yTop} ${x6},${yTop} ` +
+                 `H ${x7}`;
+
+        const fillD = `${lineD} V 0 H 0 Z`;
+
+        svg.setAttribute('viewBox', `0 0 ${W} 30`);
+        linePath.setAttribute('d', lineD);
+        if (fillPath) fillPath.setAttribute('d', fillD);
+
+        if (fc) {
+            fc.style.width = `${w}px`;
+            fc.style.height = `${h}px`;
+        }
+    }
+    window.updateTabsNotch = updateTabsNotch;
+
+    // Жесткая синхронизация видимости счётчика и перерисовки векторного контура шапки
+    function syncFieldCounterVisibility() {
+        updateTabsNotch();
     }
     window.syncFieldCounterVisibility = syncFieldCounterVisibility;
 
-    // 5. Обновление счётчика с защитой монотонности и учётом личного вклада (+1)
+    // 6. Обновление счётчика с защитой монотонности и учётом личного вклада (+1)
     function updateDailyFieldCounter() {
         if (!fieldCounterText) return;
 
@@ -1279,6 +1358,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.updateDailyFieldCounter = updateDailyFieldCounter;
+
+    // Автоматическая подстройка SVG-контура при масштабировании и изменении размера окна
+    if (window.ResizeObserver) {
+        try {
+            const tabsRo = new ResizeObserver(() => {
+                updateTabsNotch();
+            });
+            const tabsEl = document.querySelector('.tabs');
+            if (tabsEl) tabsRo.observe(tabsEl);
+            const textSpanEl = document.getElementById('dailyFieldCounterText');
+            if (textSpanEl) tabsRo.observe(textSpanEl);
+        } catch (_) {
+            window.addEventListener('resize', updateTabsNotch);
+        }
+    } else {
+        window.addEventListener('resize', updateTabsNotch);
+    }
 
     // Первичная инициализация счетчика Общего поля и запуск минутного таймера синхронизации
     updateDailyFieldCounter();

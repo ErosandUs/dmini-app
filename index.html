@@ -23,7 +23,7 @@
     <!-- Официальный скрипт Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <link rel="stylesheet" href="css/style.css?v=5">
+    <link rel="stylesheet" href="css/style.css?v=7">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
     <!-- Yandex.Metrika counter -->
@@ -46,17 +46,13 @@
         <button class="tab-btn active" data-tab="daily">Послание на день</button>
         <button class="tab-btn" data-tab="collection">Коллекция</button>
         <button class="tab-btn" data-tab="video">Видеотека</button>
+        <svg id="tabsNotchSvg" class="tabs-notch-svg" aria-hidden="true">
+            <path id="tabsNotchFillPath" class="tabs-notch-fill" />
+            <path id="tabsNotchLinePath" class="tabs-notch-stroke" />
+        </svg>
         <div class="daily-field-counter" id="dailyFieldCounter" aria-live="polite">
-            <svg class="notch-ear notch-ear-left" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path d="M0 0 C7 0 14 7 14 14 V0 H0 Z" fill="rgba(246, 240, 250, 0.95)"/>
-                <path d="M0 0.5 C7 0.5 13.5 7 13.5 14" stroke="#d3bce6" stroke-width="1"/>
-            </svg>
             <span class="field-pulse-dot" aria-hidden="true"></span>
             <span id="dailyFieldCounterText">Сегодня ... женщин в потоке ✨</span>
-            <svg class="notch-ear notch-ear-right" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path d="M14 0 C7 0 0 7 0 14 V0 H14 Z" fill="rgba(246, 240, 250, 0.95)"/>
-                <path d="M14 0.5 C7 0.5 0.5 7 0.5 14" stroke="#d3bce6" stroke-width="1"/>
-            </svg>
         </div>
     </nav>
 
@@ -235,7 +231,7 @@
     
     <script src="js/appData.js?v=1" defer></script> 
     
-    <script id="appScript" src="js/app.js?v=15" defer></script>
+    <script id="appScript" src="js/app.js?v=17" defer></script>
     <script src="js/eventPopup.js?v=04" defer></script>
 </body>
 </html>
