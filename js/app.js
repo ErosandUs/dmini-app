@@ -185,6 +185,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 avatarVideo.play().catch(() => {});
             }
 
+            if (typeof syncFieldCounterVisibility === 'function') {
+                syncFieldCounterVisibility();
+            }
+
             if (btn.dataset.tab === 'daily') {
                 if (typeof updateDailyFieldCounter === 'function') {
                     updateDailyFieldCounter();
@@ -375,6 +379,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isFlipped && !window.isCardDrawing && checkTimer()) {
             triggerMysticCardHaptic();
             window.isCardDrawing = true;
+            if (typeof syncFieldCounterVisibility === 'function') {
+                syncFieldCounterVisibility();
+            };
             if (typeof window.hideEventTimer === 'function') {
                 window.hideEventTimer();
             }
@@ -392,6 +399,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (card) card.classList.add('flipped');
                 isFlipped = true;
                 window.isCardDrawing = false;
+                if (typeof syncFieldCounterVisibility === 'function') {
+                    syncFieldCounterVisibility();
+                };
                 
                 saveCardToCollection(randomNum);
 
@@ -684,6 +694,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (drawBtn) drawBtn.style.display = 'block';
         checkTimer();
+        if (typeof syncFieldCounterVisibility === 'function') {
+            syncFieldCounterVisibility();
+        };
         if (typeof updateDailyFieldCounter === 'function') {
             updateDailyFieldCounter();
         }
@@ -725,6 +738,9 @@ document.addEventListener('DOMContentLoaded', () => {
         nextToAudioBtn.addEventListener('click', () => {
             triggerSoftHaptic();
             if (step1Card) step1Card.style.display = 'none';
+            if (typeof syncFieldCounterVisibility === 'function') {
+                syncFieldCounterVisibility();
+            };
             const fcStep2 = document.getElementById('dailyFieldCounter');
             if (fcStep2) fcStep2.style.display = 'none';
             if (step2Audio) step2Audio.style.display = 'flex'; 
@@ -1207,6 +1223,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.floor(calculated);
     }
 
+    // Жесткая синхронизация видимости счётчика
+    // Счётчик отображается ИСКЛЮЧИТЕЛЬНО на вкладке "Послание на день", на Шаге 1 и только ДО переворота карты
+    function syncFieldCounterVisibility() {
+        const fc = document.getElementById('dailyFieldCounter');
+        if (!fc) return;
+
+        const dailyTab = document.getElementById('daily');
+        const isDailyTab = dailyTab && dailyTab.classList.contains('active');
+        const isStep1 = step1Card && step1Card.style.display !== 'none';
+        
+        if (isDailyTab && isStep1 && !isFlipped && !window.isCardDrawing) {
+            fc.style.display = 'flex';
+        } else {
+            fc.style.display = 'none';
+        }
+    }
+    window.syncFieldCounterVisibility = syncFieldCounterVisibility;
+
     // 5. Обновление счётчика с защитой монотонности и учётом личного вклада (+1)
     function updateDailyFieldCounter() {
         if (!fieldCounterText) return;
@@ -1241,6 +1275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const declension = getWomenDeclension(finalCount);
         fieldCounterText.innerText = `Сегодня ${finalCount} ${declension} в потоке ✨`;
+        syncFieldCounterVisibility();
     }
 
     window.updateDailyFieldCounter = updateDailyFieldCounter;

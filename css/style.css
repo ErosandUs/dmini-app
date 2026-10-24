@@ -163,9 +163,10 @@ body {
 /* Динамический счётчик «Общее поле» в виде органичной «чёлки» под шапкой */
 .daily-field-counter {
     position: absolute;
-    bottom: 0;
+    top: 100%;
     left: 50%;
-    transform: translate(-50%, 100%);
+    transform: translateX(-50%);
+    margin-top: -1px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -197,7 +198,7 @@ body {
 .daily-field-counter::after {
     content: '';
     position: absolute;
-    top: -1px;
+    top: 0;
     left: 0;
     right: 0;
     height: 2px;
@@ -208,7 +209,7 @@ body {
 /* Векторные ушки (плавный переход от горизонтальной линии к чёлке) */
 .notch-ear {
     position: absolute;
-    top: -1px;
+    top: 0;
     width: 14px;
     height: 14px;
     pointer-events: none;
