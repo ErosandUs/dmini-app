@@ -137,11 +137,16 @@
     }
 
     // Меньше движения (настройка iPhone): без поворота и полётов, мягкая смена прозрачности
+    // Прозрачность анимируем у контейнера, а не у самой карты: opacity < 1 на элементе с
+    // transform-style: preserve-3d «сплющивает» 3D, и Safari на iPhone на миг показывает
+    // зеркальную рубашку (backface-visibility перестаёт скрывать лицевую сторону).
     async function softReveal(card) {
-        const fadeOut = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: 'ease-in', fill: 'forwards' });
+        const target = card.parentElement || card;
+        const fadeOut = target.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: 'ease-in', fill: 'forwards' });
         await fadeOut.finished;
+        card.style.transition = 'none';
         card.classList.add('flipped');
-        card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' });
+        target.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' });
         fadeOut.cancel();
     }
 
