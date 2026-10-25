@@ -348,6 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (timerBanner) {
         timerBanner.addEventListener('click', () => {
             window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+            trackEventGoal('event_banner_click');
             openModal();
         });
     }
@@ -499,6 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (directRegBtn) {
         directRegBtn.addEventListener('click', () => {
             window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+            trackEventGoal('event_watch_click');
             openLinkSafe(EVENT_CONFIG.registrationLink);
         });
     }
@@ -506,6 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (shareBtn) {
         shareBtn.addEventListener('click', () => {
             window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
+            trackEventGoal('event_share_click');
             const senderId = getSenderId();
             const directLinkWithPromo = (EVENT_CONFIG.isPromoActive && EVENT_CONFIG.promoReceiver)
                 ? `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`
@@ -592,6 +595,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const applyUrl = `${EVENT_CONFIG.registrationLink}?promo=${encodeURIComponent(promoToApply)}`;
             openLinkSafe(applyUrl);
         });
+    }
+
+    // Цели Метрики для анонса события. К каждой цели добавляется название события,
+    // чтобы в отчётах разделять разные эфиры и практики.
+    function trackEventGoal(goal) {
+        try {
+            if (typeof window.trackGoal === 'function') {
+                const eventTitle = (typeof EVENT_CONFIG !== 'undefined' && EVENT_CONFIG.title) ? EVENT_CONFIG.title : '';
+                window.trackGoal(goal, eventTitle ? { event: eventTitle } : undefined);
+            }
+        } catch (_) {}
     }
 
     function openLinkSafe(url, isTelegramShare = false) {

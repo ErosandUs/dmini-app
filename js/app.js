@@ -1,5 +1,20 @@
+// --- ЕДИНАЯ БЕЗОПАСНАЯ ОТПРАВКА ЦЕЛЕЙ В ЯНДЕКС.МЕТРИКУ (счётчик 110909428) ---
+// Если Метрика не загрузилась или заблокирована, приложение продолжает работать без ошибок.
+function trackGoal(goal, params) {
+    try {
+        if (typeof ym === 'function') {
+            if (params) {
+                ym(110909428, 'reachGoal', goal, params);
+            } else {
+                ym(110909428, 'reachGoal', goal);
+            }
+        }
+    } catch (_) {}
+}
+window.trackGoal = trackGoal;
+
 document.addEventListener('DOMContentLoaded', () => {
-    
+
     // Инициализация отображения и перехода в нативный полный экран (Bot API 8.0+)
     if (window.Telegram?.WebApp) {
         const tg = window.Telegram.WebApp;
@@ -213,8 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
             vTabBtns.forEach(b => b.classList.remove('active'));
             vTabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById(btn.dataset.vtab).classList.add('active');
-        });
+            document.getElementById(btn.dataset.vtab).classList.add('active');        });
     });
 
     // ==========================================
@@ -751,6 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ШАГ 2: АУДИО И ПЕРЕХОД К ФИНАЛЬНОМУ ВИДЕО ---
     let currentAudioName = "";
+    let finalVideoGoalSent = false; // защита от повторной отправки цели при пересмотре видео
 
     function startAudioForCurrentCard() {
         const availableTrackIds = (typeof CARD_TO_AUDIO_MAP !== 'undefined' && CARD_TO_AUDIO_MAP[currentCardNumber]) ? CARD_TO_AUDIO_MAP[currentCardNumber] : [1];
@@ -758,6 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedAudio = AUDIO_TRACKS_DATA.find(track => track.id === targetAudioId) || AUDIO_TRACKS_DATA[0];
 
         currentAudioName = selectedAudio.title;
+        finalVideoGoalSent = false;
         if (audioTitle) audioTitle.innerText = `«${currentAudioName}»`;
         if (audioPlayer) {
             audioPlayer.src = `audio/${selectedAudio.id}.mp3`;
@@ -792,6 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (shareAudioBtn) {
         shareAudioBtn.addEventListener('click', () => {
             triggerSoftHaptic();
+            trackGoal('share_audio', { track: currentAudioName });
             const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:\n${BOT_LINK}`;
             openTelegramShare(text);
         });
@@ -829,15 +846,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (audioPlayer) {
-        audioPlayer.addEventListener('ended', transitionToStep3);
-        audioPlayer.addEventListener('error', () => {
-            console.warn("Ошибка загрузки аудиопослания, переход к завершающему шагу.");
+        audioPlayer.addEventListener('ended', () => {
+            trackGoal('audio_complete', { track: currentAudioName });
             transitionToStep3();
+        });
+        audioPlayer.addEventListener('error', () => {
+            console.warn("Ошибка загрузки аудиопослания, переход к завершающему шагу.");            transitionToStep3();
         });
     }
 
     if (finalVideoPlayer) {
         finalVideoPlayer.addEventListener('ended', () => {
+            if (!finalVideoGoalSent) {
+                finalVideoGoalSent = true;
+                trackGoal('final_video_complete');
+            }
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
             autoResetTimeout = setTimeout(resetToStart, 20000); 
         });
@@ -898,6 +921,13 @@ document.addEventListener('DOMContentLoaded', () => {
             videoModal.classList.remove('active');
             modalVideoWrap.innerHTML = '';
         }
+    });
+
+    // --- ЦЕЛЬ МЕТРИКИ: переход на GetCourse из вкладки «Премиум медитации» ---
+    document.addEventListener('click', (e) => {
+        const link = e.target && e.target.closest ? e.target.closest('a.premium-btn') : null;
+        if (!link) return;
+        trackGoal('premium_click', { title: (link.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80) });
     });
 
     // ==========================================
