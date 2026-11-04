@@ -165,6 +165,18 @@ document.addEventListener('DOMContentLoaded', () => {
         window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
     }
 
+    // --- Проверка VIP-пользователей ---
+    const VIP_USERS = ['Djamilia_Kha', 'atribute']; // Никнеймы без знака @
+
+    function isUserVIP() {
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+            const username = window.Telegram.WebApp.initDataUnsafe.user.username;
+            if (VIP_USERS.includes(username)) return true;
+        }
+        if (window.location.search.includes('vip=1')) return true;
+        return false;
+    }
+
     // --- ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ ИЗ INDEX.HTML ---
     const appScriptTag = document.getElementById('appScript');
     const versionLabel = document.getElementById('appVersionLabel');
@@ -248,18 +260,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // === ЛОГИКА ТАЙМЕРА (12 ЧАСОВ) И ЭКРАНА «ПРОСТРАНСТВО ДНЯ» ===
     const COOLDOWN_MS = 12 * 60 * 60 * 1000; 
     let countdownInterval; 
-
-    // --- Проверка VIP-пользователей ---
-    const VIP_USERS = ['Djamilia_Kha', 'atribute']; // Никнеймы без знака @
-
-    function isUserVIP() {
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-            const username = window.Telegram.WebApp.initDataUnsafe.user.username;
-            if (VIP_USERS.includes(username)) return true;
-        }
-        if (window.location.search.includes('vip=1')) return true;
-        return false;
-    }
 
     function formatTime(ms) {
         const totalSeconds = Math.ceil(ms / 1000);
