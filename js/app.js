@@ -460,20 +460,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const startRect = startTarget.getBoundingClientRect();
 
-            // Создаем парящий прокси-элемент карты в точных экранных координатах миниатюры
-            const proxy = document.createElement('div');
-            proxy.className = 'cd-card-zoom-proxy';
-            proxy.style.top = `${startRect.top}px`;
-            proxy.style.left = `${startRect.left}px`;
-            proxy.style.width = `${startRect.width}px`;
-            proxy.style.height = `${startRect.height}px`;
-
-            const proxyImg = document.createElement('img');
-            proxyImg.src = 'images/0.jpeg';
-            proxyImg.alt = '';
-            proxy.appendChild(proxyImg);
-            document.body.appendChild(proxy);
-
             // Мгновенно переключаем экраны под летающим прокси
             if (cooldownDashboard) cooldownDashboard.style.display = 'none';
             if (versionLabel) versionLabel.style.display = 'none';
@@ -488,20 +474,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Вычисляем целевые координаты большой карты
             const endRect = card.getBoundingClientRect();
-            const deltaX = endRect.left - startRect.left;
-            const deltaY = endRect.top - startRect.top;
-            const scaleX = endRect.width / startRect.width;
-            const scaleY = endRect.height / startRect.height;
+            const deltaX = startRect.left - endRect.left;
+            const deltaY = startRect.top - endRect.top;
+            const scaleX = startRect.width / endRect.width;
+            const scaleY = startRect.height / endRect.height;
+
+            // Прокси сразу в итоговом размере карты: последний кадр полёта совпадает с настоящей картой
+            const proxy = document.createElement('div');
+            proxy.className = 'cd-card-zoom-proxy';
+            proxy.style.top = `${endRect.top}px`;
+            proxy.style.left = `${endRect.left}px`;
+            proxy.style.width = `${endRect.width}px`;
+            proxy.style.height = `${endRect.height}px`;
+
+            const proxyImg = document.createElement('img');
+            proxyImg.src = 'images/0.jpeg';
+            proxyImg.alt = '';
+            proxyImg.decoding = 'sync';
+            proxy.appendChild(proxyImg);
+            document.body.appendChild(proxy);
 
             // 1. Полет и масштабирование карты (460 мс, плавная кривая Apple/Telegram)
+            // Скругление компенсирует масштаб: на экране углы остаются около 12px
             const proxyAnim = proxy.animate([
                 {
-                    transform: 'translate3d(0, 0, 0) scale(1, 1)',
-                    boxShadow: '0 8px 24px rgba(35, 20, 56, 0.35)'
+                    transform: `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scaleX}, ${scaleY})`,
+                    borderRadius: `${12 / scaleX}px / ${12 / scaleY}px`
                 },
                 {
-                    transform: `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scaleX}, ${scaleY})`,
-                    boxShadow: '0 16px 42px rgba(25, 12, 42, 0.45)'
+                    transform: 'translate3d(0, 0, 0) scale(1, 1)',
+                    borderRadius: '12px / 12px'
                 }
             ], {
                 duration: 460,
@@ -552,7 +554,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const cleanup = () => {
                 card.style.visibility = '';
                 if (cardDrawStage) cardDrawStage.style.opacity = '';
-                if (proxy.parentNode) proxy.remove();
+                // Прокси убираем чуть позже: настоящая карта успевает отрисоваться под ним без мигания
+                setTimeout(() => {
+                    if (proxy.parentNode) proxy.remove();
+                }, 60);
                 triggerSoftHaptic();
                 isTransitioningToRitual = false;
             };
@@ -716,11 +721,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Не удалось загрузить карту. Пожалуйста, проверьте соединение с интернетом и попробуйте снова ✨");
             };
 
-            cardResultImg.src = currentCardPath; 
-            // Декодируем картинку до переворота, чтобы анимация не подвисала посередине
-            const imageReady = typeof cardResultImg.decode === 'function'
-                ? cardResultImg.decode().catch(() => {})
-                : new Promise(resolve => { cardResultImg.onload = resolve; });
+            // Сначала ждём загрузку: при ошибке сработает onerror, и кулдаун не запустится
+            const imageLoaded = new Promise(resolve => { cardResultImg.onload = resolve; });
+            cardResultImg.src = currentCardPath;
+            // Декодируем картинку до переворота, чтобы анимация не подвисала посередине.
+            // decode() может не завершиться в WebView, поэтому ждём его не дольше 2 секунд
+            const imageReady = imageLoaded.then(() => {
+                if (typeof cardResultImg.decode !== 'function') return;
+                return Promise.race([
+                    cardResultImg.decode().catch(() => {}),
+                    new Promise(resolve => setTimeout(resolve, 2000))
+                ]);
+            });
 
             imageReady.then(() => {
                 if (loadFailed) return;

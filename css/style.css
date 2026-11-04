@@ -3603,8 +3603,8 @@ audio {
     z-index: 9999;
     pointer-events: none;
     transform-origin: top left;
-    will-change: transform, box-shadow;
-    box-shadow: 0 8px 24px rgba(35, 20, 56, 0.35);
+    will-change: transform;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); /* как у .card-face: без скачка тени в конце */
     background: transparent;
 }
 
@@ -5007,16 +5007,36 @@ body {
 /* --- Чаша благодарности --- */
 #cooldownDashboard .cd-widget--gratitude {
     display: grid;
-    grid-template-columns: 68px 1fr;
-    grid-template-areas: "art body" "art tag";
-    column-gap: 12px;
-    row-gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 104px;
+    grid-template-areas: "body art" "tag art";
+    column-gap: 8px;
+    row-gap: 10px;
     align-items: center;
-    padding: 14px 16px 14px 12px;
+    padding: 16px 12px 16px 16px;
 }
 
 #cooldownDashboard .cd-gratitude-art-wrap {
     grid-area: art;
+    width: 104px;
+    height: 91px;
+}
+
+#cooldownDashboard .cd-gratitude-art-img {
+    width: 104px;
+    height: 91px;
+}
+
+/* Узкие экраны: чаша меньше, чтобы кнопка не заходила на неё */
+@media (max-width: 340px) {
+    #cooldownDashboard .cd-widget--gratitude {
+        grid-template-columns: minmax(0, 1fr) 80px;
+    }
+
+    #cooldownDashboard .cd-gratitude-art-wrap,
+    #cooldownDashboard .cd-gratitude-art-img {
+        width: 80px;
+        height: 70px;
+    }
 }
 
 #cooldownDashboard .cd-gratitude-body {
@@ -5026,6 +5046,7 @@ body {
 #cooldownDashboard .cd-gratitude-title {
     font-size: 1.3rem;
     color: var(--v2-ink);
+    white-space: normal;
 }
 
 #cooldownDashboard .cd-gratitude-sub {
