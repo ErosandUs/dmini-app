@@ -1,12 +1,25 @@
 const EVENT_CONFIG = {
     // 1.  Статус: true (показывать анонс и таймер) или false (скрыть всё)
-    isActive: true,
+    isActive: false,
 
     // 2. Название практики/медитации
-    title: "ЗАПИСЬ ЭФИРА. Презентация нового курса САКРАЛЬНАЯ ЖЕНСТВЕННОСТЬ",
+    title: "САКРАЛЬНАЯ ЖЕНСТВЕННОСТЬ",
 
-    // 3. Дата и время старта события (ISO)
-    date: "2026-11-09T10:10:00",
+    // 3. Дата и время старта события (ISO). Всегда по Москве: оставляйте «+03:00» в конце,
+    //    тогда обратный отсчёт и подпись «МСК» верны на любом телефоне
+    date: "2026-11-09T19:30:00+03:00",
+
+    // 3.1. Плитка «События» на главном экране, пока есть анонс: общая, без привязки к конкретному эфиру.
+    //      Строки: метка, название, «<слово> <дата>» (время в плитке не показывается)
+    widgetEyebrow: "Анонс",
+    widgetTitle: "Сакральная женственность",
+    widgetDatePrefix: "Начало",
+
+    // 3.2. Та же плитка, когда событий нет или они прошли: вход в Telegram-канал
+    channelLink: "https://t.me/djamiliakha",
+    channelEyebrow: "Telegram-канал",
+    channelTitle: "Мир это Ты",
+    channelSubtitle: "Послания, медитации, ченнелинг",
 
     // 4. Баннер события
     imagePath: "images/event_banner.jpeg",
@@ -32,6 +45,8 @@ const EVENT_CONFIG = {
     // 9. Ссылки и промокоды:
     botUsername: "Djamiliakha_bot",
     registrationLink: "https://youtu.be/qw7JHzLawZg?si=7QzByrIenbEwwtQb",
+    donationLink: "https://pay.cloudtips.ru/p/f430db35",
     promoReceiver: "ЛЮБОВЬ15",
-    appsScriptUrl: "https://script.google.com/macros/s/AKfycbxvBYeGEZgc22LaqwFhE8wX7JyX94Ti1QhwssyJqeZP3JDCJN5ey_iE5XuEm2S0xXMm-w/exec"
+    appsScriptUrl: "https://script.google.com/macros/s/AKfycbxvBYeGEZgc22LaqwFhE8wX7JyX94Ti1QhwssyJqeZP3JDCJN5ey_iE5XuEm2S0xXMm-w/exec",
+    horoscopeScriptUrl: "https://script.google.com/macros/s/AKfycby1ngpmw4NxcL9cP0_dziG-Dm6ImUweRkCiytfUtQC9g74Y8sryIh8PfsAlEYjZONjE/exec"
 };

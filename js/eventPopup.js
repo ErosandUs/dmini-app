@@ -1,11 +1,60 @@
 document.addEventListener('DOMContentLoaded', () => {
-    if (typeof EVENT_CONFIG === 'undefined' || !EVENT_CONFIG.isActive) return;
+    if (typeof EVENT_CONFIG === 'undefined') return;
 
-    const getEventKey = (baseKey) => `${baseKey}_${EVENT_CONFIG.date}`;
+    // Ключ хранения не зависит от часового пояса в дате («+03:00» отбрасывается), чтобы не сбрасывать старые отметки
+    const getEventKey = (baseKey) => `${baseKey}_${String(EVENT_CONFIG.date).replace(/(Z|[+-]\d{2}:\d{2})$/, '')}`;
 
     const eventDate = new Date(EVENT_CONFIG.date).getTime();
     const nowMs = new Date().getTime();
-    
+
+    // Правая плитка главного экрана: анонс эфира, а если событий нет (или оно прошло) — вход в Telegram-канал
+    const eventTile = document.getElementById('cooldownEventWidget');
+    const hasUpcomingEvent = Boolean(EVENT_CONFIG.isActive) && !isNaN(eventDate) && eventDate - nowMs >= 0;
+    const channelLink = EVENT_CONFIG.channelLink || 'https://t.me/djamiliakha';
+
+    function setEventTileMode(isEvent) {
+        if (!eventTile) return;
+        eventTile.dataset.mode = isEvent ? 'event' : 'channel';
+        if (isEvent) return;
+        const eyebrowEl = document.getElementById('cdEventEyebrow');
+        const titleEl = document.getElementById('cdEventTitle');
+        const subEl = document.getElementById('cdEventSub');
+        if (eyebrowEl) eyebrowEl.innerText = EVENT_CONFIG.channelEyebrow || 'Telegram-канал';
+        if (titleEl) titleEl.innerText = EVENT_CONFIG.channelTitle || 'Слово Джамили';
+        if (subEl) subEl.innerText = EVENT_CONFIG.channelSubtitle || 'Мысли и послания в канале';
+    }
+
+    function trackTileGoal(goal) {
+        try {
+            if (typeof window.trackGoal === 'function') window.trackGoal(goal);
+        } catch (_) {}
+    }
+
+    function activateEventTile() {
+        const tg = window.Telegram?.WebApp;
+        tg?.HapticFeedback?.impactOccurred('light');
+        if (eventTile.dataset.mode === 'channel') {
+            trackTileGoal('channel_tile_click');
+            if (tg?.openTelegramLink) tg.openTelegramLink(channelLink);
+            else window.open(channelLink, '_blank');
+            return;
+        }
+        trackTileGoal('event_banner_click');
+        if (typeof window.openEventPromoModal === 'function') window.openEventPromoModal();
+    }
+
+    if (eventTile) {
+        setEventTileMode(hasUpcomingEvent);
+        eventTile.addEventListener('click', activateEventTile);
+        eventTile.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                activateEventTile();
+            }
+        });
+    }
+
+    if (!EVENT_CONFIG.isActive) return;
     if (eventDate - nowMs < 0) return;
 
     const style = document.createElement('style');
@@ -21,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             padding: 12px 15px;
             background: linear-gradient(135deg, #f0e4f7, #e3d3f2);
             border: 1.5px solid #bba0d6;
-            border-radius: 8px;
+            border-radius: 12px;
             color: #31223b;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(187, 160, 214, 0.3);
@@ -242,6 +291,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(eventContainer);
 
     const countdownText = document.getElementById('eventCountdownText');
+    const floatingTitleEl = document.getElementById('eventFloatingTitle');
+    const cooldownEventWidget = document.getElementById('cooldownEventWidget');
+    const cdEventEyebrow = document.getElementById('cdEventEyebrow');
+    const cdEventDateBadge = document.getElementById('cdEventDateBadge');
+    const cdEventTitle = document.getElementById('cdEventTitle');
+    const cdEventSub = document.getElementById('cdEventSub');
     const modal = document.getElementById('eventPromoModal');
     const closeEventModal = document.getElementById('closeEventModal');
     const dismissEventModalBtn = document.getElementById('dismissEventModalBtn');
@@ -261,12 +316,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const dailyTab = document.getElementById('daily');
     const step1Card = document.getElementById('step1-card');
+    const cardDrawStage = document.getElementById('cardDrawStage');
+    const cooldownDashboard = document.getElementById('cooldownDashboard');
     const mysticCard = document.getElementById('mysticCard');
     const drawCardBtn = document.getElementById('drawCardBtn');
+    const openAudioFromCardBtn = document.getElementById('openAudioFromCardBtn');
     const nextToAudioBtn = document.getElementById('nextToAudioBtn');
     const shareCardBtn = document.getElementById('shareCardBtn');
     const videoModal = document.getElementById('videoModal');
     const shareOptionsModal = document.getElementById('shareOptionsModal');
+
+    const monthsGenitive = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    // Дата события всегда считается по Москве (UTC+3), независимо от часового пояса телефона
+    const mskObj = new Date(eventDate + 3 * 60 * 60 * 1000);
+    const staticDateStr = !isNaN(mskObj.getTime())
+        ? `${mskObj.getUTCDate()} ${monthsGenitive[mskObj.getUTCMonth()]}`
+        : '';
+
+    function getDaysWord(n) {
+        const abs = Math.abs(n) % 100;
+        const last = abs % 10;
+        if (abs >= 11 && abs <= 19) return 'дней';
+        if (last === 1) return 'день';
+        if (last >= 2 && last <= 4) return 'дня';
+        return 'дней';
+    }
 
     function isDailyTabActive() {
         return Boolean(dailyTab && dailyTab.classList.contains('active'));
@@ -275,8 +349,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function isInitialCardState() {
         if (window.isCardDrawing) return false;
         if (!step1Card || step1Card.style.display === 'none') return false;
+        if (cooldownDashboard && cooldownDashboard.style.display !== 'none') return false;
+        if (cardDrawStage && cardDrawStage.style.display === 'none') return false;
         if (mysticCard && mysticCard.classList.contains('flipped')) return false;
         if (drawCardBtn && drawCardBtn.style.display === 'none') return false;
+        if (openAudioFromCardBtn && openAudioFromCardBtn.style.display && openAudioFromCardBtn.style.display !== 'none') return false;
         if (nextToAudioBtn && nextToAudioBtn.style.display && nextToAudioBtn.style.display !== 'none') return false;
         if (shareCardBtn && shareCardBtn.style.display && shareCardBtn.style.display !== 'none') return false;
 
@@ -291,22 +368,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTimer() {
-        if (!timerBanner) return;
         const distance = eventDate - new Date().getTime();
         if (distance < 0) {
-            timerBanner.style.display = 'none';
+            if (timerBanner) timerBanner.style.display = 'none';
+            setEventTileMode(false);
             return;
         }
-        if (isDailyTabActive() && isInitialCardState()) {
-            timerBanner.style.display = 'flex';
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+
+        const isRecording = /^ЗАПИСЬ ЭФИРА/i.test((EVENT_CONFIG.title || '').trim());
+        const cleanTitle = (EVENT_CONFIG.title || 'Медитация и практика').replace(/^ЗАПИСЬ ЭФИРА\.?\s*/i, '').trim();
+
+        let conciseRemain = '';
+        if (days > 0) {
+            conciseRemain = `через ${days} ${getDaysWord(days)}`;
+        } else if (hours > 0) {
+            conciseRemain = `сегодня через ${hours} ч.`;
         } else {
-            timerBanner.style.display = 'none';
+            conciseRemain = `через ${Math.max(1, minutes)} мин.`;
         }
-        if (countdownText) {
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            countdownText.innerText = `${days} дн : ${hours} ч : ${minutes} мин`;
+
+        const badgeText = staticDateStr ? `${staticDateStr} • ${conciseRemain}` : conciseRemain;
+
+        // 1. Компактная кнопка таймера на экране ритуала карты больше не показывается:
+        // анонс эфира всегда доступен на главном экране «Пространство дня» (виджет ниже).
+        if (timerBanner) {
+            timerBanner.style.display = 'none';
+            if (floatingTitleEl) {
+                floatingTitleEl.innerText = isRecording ? '✨ Запись открытого эфира' : `✨ Медитация • ${staticDateStr}`;
+            }
+            if (countdownText) {
+                countdownText.innerText = isRecording ? 'Смотреть ➔' : `через ${days > 0 ? `${days} ${getDaysWord(days)}` : `${hours} ч.`} ➔`;
+            }
+        }
+
+        // 2. Обновление анонса эфира в едином виджете на главном экране (тексты — из eventConfig.js)
+        if (cooldownEventWidget) {
+            setEventTileMode(true);
+            if (cdEventEyebrow) {
+                cdEventEyebrow.innerText = EVENT_CONFIG.widgetEyebrow || 'Открытый эфир';
+            }
+            if (cdEventDateBadge) {
+                cdEventDateBadge.style.display = 'none';
+            }
+            if (cdEventTitle) {
+                cdEventTitle.innerText = EVENT_CONFIG.widgetTitle || cleanTitle;
+            }
+            if (cdEventSub) {
+                cdEventSub.innerText = isRecording
+                    ? 'Запись эфира доступна'
+                    : `${EVENT_CONFIG.widgetDatePrefix || 'Начало'} ${staticDateStr}`;
+            }
         }
     }
 
@@ -316,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     updateTimer();
-    setInterval(updateTimer, 3000);
+    setInterval(updateTimer, 15000);
 
     // Управление модальным окном и нативной кнопкой BackButton Telegram
     function openModal() { 
@@ -329,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (_) {}
         }
     }
+    window.openEventPromoModal = openModal;
 
     function closeModal() { 
         if (modal) modal.classList.remove('active'); 
@@ -472,17 +588,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (!EVENT_CONFIG.isPromoActive || (!isPromoClaimed && !savedShareTime)) {
-        const hoursUntilEvent = (eventDate - nowMs) / (1000 * 60 * 60);
-        const isFirstShown = localStorage.getItem(getEventKey('event_popup_first'));
-        const isLastDayShown = localStorage.getItem(getEventKey('event_popup_last'));
+        // Окно открывается само два раза: накануне и в день события (по московскому календарю).
+        // При первом касании новичка, за много дней до эфира, окно не появляется — анонс виден в плитке.
+        const mskDayNumber = (ms) => Math.floor((ms + 3 * 60 * 60 * 1000) / 86400000);
+        const daysLeft = mskDayNumber(eventDate) - mskDayNumber(nowMs);
+        const eveKey = getEventKey('event_popup_eve');
+        const dayKey = getEventKey('event_popup_day');
 
-        if (hoursUntilEvent > 24 && !isFirstShown) {
+        if (daysLeft === 1 && !localStorage.getItem(eveKey)) {
             setTimeout(openModal, 2000);
-            localStorage.setItem(getEventKey('event_popup_first'), 'true');
-        } else if (hoursUntilEvent <= 24 && hoursUntilEvent > 0 && !isLastDayShown) {
+            localStorage.setItem(eveKey, 'true');
+        } else if (daysLeft === 0 && !localStorage.getItem(dayKey)) {
             setTimeout(openModal, 2000);
-            localStorage.setItem(getEventKey('event_popup_first'), 'true');
-            localStorage.setItem(getEventKey('event_popup_last'), 'true');
+            localStorage.setItem(dayKey, 'true');
         }
     }
 

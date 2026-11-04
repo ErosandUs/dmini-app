@@ -19,14 +19,14 @@
 }
 
 .card-face img {
-    border-radius: 9px;
+    border-radius: 12px;
 }
 
 /* Свечение рисуется один раз, анимируется только его прозрачность */
 .card-face::after {
     content: "";
     position: absolute;
-    inset: -3px;
+    inset: 0;
     border-radius: 12px;
     box-shadow:
         0 0 0 2px rgba(252, 222, 160, 1),

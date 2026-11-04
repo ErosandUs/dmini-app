@@ -12,11 +12,19 @@
     --tg-content-safe-area-inset-left: 0px;
     --tg-content-safe-area-inset-right: 0px;
 
-    /* Результирующая переменная полного верхнего отступа с учетом микрозазора 4px */
-    --app-header-padding-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px) + 4px);
+    /* Результирующая переменная полного верхнего отступа с гарантированным порогом под кнопки Telegram */
+    --app-header-padding-top: max(
+        calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px) + 6px),
+        calc(env(safe-area-inset-top, 0px) + 48px),
+        56px
+    );
 
     /* Агрегированные переменные для остальных сторон */
-    --tg-safe-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+    --tg-safe-top: max(
+        calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)),
+        calc(env(safe-area-inset-top, 0px) + 44px),
+        52px
+    );
     --tg-safe-bottom: max(var(--tg-safe-area-inset-bottom, 0px), var(--tg-content-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
     --tg-safe-left: max(var(--tg-safe-area-inset-left, 0px), var(--tg-content-safe-area-inset-left, 0px), env(safe-area-inset-left, 0px));
     --tg-safe-right: max(var(--tg-safe-area-inset-right, 0px), var(--tg-content-safe-area-inset-right, 0px), env(safe-area-inset-right, 0px));
@@ -30,7 +38,14 @@
 }
 
 body {
-    background: linear-gradient(135deg, #f6f0fa 0%, #e8dcf5 100%);
+    background-color: #cbb9e8;
+    background-image: 
+        radial-gradient(circle at 92% 78%, rgba(246, 212, 200, 0.78) 0%, rgba(246, 212, 200, 0) 50%),
+        radial-gradient(circle at 8% 18%, rgba(238, 222, 252, 0.85) 0%, rgba(238, 222, 252, 0) 55%),
+        linear-gradient(168deg, #d8c6f2 0%, #c4b3e6 32%, #b59ecc 65%, #9f86be 100%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-size: cover;
     color: #5a4a6e; 
     font-family: 'Montserrat', sans-serif;
     /* CSS — единственный источник правды для отступов */
@@ -46,44 +61,45 @@ body {
     overflow-x: hidden;
 }
 
-/* Главные вкладки */
-.tabs {
-    width: 100%;
-    display: flex;
-    justify-content: space-around;
-    background: rgba(246, 240, 250, 0.95);
-    margin-top: 0;
-    margin-bottom: 0;
-    padding-top: calc(var(--app-header-padding-top) + 15px);
-    padding-bottom: 15px;
-    padding-left: calc(5px + var(--tg-safe-left));
-    padding-right: calc(5px + var(--tg-safe-right));
-    border-bottom: none;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+
+/* Декоративные сакральные мандалы на заднем плане (фиксированный фоновый слой на весь экран) */
+.bg-mandala-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+    background: #ebdff4 url('../images/cd_sky_backdrop.jpg') center top / cover no-repeat;
+    transform: translateZ(0);
 }
 
-.tab-btn {
-    background: none;
-    border: none;
-    color: #8a7a94;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.3s ease;
+.bg-mandala-svg {
+    position: absolute;
+    display: block;
+    pointer-events: none;
 }
 
-.tab-btn.active {
-    color: #9c7abb;
-    text-shadow: 0 0 8px rgba(156, 122, 187, 0.3);
+.bg-mandala-right {
+    top: 40%;
+    right: -130px;
+    width: 360px;
+    height: 360px;
+    opacity: 0.82;
+}
+
+.bg-mandala-left {
+    top: -50px;
+    left: -80px;
+    width: 270px;
+    height: 270px;
+    opacity: 0.65;
 }
 
 .tab-content {
     display: none;
-    padding: 14px calc(15px + var(--tg-safe-right)) 20px calc(15px + var(--tg-safe-left));
+    position: relative;
+    z-index: 1;
+    padding: var(--app-header-padding-top) calc(15px + var(--tg-safe-right)) 20px calc(15px + var(--tg-safe-left));
     width: 100%;
     max-width: 480px;
     margin: 0 auto;
@@ -93,11 +109,12 @@ body {
 }
 
 #daily.tab-content {
-    padding-top: 30px;
+    padding-top: 0;
 }
 
-#collection.tab-content {
-    padding-top: 10px;
+#collection.tab-content,
+#video.tab-content {
+    padding-top: var(--app-header-padding-top);
 }
 
 .tab-content.active {
@@ -119,7 +136,7 @@ body {
     background: linear-gradient(135deg, #d3bce6, #bba0d6);
     color: #31223b;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     font-family: 'Montserrat', sans-serif;
     font-weight: 600;
     text-transform: uppercase;
@@ -158,35 +175,6 @@ body {
 .next-step-btn {
     background: linear-gradient(135deg, #bba0d6, #9c7abb);
     color: #fff;
-}
-
-/* Единый inline-SVG контур нижней границы шапки и чёлки */
-.tabs-notch-svg {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    height: 30px;
-    margin-top: -1px;
-    pointer-events: none;
-    overflow: visible;
-    z-index: 9;
-}
-
-.tabs-notch-stroke {
-    stroke: #d3bce6;
-    stroke-width: 1px;
-    fill: none;
-    vector-effect: non-scaling-stroke;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    shape-rendering: geometricPrecision;
-}
-
-.tabs-notch-fill {
-    fill: rgba(246, 240, 250, 0.95);
-    fill-rule: nonzero;
-    shape-rendering: geometricPrecision;
 }
 
 /* Динамический счётчик «Общее поле» поверх SVG-чёлки */
@@ -279,13 +267,14 @@ body {
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
     overflow: hidden;
-    border: 3px solid #f6f0fa;
+    border: none;
 }
 
 .card-face img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
+    border-radius: 12px;
     background-color: transparent;
 }
 
@@ -293,26 +282,99 @@ body {
     transform: rotateY(180deg);
 }
 
-/* Строгая вертикальная центровка для аудио */
+/* Строгая вертикальная центровка для аудио (Шаг 2) на одной высоте с картой и видео */
+#step2-audio {
+    width: 100%;
+    min-height: calc(100vh - var(--tg-safe-bottom) - 16px);
+    min-height: calc(100dvh - var(--tg-safe-bottom) - 16px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: max(calc(var(--app-header-padding-top, 0px) + 6px), 78px);
+    padding-bottom: calc(var(--tg-safe-bottom) + 12px);
+    box-sizing: border-box;
+}
+
 .audio-container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    margin: 30px auto 0 auto;
+    margin: 0 auto;
     width: 100%;
+    max-width: 360px;
+    padding: 4px 6px 12px 6px;
+}
+
+.mandala-glow-wrap {
+    position: relative;
+    width: 196px;
+    height: 196px;
+    margin: 6px auto 24px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mandala-sun-aura {
+    position: absolute;
+    inset: -38px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(circle, rgba(255, 246, 210, 0.92) 0%, rgba(252, 224, 152, 0.54) 38%, rgba(242, 198, 115, 0.22) 56%, rgba(242, 198, 115, 0) 74%),
+        repeating-conic-gradient(from 0deg, rgba(255, 243, 200, 0.24) 0deg 6deg, rgba(255, 243, 200, 0) 6deg 15deg);
+    filter: blur(5px);
+    transform: translateZ(0);
+}
+
+.mandala-star {
+    position: absolute;
+    pointer-events: none;
+    z-index: 3;
+    filter: drop-shadow(0 0 6px rgba(245, 210, 130, 0.78));
+}
+
+.mandala-star--tr {
+    top: 12px;
+    right: -18px;
+    width: 26px;
+    height: 26px;
+}
+
+.mandala-star--ml {
+    top: 52%;
+    left: -24px;
+    width: 18px;
+    height: 18px;
+    transform: translateY(-50%);
+}
+
+.mandala-star--br {
+    bottom: 16px;
+    right: -8px;
+    width: 12px;
+    height: 12px;
 }
 
 .video-avatar {
-    width: 150px;
-    height: 150px;
-    margin: 0 auto 25px auto;
+    position: relative;
+    z-index: 2;
+    width: 174px;
+    height: 174px;
+    margin: 0;
+    padding: 7px;
     border-radius: 50%;
     overflow: hidden;
-    border: 3px solid #d3bce6;
-    box-shadow: 0 0 25px rgba(211, 188, 230, 0.6);
-    background-color: #e8dcf5;
+    background: radial-gradient(circle, #fffdf9 60%, #f9efe0 100%);
+    border: 1.5px solid rgba(214, 174, 98, 0.82);
+    box-shadow:
+        0 0 30px rgba(245, 208, 125, 0.7),
+        0 0 64px rgba(240, 195, 105, 0.36),
+        inset 0 0 0 1.5px rgba(205, 162, 84, 0.42);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -324,15 +386,35 @@ body {
 .video-avatar video {
     width: 100%;
     height: 100%;
+    border-radius: 50%;
     object-fit: cover;
+    border: 1.2px solid rgba(196, 152, 74, 0.65);
     transform: translateZ(0);
 }
 
 #audioTitle {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 1.4rem;
-    margin-bottom: 25px;
-    color: #4a3b52;
+    font-size: 1.85rem;
+    font-weight: 600;
+    margin: 0 auto 22px auto;
+    color: #351d4f;
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 8px rgba(255, 255, 255, 0.65);
+}
+
+.audio-player-card {
+    width: 100%;
+    max-width: 328px;
+    margin: 0 auto 24px auto;
+    padding: 6px 10px;
+    background: linear-gradient(180deg, rgba(255, 253, 250, 0.9) 0%, rgba(245, 236, 252, 0.84) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 999px;
+    border: 1.5px solid rgba(226, 190, 118, 0.84);
+    box-shadow:
+        0 4px 18px rgba(120, 88, 152, 0.15),
+        inset 0 1px 2px rgba(255, 255, 255, 0.92);
 }
 
 audio {
@@ -345,7 +427,81 @@ audio {
     display: block;
 }
 
-/* Финальный текстовый контейнер */
+.audio-player-card audio {
+    max-width: 100%;
+    height: 42px;
+    margin: 0;
+    border-radius: 999px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.audio-btn-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.audio-btn-sparkle {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+#nextToVideoBtn.audio-video-cta-btn {
+    width: 100%;
+    max-width: 328px;
+    margin: 0 auto 16px auto;
+    padding: 15px 20px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #523468 0%, #3b204f 52%, #2d163e 100%);
+    border: 1.5px solid rgba(228, 192, 120, 0.84);
+    color: #ffffff;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    box-shadow:
+        0 6px 18px rgba(45, 22, 62, 0.35),
+        inset 0 1px 1px rgba(255, 245, 220, 0.28);
+}
+
+#shareAudioBtn.audio-share-pill-btn {
+    width: 100%;
+    max-width: 328px;
+    margin: 0 auto;
+    padding: 14px 20px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(236, 222, 250, 0.72) 0%, rgba(224, 205, 245, 0.62) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1.4px solid rgba(182, 152, 214, 0.78);
+    color: #381f52;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    box-shadow:
+        0 4px 14px rgba(135, 102, 168, 0.12),
+        inset 0 1px 1px rgba(255, 255, 255, 0.65);
+}
+
+#shareAudioBtn.audio-share-pill-btn:active {
+    background: rgba(218, 196, 242, 0.85);
+    color: #2d163e;
+}
+
+.audio-share-icon {
+    width: 18px;
+    height: 18px;
+    color: #d69c3e;
+    filter: drop-shadow(0 0 3px rgba(235, 185, 90, 0.45));
+    flex-shrink: 0;
+}
+
+/* Финальный текстовый контейнер и экран завершения практики (Шаг 3) */
 .text-message-container {
     background: #fff;
     padding: 30px 20px;
@@ -372,6 +528,133 @@ audio {
     color: #4a3b52;
 }
 
+#step3-video {
+    width: 100%;
+    min-height: calc(100vh - var(--tg-safe-bottom) - 16px);
+    min-height: calc(100dvh - var(--tg-safe-bottom) - 16px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: max(calc(var(--app-header-padding-top, 0px) + 10px), 80px);
+    padding-bottom: calc(var(--tg-safe-bottom) + 12px);
+    box-sizing: border-box;
+}
+
+.completion-screen-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 380px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.completion-header {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.completion-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.completion-main-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.85rem;
+    font-weight: 600;
+    color: #361f50;
+    margin: 0;
+    letter-spacing: 0.3px;
+}
+
+.completion-title-star {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 4px rgba(235, 195, 110, 0.6));
+}
+
+.completion-top-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 260px;
+    margin: 0 auto;
+}
+
+.completion-divider-line {
+    flex: 1;
+    height: 1px;
+}
+
+.completion-divider-line--left {
+    background: linear-gradient(90deg, rgba(196, 156, 78, 0), rgba(196, 156, 78, 0.72));
+}
+
+.completion-divider-line--right {
+    background: linear-gradient(90deg, rgba(196, 156, 78, 0.72), rgba(196, 156, 78, 0));
+}
+
+.completion-top-lotus-svg {
+    width: 44px;
+    height: 27px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 4px rgba(235, 198, 120, 0.45));
+}
+
+.text-message-container.completion-card {
+    position: relative;
+    width: 100%;
+    max-width: 344px;
+    margin: 0 auto;
+    padding: 24px 20px 26px 20px;
+    background: linear-gradient(180deg, rgba(252, 247, 255, 0.92) 0%, rgba(243, 232, 253, 0.88) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 28px;
+    border: 1.5px solid rgba(218, 182, 112, 0.78);
+    box-shadow:
+        0 12px 32px rgba(118, 86, 154, 0.15),
+        0 0 24px rgba(240, 204, 128, 0.25),
+        inset 0 0 0 3px rgba(255, 255, 255, 0.55);
+}
+
+.completion-circle-stage {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 2px auto 16px auto;
+}
+
+.completion-card-sparkles {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.completion-card-sparkles--left {
+    top: 18px;
+    left: 4px;
+}
+
+.completion-card-sparkles--right {
+    top: 24px;
+    right: 4px;
+}
+
 /* Telegram Кружочек Видео */
 .telegram-circle-video {
     width: 240px;
@@ -389,6 +672,17 @@ audio {
     -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
+#step3-video .telegram-circle-video {
+    width: 216px;
+    height: 216px;
+    margin: 0 auto;
+    border: 3.5px solid rgba(214, 178, 120, 0.86);
+    box-shadow:
+        0 0 28px rgba(242, 204, 126, 0.56),
+        0 0 54px rgba(235, 192, 110, 0.28),
+        0 8px 22px rgba(128, 92, 165, 0.2);
+}
+
 .telegram-circle-video video {
     width: 100%;
     height: 100%;
@@ -404,6 +698,51 @@ audio {
     z-index: 2;
 }
 
+.text-message-container .completion-thanks-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.48rem;
+    font-weight: 600;
+    line-height: 1.32;
+    color: #361f50;
+    margin: 0 auto 20px auto;
+}
+
+#resetPracticeBtn.completion-enter-btn {
+    width: 100%;
+    max-width: 286px;
+    margin: 0 auto;
+    padding: 14px 20px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #7c5898 0%, #5e3d7a 55%, #4b2e66 100%);
+    border: 1.4px solid rgba(224, 188, 116, 0.74);
+    color: #ffffff;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.22rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    box-shadow:
+        0 0 20px rgba(238, 198, 118, 0.42),
+        0 6px 16px rgba(75, 46, 102, 0.28),
+        inset 0 1px 2px rgba(255, 255, 255, 0.35);
+}
+
+.completion-bottom-lotus {
+    width: calc(100% + 24px);
+    margin: 8px -12px -10px -12px;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.completion-bottom-lotus-svg {
+    width: 100%;
+    max-width: 380px;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 0 10px rgba(245, 212, 138, 0.45));
+}
+
 /* Внутреннее меню видеотеки */
 .video-tabs {
     display: flex;
@@ -417,7 +756,7 @@ audio {
     background: transparent;
     border: 1px solid #bba0d6;
     color: #8a7a94;
-    border-radius: 8px;
+    border-radius: 12px;
     font-family: 'Montserrat', sans-serif;
     font-size: 0.9rem;
     font-weight: 500;
@@ -575,7 +914,7 @@ audio {
     display: none;
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(246, 240, 250, 0.95);
+    background: rgba(233, 225, 247, 0.96);
     z-index: 9999;
     align-items: center;
     justify-content: center;
@@ -698,7 +1037,7 @@ audio {
     margin: 0 auto 15px auto;
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    border: 3px solid #f6f0fa;
+    border: none;
     box-sizing: border-box;
 }
 
@@ -1136,4 +1475,4105 @@ audio {
 .achievement-card.locked .achievement-status {
     color: #8a7a94;
     font-style: italic;
+}
+
+
+/* ==========================================
+   ШАГ 1.5: ПОСЛАНИЕ НЕБЕС (АСТРОНОМИЧЕСКИЙ КОМПАС)
+   Единая цветовая палитра с приложением («Тихая роскошь»)
+   ========================================== */
+
+.celestial-step {
+    width: 100%;
+    max-width: 356px;
+    margin: 0 auto;
+    animation: fadeIn 0.42s ease;
+    box-sizing: border-box;
+}
+
+.celestial-header {
+    display: none;
+}
+
+.celestial-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.95rem;
+    font-weight: 600;
+    color: #31223b;
+    line-height: 1.05;
+    letter-spacing: 0.2px;
+}
+
+.celestial-date {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: #7a6885;
+}
+
+/* 1. Главная карточка Фазы Луны (смягчённый тёмно-лиловый/лавандовый градиент) */
+.celestial-moon-card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(155deg, #4c376f 0%, #382558 100%);
+    border: 1px solid rgba(224, 203, 245, 0.45);
+    border-radius: 22px;
+    padding: 18px 16px;
+    margin-bottom: 11px;
+    box-shadow: 0 10px 24px rgba(76, 55, 111, 0.18);
+    transform: translateZ(0);
+}
+
+.celestial-moon-date {
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: #dfd2f2;
+    letter-spacing: 0.04em;
+    z-index: 2;
+    pointer-events: none;
+    user-select: none;
+}
+
+.celestial-star {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.45);
+    pointer-events: none;
+}
+
+.celestial-star--1 { top: 14px; left: 22px; width: 3px; height: 3px; }
+.celestial-star--2 { top: 26px; right: 34px; width: 3px; height: 3px; opacity: 0.6; }
+.celestial-star--3 { bottom: 18px; left: 36%; width: 2px; height: 2px; opacity: 0.35; }
+.celestial-star--4 { top: 16px; right: 26%; width: 2px; height: 2px; opacity: 0.4; }
+
+.celestial-moon-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.celestial-moon-visual {
+    width: 100px;
+    height: 100px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 14px rgba(247, 234, 181, 0.32));
+    transform: translateZ(0);
+}
+
+.celestial-moon-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.celestial-moon-img {
+    filter: sepia(0.26) brightness(1.06) contrast(1.04);
+}
+
+.celestial-moon-warm-overlay {
+    fill: rgba(251, 244, 210, 0.12);
+    pointer-events: none;
+}
+
+.celestial-moon-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.celestial-moon-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #b5a3cc;
+    margin-bottom: 3px;
+}
+
+.celestial-moon-phase {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.62rem;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.12;
+    margin-bottom: 4px;
+}
+
+.celestial-moon-illum {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: #e4daf2;
+    margin-bottom: 6px;
+}
+
+.celestial-moon-sign {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #f7eab5;
+}
+
+.celestial-moon-sign-ico {
+    width: 14px;
+    height: 14px;
+    color: #eed9a4;
+    flex-shrink: 0;
+}
+
+/* 2. Виджет событий на небе (Свайп-карусель) */
+.sky-events-widget {
+    position: relative;
+    background: linear-gradient(135deg,
+        rgba(227, 199, 125, 0.38) 0%,
+        rgba(217, 200, 240, 0.6) 100%);
+    border: 1px solid rgba(184, 145, 63, 0.6);
+    border-radius: 22px;
+    padding: 12px 14px 10px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 18px rgba(130, 95, 160, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 104px;
+    box-sizing: border-box;
+    touch-action: pan-y;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.sky-nav-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    flex-shrink: 0;
+    z-index: 2;
+}
+
+.sky-nav-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(184, 145, 63, 0.45);
+    box-shadow: 0 2px 8px rgba(100, 75, 125, 0.08);
+    color: #31223b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.sky-nav-btn:active {
+    transform: scale(0.92);
+    background: rgba(245, 238, 244, 0.95);
+}
+
+.sky-nav-arrow {
+    width: 16px;
+    height: 16px;
+}
+
+.sky-nav-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.70rem;
+    font-weight: 500;
+    color: #5a4a6e;
+    margin-top: 4px;
+    text-align: center;
+    white-space: nowrap;
+    max-width: 58px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.1;
+}
+
+.sky-center-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 6px;
+    min-width: 0;
+    z-index: 1;
+}
+
+.sky-event-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7a6885;
+    margin-bottom: 2px;
+}
+
+.sky-event-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.48rem;
+    font-weight: 600;
+    color: #201736;
+    line-height: 1.1;
+    margin: 1px 0 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.sky-event-date {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 400;
+    color: #5a4a6e;
+    line-height: 1.2;
+}
+
+.sky-dots-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 6px;
+}
+
+.sky-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #c8bad9;
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.sky-dot.is-active {
+    width: 16px;
+    height: 5px;
+    border-radius: 3px;
+    background: #8f6d2b;
+}
+
+/* 3. Сетка Бенто-карточек (Заземление и Портал) */
+.celestial-bento-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 11px;
+}
+
+.celestial-bento-grid--bottom {
+    margin-bottom: 14px;
+}
+
+.celestial-bento-card,
+.celestial-message-card {
+    background: rgba(255, 255, 255, 0.84);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(211, 188, 230, 0.68);
+    border-radius: 18px;
+    padding: 13px 14px;
+    box-shadow: 0 4px 16px rgba(156, 122, 187, 0.08);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.celestial-bento-header {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7a6885;
+    margin-bottom: 6px;
+}
+
+.celestial-bento-ico {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+.celestial-bento-ico--gold {
+    color: #9a7432;
+}
+
+/* 3. Послание неба */
+.celestial-message-card {
+    padding: 15px 16px;
+    margin-bottom: 11px;
+}
+
+.celestial-message-header {
+    margin-bottom: 7px;
+}
+
+.celestial-message-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.18rem;
+    font-weight: 500;
+    color: #31223b;
+    line-height: 1.42;
+    margin: 0;
+}
+
+/* 4. Заземление и Портал */
+.celestial-grounding-text {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: #31223b;
+    line-height: 1.36;
+}
+
+.celestial-portal-body {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: auto;
+}
+
+.celestial-portal-code {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.32rem;
+    font-weight: 700;
+    color: #8f6d2b;
+    line-height: 1.15;
+}
+
+.celestial-portal-days {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 400;
+    color: #5a4a6e;
+}
+
+/* ==========================================
+   ШАПКА ПРИЛОЖЕНИЯ И ПОДСКАЗКА СТАРТА
+   ========================================== */
+
+.start-gate-hint {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.02rem;
+    font-weight: 500;
+    color: #644d7d;
+    text-align: center;
+    max-width: 300px;
+    margin: 6px auto 10px auto;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(211, 188, 230, 0.55);
+    border-radius: 12px;
+    line-height: 1.32;
+}
+
+/* Кнопка возврата в Пространство дня из разделов */
+.back-to-hub-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 12px 0;
+    padding: 9px 15px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(184, 145, 63, 0.48);
+    border-radius: 12px;
+    color: #31223b;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(156, 122, 187, 0.14);
+    transition: transform 0.16s ease, background-color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.back-to-hub-btn:active {
+    transform: scale(0.96);
+    background: rgba(246, 240, 250, 0.96);
+}
+
+.back-to-hub-arrow {
+    font-size: 0.95rem;
+    color: #8f6d2b;
+    line-height: 1;
+}
+
+/* ==========================================
+   ИНТЕРАКТИВНЫЙ ЭКРАН КУЛДАУНА: «ПРОСТРАНСТВО ДНЯ»
+   ========================================== */
+
+.cooldown-dashboard {
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    animation: fadeIn 0.42s ease;
+    box-sizing: border-box;
+}
+
+.cd-intro {
+    text-align: center;
+    margin-bottom: 2px;
+}
+
+.cd-status-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    background: linear-gradient(135deg, rgba(227, 199, 125, 0.32), rgba(217, 200, 240, 0.55));
+    border: 1px solid rgba(184, 145, 63, 0.48);
+    border-radius: 20px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #4a3563;
+    letter-spacing: 0.2px;
+    margin-bottom: 4px;
+}
+
+.cd-intro-sub {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.75rem;
+    color: #6d5b78;
+    margin: 0;
+}
+
+/* Базовая интерактивная карточка-виджет */
+.cd-widget {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    padding: 14px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transform: translateZ(0);
+    transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+    box-sizing: border-box;
+}
+
+.cd-widget:active {
+    transform: scale(0.975);
+}
+
+/* 1. Главный виджет: Послание небес и Лунный календарь */
+.cd-widget--moon {
+    background: linear-gradient(150deg, #2d204d 0%, #1e1538 100%);
+    border: 1.5px solid rgba(227, 199, 125, 0.62);
+    box-shadow: 0 8px 24px rgba(49, 34, 59, 0.22);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cd-moon-body {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.cd-moon-visual {
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 12px rgba(247, 234, 181, 0.35));
+    transform: translateZ(0);
+}
+
+.cd-moon-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cd-widget-eyebrow {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+}
+
+.cd-widget-eyebrow--gold {
+    color: #f3dfa2;
+}
+
+.cd-widget-eyebrow--purple {
+    color: #7c5c9c;
+}
+
+.cd-moon-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.48rem;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.1;
+    margin-bottom: 3px;
+}
+
+.cd-moon-meta {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #e9dff5;
+    margin-bottom: 7px;
+}
+
+.cd-moon-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.cd-mini-chip {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #f7eab5;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(247, 234, 181, 0.28);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* Явная кнопка внутри каждого виджета */
+.cd-widget-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 9px 13px;
+    border-radius: 12px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.76rem;
+    font-weight: 600;
+    box-sizing: border-box;
+    margin-top: auto;
+}
+
+.cd-widget-btn--gold {
+    background: linear-gradient(135deg, #f3dfa2 0%, #dfc073 100%);
+    color: #26193d;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+.cd-widget-btn--purple {
+    background: linear-gradient(135deg, #bba0d6 0%, #9c7abb 100%);
+    color: #ffffff;
+}
+
+.cd-widget-btn--event {
+    background: linear-gradient(135deg, #8f6d2b 0%, #b58d3d 100%);
+    color: #ffffff;
+}
+
+.cd-btn-arrow {
+    font-size: 0.9rem;
+    line-height: 1;
+    font-weight: 700;
+}
+
+/* 2. Двухколоночная сетка для Коллекции и Видеотеки */
+.cd-grid-2col {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.cd-widget--light {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(187, 160, 214, 0.72);
+    box-shadow: 0 6px 18px rgba(156, 122, 187, 0.14);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 146px;
+    padding: 13px 12px;
+}
+
+.cd-widget-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.cd-icon-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f5eef9, #e5d4f5);
+    border: 1px solid rgba(187, 160, 214, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.cd-badge-pill {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.66rem;
+    font-weight: 600;
+    color: #6e4f9a;
+    background: rgba(187, 160, 214, 0.22);
+    border: 1px solid rgba(187, 160, 214, 0.45);
+    padding: 2px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+.cd-widget-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.28rem;
+    font-weight: 700;
+    color: #2e1f3d;
+    line-height: 1.12;
+    margin-bottom: 3px;
+}
+
+.cd-widget-desc {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.71rem;
+    color: #6d5b78;
+    line-height: 1.28;
+    margin-bottom: 9px;
+}
+
+/* 3. Виджет ближайшей медитации / эфира */
+.cd-widget--event {
+    background: linear-gradient(135deg, rgba(255, 250, 237, 0.94) 0%, rgba(242, 232, 252, 0.94) 100%);
+    border: 1.5px solid rgba(184, 145, 63, 0.65);
+    box-shadow: 0 6px 18px rgba(184, 145, 63, 0.14);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cd-event-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.cd-event-date-badge {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.69rem;
+    font-weight: 700;
+    color: #7d5b1e;
+    background: rgba(227, 199, 125, 0.42);
+    border: 1px solid rgba(184, 145, 63, 0.5);
+    padding: 3px 9px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+
+.cd-event-main-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.24rem;
+    font-weight: 700;
+    color: #2e1f3d;
+    line-height: 1.18;
+}
+
+.cd-event-sub {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.73rem;
+    color: #5a4a6e;
+    line-height: 1.3;
+    margin-bottom: 4px;
+}
+
+/* 4. Карточка сегодняшней выпавшей карты на дашборде */
+.cd-today-card-box {
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(211, 188, 230, 0.72);
+    border-radius: 18px;
+    padding: 11px 13px;
+    box-shadow: 0 4px 14px rgba(156, 122, 187, 0.1);
+}
+
+.cd-today-card-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cd-today-card-thumb {
+    width: 52px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 3px 8px rgba(49, 34, 59, 0.18);
+    flex-shrink: 0;
+}
+
+.cd-today-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.cd-today-card-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.16rem;
+    font-weight: 600;
+    color: #31223b;
+    line-height: 1.15;
+    margin-bottom: 7px;
+}
+
+.cd-today-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cd-inline-btn {
+    border: 1px solid #bba0d6;
+    background: rgba(255, 255, 255, 0.9);
+    color: #5a4275;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.71rem;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.cd-inline-btn:active {
+    transform: scale(0.95);
+}
+
+.cd-inline-btn--primary {
+    background: linear-gradient(135deg, #d3bce6, #bba0d6);
+    color: #2e1f3d;
+    border-color: transparent;
+}
+
+/* 5. Нижний блок таймера кулдауна */
+.cd-cooldown-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.cd-cooldown-timer-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px 14px;
+    background: rgba(233, 225, 247, 0.65);
+    border: 1px solid rgba(187, 160, 214, 0.55);
+    border-radius: 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.76rem;
+    color: #5a4a6e;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.cd-cooldown-timer-pill strong {
+    color: #31223b;
+    font-weight: 600;
+}
+
+.cd-vip-draw-btn {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px dashed #9c7abb;
+    border-radius: 12px;
+    padding: 8px 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #6e4f9a;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.cd-vip-draw-btn:active {
+    transform: scale(0.96);
+}
+
+/* ==========================================
+   БЛОК «ЭНЕРГИИ ДНЯ» (КОМПАКТНЫЕ ВЕКТОРНЫЕ ИКОНКИ)
+   ========================================== */
+
+.celestial-harmony-card {
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(211, 188, 230, 0.72);
+    border-radius: 18px;
+    padding: 12px 14px;
+    margin-bottom: 11px;
+    box-shadow: 0 4px 16px rgba(156, 122, 187, 0.08);
+    box-sizing: border-box;
+}
+
+.celestial-energy-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 8px 0 10px 0;
+    text-align: center;
+}
+
+.celestial-energy-btn {
+    background: none;
+    border: none;
+    padding: 4px 2px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.celestial-energy-btn:active {
+    transform: scale(0.93);
+}
+
+.celestial-energy-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-sizing: border-box;
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease;
+}
+
+.celestial-energy-btn.is-active .celestial-energy-circle {
+    transform: scale(1.08);
+}
+
+/* 1. Благоприятно: золотой ободок и сияние */
+.celestial-energy-circle--gold {
+    border: 2px solid #c9a050;
+    background: radial-gradient(circle, #fffdf7 0%, #f7eccf 100%);
+    box-shadow: 0 3px 12px rgba(201, 160, 80, 0.35);
+    color: #876520;
+}
+
+.celestial-energy-btn.is-active .celestial-energy-circle--gold {
+    box-shadow: 0 0 0 3px rgba(201, 160, 80, 0.22), 0 4px 16px rgba(201, 160, 80, 0.45);
+}
+
+/* 2. Гармонично: фиолетовый ободок и сияние */
+.celestial-energy-circle--purple {
+    border: 2px solid #8e6bb3;
+    background: radial-gradient(circle, #faf6ff 0%, #ede0f8 100%);
+    box-shadow: 0 3px 12px rgba(142, 107, 179, 0.28);
+    color: #5d3885;
+}
+
+.celestial-energy-btn.is-active .celestial-energy-circle--purple {
+    box-shadow: 0 0 0 3px rgba(142, 107, 179, 0.22), 0 4px 16px rgba(142, 107, 179, 0.38);
+}
+
+/* 3. Бережно / Неблагоприятно: благородный терракотово-оранжевый ободок */
+.celestial-energy-circle--terracotta {
+    border: 2px solid #df7356;
+    background: radial-gradient(circle, #fff7f4 0%, #fae2da 100%);
+    box-shadow: 0 3px 12px rgba(223, 115, 86, 0.28);
+    color: #9c3c24;
+}
+
+.celestial-energy-btn.is-active .celestial-energy-circle--terracotta {
+    box-shadow: 0 0 0 3px rgba(223, 115, 86, 0.22), 0 4px 16px rgba(223, 115, 86, 0.4);
+}
+
+.celestial-energy-svg {
+    width: 26px;
+    height: 26px;
+    display: block;
+    stroke-width: 1.35;
+}
+
+.celestial-energy-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.69rem;
+    font-weight: 600;
+    color: #5a4a6e;
+    transition: color 0.2s, font-weight 0.2s;
+    white-space: nowrap;
+}
+
+.celestial-energy-btn.is-active .celestial-energy-label {
+    color: #2b173c;
+    font-weight: 700;
+}
+
+/* Интерактивная плашка подробностей (1 предложение) */
+.celestial-energy-detail {
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(211, 188, 230, 0.55);
+    border-radius: 12px;
+    padding: 9px 12px;
+    margin-top: 2px;
+    box-sizing: border-box;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.celestial-energy-detail-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+.celestial-energy-detail-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #31223b;
+    line-height: 1.2;
+}
+
+.celestial-energy-detail-desc {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.77rem;
+    color: #55446a;
+    line-height: 1.38;
+    margin: 0;
+}
+
+.celestial-harmony-tag {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.celestial-harmony-tag--gold {
+    background: rgba(227, 199, 125, 0.38);
+    color: #7d5b1e;
+    border: 1px solid rgba(201, 160, 80, 0.35);
+}
+
+.celestial-harmony-tag--purple {
+    background: rgba(187, 160, 214, 0.32);
+    color: #613e8a;
+    border: 1px solid rgba(142, 107, 179, 0.35);
+}
+
+.celestial-harmony-tag--terracotta {
+    background: rgba(240, 168, 148, 0.32);
+    color: #8c351f;
+    border: 1px solid rgba(223, 115, 86, 0.35);
+}
+
+
+/* ==========================================
+   v28: РЕАЛИЗАЦИЯ «ПРОСТРАНСТВА ДНЯ» ПО МАКЕТУ
+   - Единый радиус виджетов: 20px
+   - Единый радиус всех кнопок-пилюль: 999px
+   - Единый шаг между виджетами: 12px
+   - Полноширинные виджеты-кнопки (Видеотека и Эфир)
+   - Шапка: Заголовок + пилюля «218 женщин в потоке ✨»
+   ========================================== */
+
+/* Пилюля счётчика под заголовком */
+.daily-field-counter {
+    position: static;
+    transform: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    padding: 5px 16px;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(211, 188, 230, 0.75);
+    border-radius: 999px;
+    box-shadow: 0 2px 10px rgba(156, 122, 187, 0.12);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #3b2c4c;
+    letter-spacing: 0.2px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.field-pulse-dot {
+    display: none;
+}
+
+#daily.tab-content {
+    padding-top: 0;
+}
+
+/* Единый знаменатель Safe Area для всех внутренних экранов с топбаром */
+#step1_5-celestial.celestial-step,
+#collection.tab-content,
+#video.tab-content {
+    padding-top: max(calc(var(--app-header-padding-top, 0px) + 6px), 78px) !important;
+}
+
+/* Строка-навигатор внутренних разделов («← Назад» слева, название по центру) */
+.screen-topbar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    margin: 0 0 12px 0;
+}
+
+.screen-topbar .back-to-hub-btn {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
+    padding: 5px 11px;
+    gap: 4px;
+    font-size: 0.70rem;
+    min-height: 30px;
+    border-radius: 10px;
+    border-color: rgba(187, 160, 214, 0.7);
+    box-shadow: 0 2px 8px rgba(156, 122, 187, 0.12);
+}
+
+.screen-topbar .back-to-hub-btn:active {
+    transform: translateY(-50%) scale(0.96);
+}
+
+.screen-topbar .back-to-hub-arrow {
+    color: #6e4f9a;
+}
+
+.screen-topbar-title {
+    margin: 0;
+    padding: 0 66px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.28rem;
+    font-weight: 600;
+    color: #2e1f3d;
+    text-align: center;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.screen-topbar + .celestial-header .celestial-title {
+    display: none;
+}
+
+/* Вводный блок дашборда скрыт */
+.cd-intro {
+    display: none;
+}
+
+/* Единый контейнер дашборда: шаг между виджетами СТРОГО 12px */
+.cooldown-dashboard {
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-sizing: border-box;
+}
+
+/* Базовый интерактивный виджет: Скругление СТРОГО 20px */
+.cd-widget {
+    position: relative;
+    overflow: hidden;
+    border-radius: 20px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transform: translateZ(0);
+    transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.cd-widget:active {
+    transform: scale(0.98);
+}
+
+/* Единый класс для кнопок-пилюль: Скругление СТРОГО 999px */
+.cd-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    line-height: 1.2;
+    white-space: nowrap;
+    box-sizing: border-box;
+    transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.cd-pill-btn:active {
+    transform: scale(0.96);
+}
+
+.cd-pill-btn--full {
+    width: 100%;
+    padding: 10px 14px;
+}
+
+.cd-pill-btn--gold {
+    background: linear-gradient(135deg, #fce5a3 0%, #ebc76b 100%);
+    color: #271a38;
+    box-shadow: 0 3px 10px rgba(184, 145, 63, 0.25);
+    font-weight: 700;
+}
+
+.cd-pill-btn--purple-gold {
+    background: linear-gradient(135deg, #4b2a67 0%, #683a8b 52%, #b58d3f 100%);
+    color: #ffffff;
+    border: 1px solid rgba(228, 192, 120, 0.75);
+    box-shadow: 0 4px 15px rgba(60, 32, 85, 0.28);
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(35, 18, 52, 0.45);
+}
+
+.cd-pill-btn--dark-purple {
+    background: #231438;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(35, 20, 56, 0.35);
+}
+
+.cd-pill-btn--soft-lavender {
+    background: rgba(229, 214, 247, 0.95);
+    color: #31223b;
+    border: 1px solid rgba(187, 160, 214, 0.7);
+    box-shadow: 0 2px 8px rgba(156, 122, 187, 0.12);
+}
+
+.cd-pill-arrow {
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.cd-btn-svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+/* ------------------------------------------
+   ВИДЖЕТ 1: Послание небес (тёмный с золотой рамкой)
+   ------------------------------------------ */
+.cd-widget--moon {
+    background: radial-gradient(circle at 80% 20%, #2a1c47 0%, #170e28 100%);
+    border: 1px solid rgba(227, 199, 125, 0.55);
+    box-shadow: 0 8px 22px rgba(23, 14, 40, 0.3);
+    padding: 14px 16px;
+    display: block;
+}
+
+.cd-widget--moon::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(227, 199, 125, 0.22);
+    border-radius: 17px;
+    pointer-events: none;
+}
+
+.cd-moon-body {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.cd-moon-visual {
+    width: 78px;
+    height: 78px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 14px rgba(247, 234, 181, 0.38));
+}
+
+.cd-moon-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.cd-widget--moon .cd-moon-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.55rem;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.1;
+    margin: 0 0 2px 0;
+}
+
+.cd-widget--moon .cd-moon-meta {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: #e5daf2;
+    margin-bottom: 9px;
+    line-height: 1.25;
+}
+
+.cd-widget--moon .cd-pill-btn--gold {
+    padding: 6px 14px;
+    font-size: 0.72rem;
+}
+
+/* ------------------------------------------
+   ВИДЖЕТ 2: Объединённый «Послание дня + Коллекция»
+   ------------------------------------------ */
+.cd-today-card-box {
+    position: relative;
+    background: linear-gradient(145deg, rgba(255, 252, 246, 0.94) 0%, rgba(246, 237, 253, 0.88) 50%, rgba(236, 221, 248, 0.94) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1.5px solid rgba(210, 185, 234, 0.75);
+    border-radius: 20px;
+    padding: 14px 15px 0 15px;
+    box-shadow: 0 8px 24px rgba(135, 102, 168, 0.16);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.cd-today-card-box::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(206, 175, 108, 0.35);
+    border-radius: 17px;
+    pointer-events: none;
+}
+
+.cd-today-header {
+    text-align: center;
+    margin-bottom: 9px;
+}
+
+.cd-today-eyebrow {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #5a4275;
+    text-transform: uppercase;
+    margin-bottom: 0;
+}
+
+.cd-today-card-name {
+    display: none !important;
+}
+
+.cd-today-card-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Сакральная колода МАК-карт на главном экране (v35: крупная и притягательная) */
+.cd-today-deck {
+    position: relative;
+    width: 90px;
+    height: 130px;
+    flex-shrink: 0;
+}
+
+.cd-today-card-thumb {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 84px;
+    height: 126px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(35, 20, 56, 0.22);
+}
+
+.cd-today-card-thumb--back {
+    top: 3px;
+    left: 10px;
+    transform: rotate(7deg);
+    opacity: 0.72;
+    box-shadow: 0 4px 12px rgba(35, 20, 56, 0.16);
+}
+
+.cd-today-card-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.cd-today-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+}
+
+/* Нижняя панель-ссылка на Мою коллекцию */
+.cd-collection-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 12px -15px 0 -15px;
+    padding: 10px 16px;
+    border-top: 1px solid rgba(216, 194, 236, 0.7);
+    background: linear-gradient(90deg, rgba(246, 237, 253, 0.65) 0%, rgba(238, 224, 250, 0.75) 100%);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+.cd-collection-row:active {
+    background: rgba(233, 222, 248, 0.85);
+}
+
+.cd-collection-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cd-collection-deck-ico {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.cd-collection-texts {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.cd-collection-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #271a38;
+}
+
+.cd-gold-dot {
+    color: #c49a45;
+}
+
+.cd-collection-sub {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #5a4a6e;
+}
+
+.cd-collection-open {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #271a38;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ------------------------------------------
+   ВИДЖЕТ 3: Видеотека (полноширинный виджет-кнопка)
+   ------------------------------------------ */
+.cd-widget--video {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 12px 14px;
+    background: linear-gradient(145deg, rgba(255, 252, 246, 0.94) 0%, rgba(246, 237, 253, 0.88) 50%, rgba(236, 221, 248, 0.94) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1.5px solid rgba(210, 185, 234, 0.75);
+    box-shadow: 0 8px 24px rgba(135, 102, 168, 0.16);
+}
+
+.cd-widget--video::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(206, 175, 108, 0.3);
+    border-radius: 17px;
+    pointer-events: none;
+}
+
+.cd-video-thumb-wrap {
+    position: relative;
+    width: 90px;
+    height: 82px;
+    border-radius: 14px;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(35, 20, 56, 0.2);
+}
+
+.cd-video-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.cd-video-play-circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #271a38;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.cd-video-play-circle svg {
+    width: 14px;
+    height: 14px;
+    margin-left: 2px;
+}
+
+.cd-video-thumb-caption {
+    position: absolute;
+    bottom: 4px;
+    left: 5px;
+    right: 5px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.52rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.1;
+    letter-spacing: 0.04em;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.85);
+    pointer-events: none;
+}
+
+.cd-video-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    z-index: 1;
+}
+
+.cd-video-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #271a38;
+    line-height: 1.1;
+    margin: 0;
+}
+
+.cd-dark-dot {
+    color: #7c5c9c;
+}
+
+.cd-video-sub {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 500;
+    color: #5a4a6e;
+    margin: 2px 0 9px 0;
+}
+
+.cd-video-deco-star {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+}
+
+.cd-video-deco-lotus {
+    position: absolute;
+    bottom: -4px;
+    right: -2px;
+    width: 76px;
+    height: 56px;
+    pointer-events: none;
+}
+
+/* ------------------------------------------
+   ВИДЖЕТ 4: Открытый эфир (полноширинный виджет-кнопка с фоном)
+   ------------------------------------------ */
+.cd-widget--event-banner {
+    position: relative;
+    padding: 16px 16px;
+    background: #e9daf2 url('../images/event_widget_bg.jpg') right center / cover no-repeat;
+    border: 1.5px solid rgba(184, 145, 63, 0.45);
+    box-shadow: 0 6px 20px rgba(156, 122, 187, 0.16);
+    display: flex;
+    align-items: center;
+}
+
+/* Полупрозрачная градиентная маска слева для 100% читаемости текста */
+.cd-widget--event-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(246, 238, 252, 0.94) 0%, rgba(246, 238, 252, 0.88) 55%, rgba(246, 238, 252, 0.15) 100%);
+    pointer-events: none;
+}
+
+.cd-event-banner-content {
+    position: relative;
+    z-index: 1;
+    max-width: 66%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.cd-event-eyebrow-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #644a7a;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.cd-live-wave-ico {
+    width: 14px;
+    height: 12px;
+}
+
+.cd-event-banner-title {
+    font-family: 'Cormorant Garamond', serif;
+    color: #231438;
+    line-height: 1.15;
+    margin-bottom: 10px;
+}
+
+.cd-event-line1 {
+    display: block;
+    font-size: 1.12rem;
+    font-weight: 600;
+    color: #271a38;
+}
+
+.cd-event-line2 {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #1f1133;
+}
+
+/* ------------------------------------------
+   НИЖНЯЯ ПЛАШКА ТАЙМЕРА (СТРОГО 20px СДАВЛЕНИЕ)
+   ------------------------------------------ */
+.cd-cooldown-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+}
+
+.cd-cooldown-timer-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 11px 16px;
+    background: rgba(233, 225, 247, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(187, 160, 214, 0.6);
+    border-radius: 20px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.77rem;
+    color: #4a385f;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.cd-cooldown-timer-pill strong {
+    color: #271a38;
+    font-weight: 700;
+}
+
+.cd-vip-draw-btn {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px dashed #9c7abb;
+    border-radius: 12px;
+    padding: 8px 16px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #6e4f9a;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.cd-vip-draw-btn:active {
+    transform: scale(0.96);
+}
+
+/* Однострочная ссылка-пилюля на эфир (экран до открытия карты) */
+#eventFloatingTimer.event-timer-btn {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: fit-content;
+    max-width: 300px;
+    min-height: 36px;
+    margin: 4px auto 0 auto !important;
+    padding: 7px 16px !important;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(187, 160, 214, 0.6);
+    border-radius: 12px;
+    box-shadow: none;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+#eventFloatingTimer .event-timer-title {
+    font-size: 0.68rem;
+    letter-spacing: 0.3px;
+    margin-bottom: 0;
+}
+
+#eventFloatingTimer .event-timer-countdown {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #6e4f9a;
+}
+
+
+/* ==========================================
+   v30: МОДАЛЬНОЕ ОКНО ШЕРИНГА И ЛУННЫЙ КАЛЕНДАРЬ
+   ========================================== */
+
+/* 1. Модальное окно «Куда отправить послание?» */
+.share-options-modal {
+    background: rgba(35, 20, 56, 0.68) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.share-modal-card {
+    position: relative;
+    background: linear-gradient(145deg, rgba(255, 252, 246, 0.96) 0%, rgba(246, 237, 253, 0.92) 50%, rgba(236, 221, 248, 0.96) 100%) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1.5px solid rgba(210, 185, 234, 0.75) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 10px 36px rgba(35, 20, 56, 0.3) !important;
+    padding: 26px 20px 22px 20px !important;
+    max-width: 340px !important;
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+.share-modal-card::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(206, 175, 108, 0.35);
+    border-radius: 17px;
+    pointer-events: none;
+}
+
+.share-modal-title {
+    font-family: 'Cormorant Garamond', serif !important;
+    font-size: 1.62rem !important;
+    font-weight: 700 !important;
+    color: #271a38 !important;
+    line-height: 1.15;
+    margin: 4px 0 16px 0 !important;
+}
+
+.share-modal-close {
+    position: absolute !important;
+    top: 10px !important;
+    right: 14px !important;
+    font-size: 28px !important;
+    color: #7c5c9c !important;
+    cursor: pointer;
+    line-height: 1;
+    transition: transform 0.15s ease, color 0.15s ease;
+    z-index: 10;
+}
+
+.share-modal-close:active {
+    transform: scale(0.9);
+    color: #271a38;
+}
+
+.share-action-friend {
+    background: linear-gradient(135deg, #a788cb 0%, #8b66b6 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 14px rgba(139, 102, 182, 0.35) !important;
+    margin-bottom: 9px !important;
+}
+
+.share-action-universe {
+    background: rgba(255, 255, 255, 0.88) !important;
+    border: 1.5px solid rgba(187, 160, 214, 0.85) !important;
+    color: #2e1d42 !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 10px rgba(156, 122, 187, 0.12) !important;
+}
+
+/* 2. Четырёхугольные звёздочки (✦) в Лунном календаре */
+.celestial-star {
+    position: absolute;
+    border-radius: 0 !important;
+    background: #fce5a3 !important;
+    clip-path: polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%) !important;
+    -webkit-clip-path: polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%) !important;
+    filter: drop-shadow(0 0 3px rgba(247, 234, 181, 0.75));
+    pointer-events: none;
+    z-index: 1;
+}
+
+.celestial-star--1 { top: 10px; left: 18px; width: 11px; height: 11px; opacity: 0.95; }
+.celestial-star--2 { top: 18px; right: 24px; width: 13px; height: 13px; opacity: 0.9; }
+.celestial-star--3 { bottom: 14px; left: 32%; width: 9px; height: 9px; opacity: 0.8; }
+.celestial-star--4 { top: 12px; right: 22%; width: 10px; height: 10px; opacity: 0.85; }
+
+/* Фоновые четырёхугольные звёздочки на экране Лунного календаря */
+.celestial-step {
+    position: relative;
+}
+
+.celestial-backdrop-stars {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.celestial-bg-star {
+    position: absolute;
+    color: #f0d588;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    filter: drop-shadow(0 0 4px rgba(240, 213, 136, 0.6));
+}
+
+.celestial-bg-star--1 { top: 14px; right: 18px; font-size: 16px; opacity: 0.75; }
+.celestial-bg-star--2 { top: 52px; left: 12px; font-size: 13px; opacity: 0.55; }
+.celestial-bg-star--3 { top: 220px; right: 6px; font-size: 15px; opacity: 0.6; }
+.celestial-bg-star--4 { bottom: 130px; left: 8px; font-size: 13px; opacity: 0.5; }
+.celestial-bg-star--5 { bottom: 65px; right: 20px; font-size: 14px; opacity: 0.65; }
+
+/* 3. Виджет планет в лунном календаре в тон общему фону */
+.sky-events-widget {
+    position: relative;
+    background: linear-gradient(145deg, rgba(255, 252, 246, 0.94) 0%, rgba(246, 237, 253, 0.88) 50%, rgba(236, 221, 248, 0.94) 100%) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1.5px solid rgba(210, 185, 234, 0.75) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 6px 20px rgba(135, 102, 168, 0.12) !important;
+    padding: 12px 14px 10px 14px;
+    margin-bottom: 12px;
+}
+
+.sky-events-widget::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(206, 175, 108, 0.3);
+    border-radius: 17px;
+    pointer-events: none;
+}
+
+.sky-nav-btn {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border: 1.2px solid rgba(187, 160, 214, 0.65) !important;
+    color: #271a38 !important;
+    box-shadow: 0 2px 8px rgba(100, 75, 125, 0.12) !important;
+}
+
+/* 4. Заметная, контрастная кнопка возврата внизу лунного календаря */
+#backToCardBtn {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(243, 233, 252, 0.96) 100%) !important;
+    border: 1.5px solid rgba(184, 145, 63, 0.65) !important;
+    color: #271a38 !important;
+    font-weight: 700 !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 18px rgba(135, 102, 168, 0.22) !important;
+    margin: 16px auto 25px auto !important;
+    display: block !important;
+    transition: transform 0.15s ease, background 0.2s ease !important;
+}
+
+#backToCardBtn:active {
+    transform: scale(0.97) !important;
+    background: rgba(240, 230, 252, 1) !important;
+}
+
+
+
+/* ==========================================
+   v31: «СПЯЩЕЕ / ПРОБУЖДЁННОЕ ПРОСТРАНСТВО ДНЯ» И РИТУАЛ КАРТЫ
+   - Дашборд — стартовый экран; состояние задаёт класс .is-sleeping
+   - Сакральная вуаль (.cd-veil) на «Послании небес» и «Видеотеке»
+   - Анимации только через transform / opacity (60 FPS, без box-shadow-пульсаций)
+   ========================================== */
+
+/* --- Сакральная вуаль ожидания: деликатное матовое стекло с золотым замочком --- */
+.cd-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    border-radius: inherit;
+    background: linear-gradient(145deg, rgba(238, 230, 250, 0.18) 0%, rgba(216, 198, 240, 0.24) 100%);
+    backdrop-filter: blur(2.5px);
+    -webkit-backdrop-filter: blur(2.5px);
+    transform: translateZ(0);
+    /* Растворение: сначала гаснет прозрачность, затем слой скрывается */
+    transition: opacity 0.7s ease, visibility 0s linear 0.7s;
+}
+
+.cooldown-dashboard.is-sleeping .cd-veil {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+}
+
+.cd-veil-lock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 250, 238, 0.62);
+    border: 1px solid rgba(206, 175, 108, 0.75);
+    box-shadow: 0 2px 10px rgba(184, 145, 63, 0.28);
+    color: #b8913f;
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+}
+
+.cd-veil-lock.is-pulsing {
+    transform: scale(0.85);
+}
+
+.cd-veil-lock svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* --- Контекстное анимационное окошко прямо из замочка --- */
+.cd-veil-bubble {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    max-width: 280px;
+    margin: 0 auto;
+    z-index: 10;
+    padding: 9px 12px;
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(255, 253, 248, 0.97) 0%, rgba(243, 231, 253, 0.97) 100%);
+    border: 1px solid rgba(206, 175, 108, 0.88);
+    box-shadow: 0 8px 22px rgba(52, 30, 82, 0.22), 0 0 12px rgba(235, 200, 125, 0.25);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.28;
+    color: #31223b;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.45) translateZ(0);
+    transform-origin: center center;
+    transition: opacity 0.28s ease, transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cd-widget--video .cd-veil-bubble {
+    left: 6px;
+    right: 6px;
+    padding: 8px 7px;
+    font-size: 0.70rem;
+    line-height: 1.24;
+    border-radius: 13px;
+}
+
+.cd-veil-bubble.is-visible {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+}
+
+/* Спящие виджеты выглядят «закрытыми», но остаются нажимаемыми (мягкое уведомление) */
+.cooldown-dashboard.is-sleeping .cd-celestial-split-card,
+.cooldown-dashboard.is-sleeping .cd-widget--moon,
+.cooldown-dashboard.is-sleeping .cd-widget--video {
+    cursor: default;
+}
+
+/* --- Виджет «Ваше послание сегодня»: два состояния --- */
+.cd-today-sleeping,
+.cd-today-awake {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.cooldown-dashboard.is-sleeping .cd-today-sleeping {
+    display: flex;
+}
+
+.cooldown-dashboard:not(.is-sleeping) .cd-today-awake {
+    display: flex;
+    animation: fadeIn 0.5s ease;
+}
+
+/* В спящем состоянии под картой нет «стопки» — только рубашка */
+.cooldown-dashboard.is-sleeping .cd-today-card-thumb--back {
+    display: none;
+}
+
+.cd-today-sleeping-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.22;
+    color: #31223b;
+    margin: 0;
+}
+
+.cd-pill-btn--cta {
+    padding: 12px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+/* Таймер встроен прямо в карточку послания (с комфортным отступом от кнопки) */
+.cd-today-inline-timer {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: #5a4a6e;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 2px;
+}
+
+.cd-today-inline-timer strong {
+    color: #271a38;
+    font-weight: 700;
+}
+
+/* Нижняя зона: футер виден только когда есть VIP-кнопка (отдельной плашки таймера больше нет) */
+.cd-cooldown-footer:not(.is-vip) {
+    display: none;
+}
+
+/* --- Экран ритуала: карта в оптическом центре экрана --- */
+#cardDrawStage.ritual-stage {
+    min-height: calc(100vh - var(--tg-safe-bottom) - 16px);
+    min-height: calc(100dvh - var(--tg-safe-bottom) - 16px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: max(calc(var(--app-header-padding-top, 0px) + 6px), 78px);
+    padding-bottom: calc(var(--tg-safe-bottom) + 8px);
+    box-sizing: border-box;
+}
+
+/* Подсказка-призыв отключена (пользователи сразу тапают по карте или кнопке) */
+.ritual-prompt {
+    display: none !important;
+}
+
+/* Сакральный золотой лотос-разделитель над картой дня */
+.ritual-top-divider {
+    width: 100%;
+    max-width: 240px;
+    height: 30px;
+    margin: 0 auto 12px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    opacity: 0.95;
+    transform: translateZ(0);
+}
+
+/* Прокси-элемент для кинематографичного зума карты (60 FPS, GPU composite) */
+.cd-card-zoom-proxy {
+    position: fixed;
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 9999;
+    pointer-events: none;
+    transform-origin: top left;
+    will-change: transform, box-shadow;
+    box-shadow: 0 8px 24px rgba(35, 20, 56, 0.35);
+    background: transparent;
+}
+
+.cd-card-zoom-proxy img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 12px;
+}
+
+/* Карта крупнее: ширина ограничена экраном и высотой окна (пропорция 320:420 сохраняется) */
+#cardDrawStage .card-container {
+    width: min(100%, 372px, max(240px, calc((100vh - var(--app-header-padding-top) - var(--tg-safe-bottom) - 230px) * 0.762)));
+    width: min(100%, 372px, max(240px, calc((100dvh - var(--app-header-padding-top) - var(--tg-safe-bottom) - 230px) * 0.762)));
+    max-width: none;
+    height: auto;
+    aspect-ratio: 320 / 420;
+    margin: 0 auto;
+}
+
+/* Зарезервированная зона под кнопки: макет не смещается при их появлении */
+.ritual-actions {
+    width: 100%;
+    min-height: 112px;
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ritual-actions .action-btn {
+    width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ritual-prompt-text { animation: none; opacity: 1; }
+    .ritual-prompt { transition: opacity 0.2s ease; }
+    .cd-veil { transition-duration: 0.01s; }
+    .cd-veil-bubble { transition-duration: 0.01s; }
+}
+
+/* --- Тёплое уведомление для спящих виджетов (отключено в пользу контекстных бабблов) --- */
+.sacred-gate-toast {
+    display: none !important;
+}
+
+/* ==========================================
+   v33: САКРАЛЬНОЕ СВЯТИЛИЩЕ «ПРОСТРАНСТВО ДНЯ»
+   - Венец неба: Луна по центру с золотыми орбитами и полупрозрачной пепельной тенью
+   - Сдвоенный стеклянный модуль: «Энергии Вселенной» + «Гороскоп»
+   - Оптический центр: «Ваша карта дня» с сияющим лотосом и тонкой ссылкой «Моя коллекция ›»
+   - Двухколоночный ряд (50/50): «Видеотека» + «Открытый эфир»
+   - Алтарь: «Чаша благодарности» + «Энергообмен ›» (CloudTips)
+   - Нижний футер единения: Счётчик женщин в потоке
+   ========================================== */
+
+body {
+    background: #ebdff4 url('../images/cd_sky_backdrop.jpg') center top / cover no-repeat fixed !important;
+}
+
+#cooldownDashboard.cooldown-dashboard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: calc(var(--app-header-padding-top, 0px) + 2px) 4px 18px 4px;
+    box-sizing: border-box;
+}
+
+/* --- 1. ВЕНЕЦ НЕБА: ПАРЯЩАЯ ЛУНА ПО ЦЕНТРУ --- */
+.cd-moon-crown {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: -14px auto -18px auto;
+    cursor: default;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.cd-moon-orbits-svg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 320px;
+    height: 184px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    filter: drop-shadow(0 0 8px rgba(255, 236, 179, 0.55));
+}
+
+.cd-moon-disc-wrap {
+    position: relative;
+    width: 98px;
+    height: 98px;
+    z-index: 2;
+    border-radius: 50%;
+    filter: drop-shadow(0 0 22px rgba(255, 241, 204, 0.78)) drop-shadow(0 4px 14px rgba(132, 98, 168, 0.28));
+}
+
+/* --- 2. СДВОЕННЫЙ ВИДЖЕТ: ЭНЕРГИИ ВСЕЛЕННОЙ + ГОРОСКОП --- */
+.cd-celestial-split-card {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(255, 251, 246, 0.84) 0%, rgba(246, 236, 250, 0.78) 52%, rgba(253, 244, 234, 0.84) 100%);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1.2px solid rgba(226, 196, 134, 0.68);
+    box-shadow: 0 10px 28px rgba(126, 94, 158, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+    padding: 11px 14px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.cd-split-half {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.cd-split-half:active {
+    transform: scale(0.98);
+    opacity: 0.88;
+}
+
+.cd-split-left {
+    flex: 1.15;
+    padding-right: 10px;
+    min-width: 0;
+}
+
+.cd-split-right {
+    flex: 0.95;
+    padding-left: 11px;
+    min-width: 0;
+}
+
+.cd-split-divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 2px 0;
+    background: linear-gradient(180deg, rgba(206, 170, 98, 0.1) 0%, rgba(206, 170, 98, 0.62) 50%, rgba(206, 170, 98, 0.1) 100%);
+    flex-shrink: 0;
+}
+
+.cd-split-sparkle {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 6px rgba(235, 194, 104, 0.6));
+}
+
+.cd-split-sparkle svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.cd-zodiac-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    color: #c8973e;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.cd-zodiac-glyph svg {
+    width: 26px;
+    height: 26px;
+    stroke: #c8973e;
+    filter: drop-shadow(0 1px 4px rgba(200, 151, 62, 0.4));
+    display: block;
+}
+
+.cd-split-texts {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cd-split-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.08rem;
+    font-weight: 700;
+    color: #2c1d3e;
+    line-height: 1.12;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cd-split-sub {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.64rem;
+    font-weight: 500;
+    color: #635078;
+    line-height: 1.25;
+}
+
+.cd-split-sub--dates {
+    font-size: 0.65rem;
+    color: #6b5780;
+    white-space: nowrap;
+}
+
+.cd-split-chevron {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.35rem;
+    color: #7d6794;
+    line-height: 1;
+    margin-left: 2px;
+    flex-shrink: 0;
+    transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.cd-split-half:active .cd-split-chevron {
+    transform: translateX(2px);
+    color: #c8973e;
+}
+
+/* --- 3. СВЯТИЛИЩЕ «ВАША КАРТА ДНЯ» --- */
+#cooldownDashboard .cd-today-card-box {
+    position: relative;
+    background: linear-gradient(160deg, rgba(248, 240, 252, 0.82) 0%, rgba(255, 248, 238, 0.88) 54%, rgba(246, 234, 248, 0.86) 100%);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1.3px solid rgba(224, 190, 124, 0.72);
+    border-radius: 22px;
+    padding: 14px 16px 10px 16px;
+    box-shadow: 0 12px 32px rgba(122, 88, 156, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+    overflow: hidden;
+}
+
+#cooldownDashboard .cd-today-card-box::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(218, 184, 114, 0.36);
+    border-radius: 18px;
+    pointer-events: none;
+}
+
+.cd-card-top-ornament {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: -4px auto 4px auto;
+}
+
+.cd-ornament-wing {
+    width: 48px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(212, 172, 84, 0) 0%, rgba(212, 172, 84, 0.72) 100%);
+}
+
+.cd-ornament-wing--right {
+    background: linear-gradient(90deg, rgba(212, 172, 84, 0.72) 0%, rgba(212, 172, 84, 0) 100%);
+}
+
+.cd-ornament-star {
+    width: 16px;
+    height: 16px;
+    filter: drop-shadow(0 0 5px rgba(245, 212, 132, 0.75));
+}
+
+#cooldownDashboard .cd-today-header {
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+#cooldownDashboard .cd-today-eyebrow {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.56rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: #2c1d3e;
+    text-transform: none;
+    line-height: 1.12;
+}
+
+/* Сакральная колода и призыв в спящем состоянии */
+#cooldownDashboard .cd-today-sleeping {
+    width: 100%;
+}
+
+.cd-today-deck--sleeping {
+    cursor: pointer;
+    transition: transform 0.25s ease;
+}
+
+.cd-today-deck--sleeping:hover,
+.cd-today-deck--sleeping:active {
+    transform: scale(1.05);
+}
+
+.cooldown-dashboard.is-sleeping .cd-today-deck--sleeping .cd-today-card-thumb--back {
+    display: block !important;
+}
+
+.cd-deck-aura {
+    position: absolute;
+    top: -14px;
+    left: -14px;
+    right: -14px;
+    bottom: -14px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(235, 195, 110, 0.45) 0%, rgba(235, 195, 110, 0) 70%);
+    pointer-events: none;
+    animation: cdPulseAura 3s ease-in-out infinite;
+}
+
+@keyframes cdPulseAura {
+    0%, 100% { opacity: 0.6; transform: scale(0.95); }
+    50% { opacity: 1; transform: scale(1.08); }
+}
+
+.cd-today-card-hint {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    color: #5a3d72;
+    line-height: 1.4;
+    margin: 0 0 10px 0;
+}
+
+/* Кнопки в стиле Sacred Pearlescent Glass (розово-лавандовый перламутр и аметист) */
+.cd-pill-btn--champagne-gold,
+#cooldownDashboard .cd-pill-btn--champagne-gold {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(246, 236, 255, 0.92) 50%, rgba(236, 220, 250, 0.95) 100%) !important;
+    color: #3b2052 !important;
+    border: 1px solid rgba(200, 168, 235, 0.75) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 4px 16px rgba(160, 120, 195, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+    padding: 10px 20px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+#cooldownDashboard .cd-pill-btn--champagne-gold:active {
+    transform: scale(0.98) !important;
+}
+
+.cd-pill-btn--glass-gold,
+#cooldownDashboard .cd-pill-btn--glass-gold {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(243, 234, 252, 0.65) 100%) !important;
+    border: 1px solid rgba(190, 160, 220, 0.5) !important;
+    border-radius: 18px !important;
+    color: #4e3266 !important;
+    font-family: 'Montserrat', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+    padding: 9px 18px !important;
+    box-shadow: 0 3px 12px rgba(120, 90, 160, 0.1) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+#cooldownDashboard .cd-pill-btn--glass-gold:active {
+    transform: scale(0.98) !important;
+}
+
+.cd-pill-chevron {
+    font-size: 1.22rem;
+    font-weight: 600;
+    line-height: 1;
+    margin-left: 2px;
+}
+
+/* Нижняя минималистичная ссылка «Моя коллекция ›» */
+#cooldownDashboard .cd-collection-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin: 8px 0 0 0;
+    padding: 2px 8px 0 8px;
+    border-top: none;
+    background: transparent;
+}
+
+.cd-collection-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 82%;
+}
+
+.cd-collection-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(206, 170, 98, 0) 0%, rgba(206, 170, 98, 0.52) 50%, rgba(206, 170, 98, 0) 100%);
+}
+
+.cd-collection-star {
+    font-size: 0.65rem;
+    color: #d4a64a;
+    line-height: 1;
+}
+
+.cd-collection-link-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 2px 10px;
+}
+
+#cooldownDashboard .cd-collection-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: #4f3d63;
+}
+
+#cooldownDashboard .cd-collection-sub {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: #78638f;
+}
+
+#cooldownDashboard .cd-collection-open {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #6b5682;
+    line-height: 1;
+}
+
+
+/* ==========================================================================
+   v33 — Sacred Sanctuary: часть 2 (плитки, чаша благодарности, футер, гороскоп, модалка знаков)
+   ========================================================================== */
+
+.cd-dual-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 0;
+}
+
+#cooldownDashboard .cd-widget--video,
+#cooldownDashboard .cd-widget--event-banner {
+    position: relative;
+    overflow: hidden;
+    min-height: 104px;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 20px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.62) 0%, rgba(236, 224, 248, 0.5) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    box-shadow: 0 8px 22px rgba(120, 90, 160, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    cursor: pointer;
+    display: block;
+}
+
+#cooldownDashboard .cd-tile-art {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    height: 100%;
+    width: auto;
+    max-width: 60%;
+    object-fit: contain;
+    object-position: right bottom;
+    pointer-events: none;
+    user-select: none;
+}
+
+#cooldownDashboard .cd-tile-art--crystal { max-width: 50%; }
+
+.cd-video-info,
+.cd-event-banner-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 84px;
+    max-width: 64%;
+}
+
+#cooldownDashboard .cd-video-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #3d2d52;
+    line-height: 1.1;
+}
+
+#cooldownDashboard .cd-video-sub {
+    margin-top: 2px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.64rem;
+    line-height: 1.35;
+    color: #78638f;
+}
+
+.cd-event-eyebrow-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: #5a4672;
+}
+
+.cd-live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #e8607a;
+    box-shadow: 0 0 6px rgba(232, 96, 122, 0.7);
+    flex-shrink: 0;
+}
+
+#cooldownDashboard .cd-event-banner-title {
+    margin-top: 4px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #3d2d52;
+}
+
+.cd-tile-play-btn {
+    margin-top: 6px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(246, 236, 255, 0.75) 100%);
+    border: 1px solid rgba(195, 165, 230, 0.6);
+    color: #5d3f74;
+    box-shadow: 0 3px 10px rgba(120, 90, 160, 0.16);
+}
+
+.cd-tile-play-btn svg { width: 18px; height: 18px; }
+
+.cd-event-time-row {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #7b4f8e;
+    margin: 2px 0 1px;
+}
+
+/* Чаша благодарности v35 */
+#cooldownDashboard .cd-widget--gratitude {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 10px 14px 10px 10px;
+    min-height: 88px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(255, 250, 246, 0.82) 0%, rgba(246, 236, 252, 0.72) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 8px 24px rgba(150, 110, 180, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    cursor: pointer;
+}
+
+.cd-gratitude-art-wrap {
+    flex: 0 0 68px;
+    height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cd-gratitude-art-img {
+    width: 68px;
+    height: 68px;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 10px rgba(230, 185, 240, 0.45));
+}
+
+.cd-gratitude-body {
+    flex: 1;
+    min-width: 0;
+}
+
+#cooldownDashboard .cd-gratitude-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #3d2d52;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+#cooldownDashboard .cd-gratitude-sub {
+    margin-top: 3px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.64rem;
+    line-height: 1.35;
+    color: #6e5482;
+    white-space: normal;
+}
+
+.cd-gratitude-tag {
+    flex-shrink: 0;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 236, 255, 0.92) 100%);
+    border: 1px solid rgba(195, 165, 230, 0.65);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #3b2052;
+    box-shadow: 0 3px 12px rgba(150, 110, 185, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    cursor: pointer;
+    transition: transform 0.18s ease;
+}
+
+.cd-gratitude-tag:active {
+    transform: scale(0.96);
+}
+
+.cd-gratitude-chevron {
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+/* Нижний футер со счётчиком */
+.cd-bottom-field-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 2px 0 10px;
+}
+
+.cd-bottom-ornament {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 70%;
+}
+
+.cd-bottom-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(206, 170, 98, 0) 0%, rgba(206, 170, 98, 0.55) 50%, rgba(206, 170, 98, 0) 100%);
+}
+
+.cd-bottom-star { font-size: 0.7rem; color: #d4a64a; line-height: 1; }
+
+#cooldownDashboard .daily-field-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #5a4672;
+    background: linear-gradient(135deg, rgba(255, 250, 238, 0.85), rgba(244, 234, 252, 0.8));
+    border: 1px solid rgba(206, 170, 98, 0.45);
+    box-shadow: 0 4px 14px rgba(150, 120, 170, 0.15);
+}
+
+/* Персональный гороскоп внутри «Энергии Вселенной» */
+.celestial-horoscope-card {
+    margin: 0 0 14px;
+    padding: 14px 14px 10px;
+    border-radius: 22px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(240, 228, 252, 0.6));
+    border: 1px solid rgba(206, 170, 98, 0.4);
+    box-shadow: 0 8px 22px rgba(120, 90, 160, 0.14);
+}
+
+.celestial-horoscope-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.celestial-horoscope-badge { display: flex; align-items: center; gap: 10px; min-width: 0; }
+
+.celestial-horoscope-glyph {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    color: #b8862e;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(206, 170, 98, 0.55);
+}
+
+.celestial-horoscope-eyebrow {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #9a7a3c;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.celestial-horoscope-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #3d2d52;
+}
+
+.celestial-horoscope-element {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.64rem;
+    color: #78638f;
+}
+
+.celestial-change-sign-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: 18px;
+    border: 1px solid rgba(206, 170, 98, 0.5);
+    background: rgba(255, 255, 255, 0.7);
+    color: #6b5682;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.64rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.celestial-horoscope-body {
+    margin: 10px 0 0;
+}
+
+.celestial-horoscope-p {
+    margin: 0;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: #4a3a5e;
+    white-space: pre-line;
+}
+
+.celestial-horoscope-expandable {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    overflow: hidden;
+}
+
+.celestial-horoscope-card.is-expanded .celestial-horoscope-expandable {
+    grid-template-rows: 1fr;
+}
+
+.celestial-horoscope-expandable-inner {
+    min-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+
+.celestial-horoscope-card.is-expanded .celestial-horoscope-expandable-inner {
+    opacity: 1;
+}
+
+.celestial-horoscope-rest-p {
+    margin-top: 10px;
+}
+
+.celestial-horoscope-affirmation {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(206, 170, 98, 0.35);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.35;
+    text-align: center;
+    color: #6b5682;
+}
+
+.celestial-horoscope-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 22px;
+    margin: 2px auto 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.celestial-toggle-arrow {
+    width: 18px;
+    height: 18px;
+    stroke: #a084bd;
+    transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), stroke 0.2s ease;
+}
+
+.celestial-horoscope-card.is-expanded .celestial-toggle-arrow {
+    transform: rotate(180deg);
+    stroke: #b8862e;
+}
+
+.celestial-horoscope-toggle-btn:active .celestial-toggle-arrow {
+    transform: scale(0.9);
+}
+
+.celestial-horoscope-card.is-expanded .celestial-horoscope-toggle-btn:active .celestial-toggle-arrow {
+    transform: rotate(180deg) scale(0.9);
+}
+
+/* Единая кликабельная карточка «Энергии Вселенной + Гороскоп» */
+.cd-celestial-split-card {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.cd-celestial-split-card:active {
+    transform: scale(0.985);
+}
+
+/* Легковесное модальное окно выбора знака Зодиака (без тормозящих backdrop-filter) */
+.zodiac-picker-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(20, 11, 33, 0.74) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.zodiac-picker-card {
+    position: relative;
+    max-width: 370px;
+    width: calc(100% - 24px);
+    text-align: center;
+    padding: 22px 14px 18px;
+    border-radius: 20px !important;
+    background: linear-gradient(145deg, #ffffff 0%, #f9f2fd 50%, #ede0f8 100%) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1.5px solid rgba(210, 185, 234, 0.8) !important;
+    box-shadow: 0 10px 32px rgba(24, 11, 38, 0.32) !important;
+    transform: translateZ(0);
+    will-change: transform;
+    box-sizing: border-box;
+}
+
+.zodiac-modal-eyebrow {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    color: #9a7a3c;
+    margin-bottom: 2px;
+}
+
+.zodiac-modal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.42rem;
+    font-weight: 700;
+    color: #2c1d3e;
+    line-height: 1.15;
+    margin: 0 0 4px;
+}
+
+.zodiac-modal-sub {
+    margin: 2px 0 12px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.73rem;
+    line-height: 1.35;
+    color: #78638f;
+    padding: 0 8px;
+}
+
+/* Компактная сетка 4x3 (12 знаков) */
+.zodiac-grid.zodiac-grid--compact {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.zodiac-sign-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    padding: 6px 2px 5px;
+    min-height: 50px;
+    border-radius: 11px;
+    border: 1px solid rgba(206, 170, 98, 0.28);
+    background: rgba(255, 255, 255, 0.82);
+    color: #4a3a5e;
+    cursor: pointer;
+    font-family: 'Montserrat', sans-serif;
+    box-sizing: border-box;
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.zodiac-sign-btn:hover {
+    background: rgba(255, 252, 244, 0.95);
+    border-color: rgba(206, 170, 98, 0.5);
+}
+
+.zodiac-sign-btn:active {
+    transform: scale(0.96);
+}
+
+.zodiac-sign-btn.is-selected {
+    background: linear-gradient(135deg, #fcedc5 0%, #e5c378 100%);
+    border-color: #c99a3e;
+    box-shadow: 0 2px 10px rgba(201, 154, 62, 0.32);
+    color: #2c1b3d;
+}
+
+.zodiac-btn-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    color: #b8862e;
+}
+
+.zodiac-btn-glyph svg {
+    width: 18px;
+    height: 18px;
+    stroke: #b8862e;
+    display: block;
+}
+
+.zodiac-sign-btn.is-selected .zodiac-btn-glyph svg {
+    stroke: #875c12;
+}
+
+.celestial-horoscope-glyph svg {
+    width: 26px;
+    height: 26px;
+    stroke: #b8862e;
+}
+
+.zodiac-btn-name {
+    font-size: 0.65rem;
+    font-weight: 600;
+    line-height: 1.1;
+    color: inherit;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.zodiac-btn-dates {
+    font-size: 0.50rem;
+    color: #78638f;
+    line-height: 1.1;
+    margin-top: 1px;
+    white-space: nowrap;
+    letter-spacing: -0.02em;
+}
+
+.zodiac-sign-btn.is-selected .zodiac-btn-dates {
+    color: #5d3f18;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   ДИЗАЙН v2 (03.11.2026) — главный экран
+   Единая палитра, две кнопки (главная / второстепенная), размеры текста под телефон,
+   замки с подписью, единый виджет «Эфир + Видеотека».
+   Старые правила выше НЕ удалены: этот блок переопределяет их (подключён последним).
+   ========================================================================== */
+:root {
+    --v2-ink: #2c1d3e;
+    --v2-ink-2: #4a3862;
+    --v2-violet-deep: #4b2c70;
+    --v2-violet: #6a478f;
+    --v2-gold: #b8913f;
+    --v2-gold-line: rgba(206, 170, 98, 0.6);
+    --v2-btn-h: 48px;
+}
+
+/* --- Кнопки: одна главная, одна второстепенная --- */
+.cd-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: var(--v2-btn-h);
+    padding: 0 22px;
+    border: 1px solid transparent;
+    border-radius: 18px;
+    box-sizing: border-box;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.2s ease;
+}
+
+.cd-btn:active {
+    transform: scale(0.98);
+}
+
+.cd-btn--block {
+    width: 100%;
+}
+
+.cd-btn--sm {
+    min-height: 42px;
+    padding: 0 18px;
+    font-size: 0.9rem;
+}
+
+.cd-btn--primary {
+    background: linear-gradient(135deg, #6a478f 0%, #4b2c70 100%);
+    color: #ffffff;
+    border-color: rgba(214, 178, 104, 0.85);
+    box-shadow: 0 6px 16px rgba(75, 44, 112, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.cd-btn--secondary {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(243, 234, 252, 0.72) 100%);
+    color: var(--v2-violet-deep);
+    border-color: rgba(190, 160, 220, 0.8);
+    box-shadow: 0 3px 12px rgba(120, 90, 160, 0.12);
+}
+
+.cd-btn-chevron {
+    font-size: 1.3em;
+    line-height: 1;
+    margin-top: -1px;
+}
+
+.cd-btn .cd-btn-svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+/* --- Замок: постоянная подпись, текст под вуалью читается --- */
+.cd-veil {
+    background: linear-gradient(145deg, rgba(238, 230, 250, 0.3) 0%, rgba(216, 198, 240, 0.38) 100%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.cd-veil-lock {
+    width: auto;
+    height: 32px;
+    padding: 0 13px 0 10px;
+    gap: 7px;
+    border-radius: 999px;
+    background: rgba(255, 251, 240, 0.96);
+    color: #8a6a23;
+}
+
+.cd-veil-lock svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+.cd-veil-lock-text {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1;
+    color: #4f3b16;
+    white-space: nowrap;
+}
+
+.cd-veil-bubble {
+    font-size: 0.8125rem;
+    padding: 10px 14px;
+}
+
+/* --- Верхняя плашка «Энергии Вселенной / Гороскоп» --- */
+#cooldownDashboard .cd-celestial-split-card {
+    padding: 13px 14px;
+}
+
+#cooldownDashboard .cd-split-title {
+    font-size: 1.2rem;
+    white-space: normal;
+    overflow: visible;
+    line-height: 1.1;
+}
+
+#cooldownDashboard .cd-split-sub {
+    font-size: 0.8125rem;
+    color: var(--v2-ink-2);
+    line-height: 1.3;
+}
+
+#cooldownDashboard .cd-split-sub--dates {
+    font-size: 0.8125rem;
+    color: var(--v2-ink-2);
+    white-space: normal;
+}
+
+#cooldownDashboard .cd-split-left {
+    flex: 1;
+}
+
+#cooldownDashboard .cd-split-right {
+    flex: 1;
+}
+
+#cooldownDashboard .cd-split-half {
+    gap: 8px;
+}
+
+/* Пока карта не получена: подписи скрыты, внизу плашки — замок с пояснением */
+#cooldownDashboard.is-sleeping .cd-celestial-split-card {
+    padding-bottom: 54px;
+}
+
+#cooldownDashboard.is-sleeping .cd-celestial-split-card .cd-split-sub {
+    display: none;
+}
+
+
+.cd-celestial-split-card .cd-veil {
+    align-items: flex-end;
+    padding-bottom: 10px;
+    box-sizing: border-box;
+}
+
+/* --- «Ваша карта дня» --- */
+#cooldownDashboard .cd-today-deck {
+    width: 104px;
+    height: 156px;
+}
+
+#cooldownDashboard .cd-today-card-thumb {
+    width: 98px;
+    height: 147px;
+}
+
+#cooldownDashboard .cd-today-card-thumb--back {
+    left: 8px;
+}
+
+#cooldownDashboard .cd-today-card-hint {
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--v2-ink-2);
+    margin: 0 0 12px 0;
+}
+
+#cooldownDashboard .cd-today-card-actions {
+    gap: 10px;
+}
+
+#cooldownDashboard .cd-today-inline-timer {
+    font-size: 0.8125rem;
+    color: var(--v2-ink-2);
+    margin-top: 12px;
+}
+
+#cooldownDashboard .cd-today-inline-timer strong {
+    color: var(--v2-ink);
+    white-space: nowrap;
+}
+
+#cooldownDashboard .cd-collection-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--v2-ink-2);
+}
+
+#cooldownDashboard .cd-collection-sub {
+    font-size: 0.8125rem;
+    color: var(--v2-ink-2);
+}
+
+#cooldownDashboard .cd-collection-open {
+    font-size: 1.3rem;
+}
+
+#cooldownDashboard .cd-collection-link-inner {
+    min-height: 40px;
+    padding: 0 12px;
+}
+
+/* --- Две плитки: Видеотека (слева) и События (справа: анонс эфира или вход в канал) --- */
+#cooldownDashboard .cd-dual-grid {
+    gap: 12px;
+}
+
+#cooldownDashboard .cd-tile {
+    position: relative;
+    overflow: hidden;
+    min-height: 108px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    border-radius: 22px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.7) 0%, rgba(236, 224, 248, 0.56) 100%);
+    border: 1.2px solid rgba(226, 196, 134, 0.55);
+    box-shadow: 0 8px 22px rgba(120, 90, 160, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.cd-tile-art {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    height: 100%;
+    width: auto;
+    max-width: 42%;
+    object-fit: contain;
+    object-position: right bottom;
+    pointer-events: none;
+    user-select: none;
+}
+
+.cd-tile-body {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2px;
+    min-height: 88px;
+}
+
+.cd-tile--event .cd-tile-body {
+    justify-content: flex-start;
+}
+
+.cd-tile--event .cd-tile-art {
+    max-width: 34%;
+    opacity: 0.55;
+}
+
+#cooldownDashboard .cd-tile .cd-event-eyebrow-row {
+    gap: 6px;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--v2-ink-2);
+}
+
+#cooldownDashboard .cd-tile .cd-live-dot {
+    width: 7px;
+    height: 7px;
+    background: #c8973e;
+    box-shadow: 0 0 6px rgba(200, 151, 62, 0.6);
+}
+
+#cooldownDashboard .cd-tile .cd-event-banner-title {
+    margin: 0;
+    font-size: 1.15rem;
+    line-height: 1.1;
+    color: var(--v2-ink);
+}
+
+#cooldownDashboard .cd-tile .cd-video-title {
+    font-size: 1.3rem;
+    line-height: 1.1;
+    color: var(--v2-ink);
+}
+
+.cd-event-when {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--v2-ink-2);
+}
+
+.cd-event-when:empty {
+    display: none;
+}
+
+#cooldownDashboard .cd-tile--video .cd-tile-play-btn {
+    display: flex;
+    width: 40px;
+    height: 40px;
+    margin-top: 8px;
+}
+
+#cooldownDashboard .cd-tile--video .cd-tile-play-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Замок на плитке Видеотеки: подпись в две строки */
+.cd-tile--video .cd-veil {
+    justify-content: center;
+    align-items: flex-end;
+    padding: 0 6px 10px;
+    box-sizing: border-box;
+}
+
+#cooldownDashboard .cd-tile--video .cd-veil-lock {
+    height: auto;
+    min-height: 32px;
+    padding: 5px 9px 5px 8px;
+    gap: 5px;
+    border-radius: 16px;
+}
+
+#cooldownDashboard .cd-tile--video .cd-veil-lock-text {
+    white-space: normal;
+    line-height: 1.15;
+}
+
+#cooldownDashboard.is-sleeping .cd-tile--video .cd-tile-play-btn {
+    visibility: hidden;
+}
+
+.cooldown-dashboard.is-sleeping .cd-tile--video {
+    cursor: default;
+}
+
+/* --- Чаша благодарности --- */
+#cooldownDashboard .cd-widget--gratitude {
+    display: grid;
+    grid-template-columns: 68px 1fr;
+    grid-template-areas: "art body" "art tag";
+    column-gap: 12px;
+    row-gap: 8px;
+    align-items: center;
+    padding: 14px 16px 14px 12px;
+}
+
+#cooldownDashboard .cd-gratitude-art-wrap {
+    grid-area: art;
+}
+
+#cooldownDashboard .cd-gratitude-body {
+    grid-area: body;
+}
+
+#cooldownDashboard .cd-gratitude-title {
+    font-size: 1.3rem;
+    color: var(--v2-ink);
+}
+
+#cooldownDashboard .cd-gratitude-sub {
+    font-size: 0.8125rem;
+    color: var(--v2-ink-2);
+}
+
+#cooldownDashboard .cd-gratitude-tag.cd-btn {
+    grid-area: tag;
+    justify-self: start;
+    margin-left: 0;
+    min-height: 42px;
+    padding: 0 18px;
+    font-size: 0.9rem;
+    color: var(--v2-violet-deep);
+}
+
+/* --- Счётчик --- */
+#cooldownDashboard .daily-field-counter {
+    font-size: 0.8125rem;
+    color: var(--v2-ink-2);
+    padding: 8px 16px;
+}
+
+/* ==========================================================================
+   ДИЗАЙН v2 — этап 2 (04.11.2026): экран «Энергии Вселенной»
+   Единое стекло, крупный текст под телефон, понятная кнопка «Выбрать знак»,
+   карусель планет без обрезанных подписей, плитка «Портал».
+   ========================================================================== */
+#step1_5-celestial {
+    max-width: 420px;
+    padding: 0 4px 28px;
+    box-sizing: border-box;
+}
+
+/* --- Шапка экрана --- */
+#step1_5-celestial .screen-topbar {
+    min-height: 44px;
+    margin-bottom: 14px;
+}
+
+#step1_5-celestial .screen-topbar .back-to-hub-btn {
+    min-height: 40px;
+    padding: 0 15px 0 12px;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(190, 160, 220, 0.8);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(243, 234, 252, 0.72) 100%);
+    color: var(--v2-violet-deep);
+    font-size: 0.875rem;
+    box-shadow: 0 3px 12px rgba(120, 90, 160, 0.12);
+}
+
+#step1_5-celestial .screen-topbar .back-to-hub-arrow {
+    font-size: 1.1rem;
+}
+
+#step1_5-celestial .screen-topbar {
+    justify-content: flex-start;
+}
+
+#step1_5-celestial .screen-topbar-title {
+    padding: 0 0 0 116px;
+    font-size: 1.4rem;
+    color: var(--v2-ink);
+    text-align: left;
+}
+
+/* --- Единое стекло для всех карточек экрана --- */
+#step1_5-celestial .celestial-horoscope-card,
+#step1_5-celestial .sky-events-widget,
+#step1_5-celestial .celestial-harmony-card,
+#step1_5-celestial .celestial-message-card,
+#step1_5-celestial .celestial-bento-card {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.7) 0%, rgba(236, 224, 248, 0.56) 100%) !important;
+    border: 1.2px solid rgba(226, 196, 134, 0.55) !important;
+    border-radius: 22px !important;
+    box-shadow: 0 8px 22px rgba(120, 90, 160, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+
+#step1_5-celestial .celestial-moon-card,
+#step1_5-celestial .celestial-horoscope-card,
+#step1_5-celestial .sky-events-widget,
+#step1_5-celestial .celestial-harmony-card,
+#step1_5-celestial .celestial-message-card {
+    margin: 0 0 12px;
+}
+
+#step1_5-celestial .celestial-bento-grid--bottom {
+    gap: 12px;
+    margin: 0;
+}
+
+#step1_5-celestial .celestial-bento-card,
+#step1_5-celestial .celestial-message-card,
+#step1_5-celestial .celestial-harmony-card {
+    padding: 16px;
+}
+
+#step1_5-celestial .celestial-bento-header {
+    gap: 7px;
+    margin-bottom: 8px;
+    font-size: 0.75rem;
+    color: var(--v2-ink-2);
+}
+
+#step1_5-celestial .celestial-bento-ico {
+    width: 16px;
+    height: 16px;
+}
+
+/* --- Карточка Луны (тёмный акцент сохранён), размеры под телефон --- */
+#step1_5-celestial .celestial-moon-label {
+    font-size: 0.75rem;
+}
+
+#step1_5-celestial .celestial-moon-phase {
+    font-size: 1.75rem;
+}
+
+#step1_5-celestial .celestial-moon-illum,
+#step1_5-celestial .celestial-moon-sign {
+    font-size: 0.875rem;
+}
+
+#step1_5-celestial .celestial-moon-date {
+    font-size: 0.8125rem;
+}
+
+/* --- Гороскоп --- */
+#step1_5-celestial .celestial-horoscope-card {
+    padding: 16px 16px 10px;
+}
+
+#step1_5-celestial .celestial-horoscope-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+#step1_5-celestial .celestial-horoscope-glyph {
+    width: 48px;
+    height: 48px;
+}
+
+#step1_5-celestial .celestial-horoscope-eyebrow {
+    font-size: 0.75rem;
+    color: #86652a;
+}
+
+#step1_5-celestial .celestial-horoscope-title {
+    font-size: 1.3rem;
+    line-height: 1.1;
+    color: var(--v2-ink);
+    font-variant-numeric: lining-nums;
+}
+
+#step1_5-celestial .celestial-horoscope-element {
+    font-size: 0.8125rem;
+    color: var(--v2-ink-2);
+}
+
+#step1_5-celestial .celestial-change-sign-btn {
+    min-height: 40px;
+    padding: 0 16px;
+    gap: 6px;
+    border: 1px solid rgba(190, 160, 220, 0.8);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(243, 234, 252, 0.72) 100%);
+    color: var(--v2-violet-deep);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+#step1_5-celestial .celestial-horoscope-p {
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: #3d2d52;
+}
+
+#step1_5-celestial .celestial-horoscope-affirmation {
+    font-size: 1.15rem;
+    color: var(--v2-ink-2);
+}
+
+#step1_5-celestial .celestial-horoscope-toggle-btn {
+    height: 34px;
+}
+
+/* Знак не выбран: описание и одна понятная главная кнопка «Выбрать знак» */
+#step1_5-celestial .celestial-horoscope-card.is-empty {
+    display: flex;
+    flex-direction: column;
+}
+
+#step1_5-celestial .is-empty .celestial-horoscope-top {
+    display: contents;
+}
+
+#step1_5-celestial .is-empty .celestial-horoscope-badge {
+    order: 1;
+}
+
+#step1_5-celestial .is-empty .celestial-horoscope-body {
+    order: 2;
+    margin: 12px 0 14px;
+}
+
+#step1_5-celestial .is-empty .celestial-change-sign-btn {
+    order: 3;
+    width: 100%;
+    min-height: var(--v2-btn-h);
+    justify-content: center;
+    margin-bottom: 6px;
+    background: linear-gradient(135deg, #6a478f 0%, #4b2c70 100%);
+    border-color: rgba(214, 178, 104, 0.85);
+    color: #ffffff;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 16px rgba(75, 44, 112, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+#step1_5-celestial .is-empty .celestial-horoscope-toggle-btn {
+    display: none !important;
+}
+
+/* --- Карусель планет --- */
+#step1_5-celestial .sky-events-widget {
+    padding: 14px 8px 12px;
+}
+
+#step1_5-celestial .sky-events-widget::before {
+    border-radius: 19px;
+}
+
+#step1_5-celestial .sky-nav-col {
+    width: 70px;
+}
+
+#step1_5-celestial .sky-nav-btn {
+    width: 40px;
+    height: 40px;
+}
+
+#step1_5-celestial .sky-nav-label {
+    max-width: none;
+    margin-top: 5px;
+    overflow: visible;
+    text-overflow: clip;
+    font-size: 0.8125rem;
+    color: var(--v2-ink-2);
+}
+
+#step1_5-celestial .sky-center-content {
+    padding: 0 2px;
+}
+
+#step1_5-celestial .sky-event-header {
+    font-size: 0.75rem;
+    color: var(--v2-ink-2);
+}
+
+#skyEventIco {
+    color: #b8913f;
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+#step1_5-celestial .sky-event-title {
+    font-size: 1.45rem;
+    white-space: normal;
+    overflow: visible;
+    line-height: 1.1;
+    color: var(--v2-ink);
+}
+
+#step1_5-celestial .sky-event-date {
+    font-size: 0.875rem;
+    color: var(--v2-ink-2);
+}
+
+#step1_5-celestial .sky-dots-row {
+    gap: 7px;
+    margin-top: 9px;
+}
+
+#step1_5-celestial .sky-dot {
+    width: 8px;
+    height: 8px;
+}
+
+#step1_5-celestial .sky-dot.is-active {
+    width: 24px;
+    height: 8px;
+    border-radius: 4px;
+}
+
+/* --- Энергии дня --- */
+#step1_5-celestial .celestial-energy-grid {
+    gap: 6px;
+    margin: 10px 0 12px;
+}
+
+#step1_5-celestial .celestial-energy-circle {
+    width: 56px;
+    height: 56px;
+}
+
+#step1_5-celestial .celestial-energy-svg {
+    width: 30px;
+    height: 30px;
+}
+
+#step1_5-celestial .celestial-energy-label {
+    font-size: 0.8125rem;
+    color: var(--v2-ink-2);
+}
+
+#step1_5-celestial .celestial-energy-btn.is-active .celestial-energy-label {
+    color: var(--v2-ink);
+}
+
+#step1_5-celestial .celestial-energy-detail {
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(226, 196, 134, 0.45);
+    border-radius: 16px;
+}
+
+#step1_5-celestial .celestial-energy-detail-title {
+    font-size: 1.2rem;
+    color: var(--v2-ink);
+}
+
+#step1_5-celestial .celestial-energy-detail-desc {
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--v2-ink-2);
+}
+
+#step1_5-celestial .celestial-harmony-tag {
+    font-size: 0.8125rem;
+    padding: 3px 10px;
+    border-radius: 10px;
+}
+
+/* --- Послание неба, заземление, портал --- */
+#step1_5-celestial .celestial-message-text {
+    font-size: 1.3rem;
+    line-height: 1.4;
+    color: var(--v2-ink);
+}
+
+#step1_5-celestial .celestial-grounding-text {
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    color: var(--v2-ink);
+}
+
+#step1_5-celestial .celestial-portal-body {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 4px;
+    margin: auto 0;
+}
+
+#step1_5-celestial .celestial-portal-code {
+    font-size: 2.1rem;
+    line-height: 1;
+    font-variant-numeric: lining-nums;
+    font-feature-settings: "lnum" 1;
+}
+
+#step1_5-celestial .celestial-portal-code.is-long {
+    font-size: 1.3rem;
+    line-height: 1.15;
+}
+
+#step1_5-celestial .celestial-portal-days {
+    font-size: 0.9375rem;
+    color: var(--v2-ink-2);
+}
+
+/* ==========================================================================
+   ДИЗАЙН v2 — этап 3 (04.11.2026): карта → аудио → видео
+   Две кнопки (главная / второстепенная) вместо «action-btn», свой аудиоплеер,
+   кнопки по ширине карточки, текст не мельче 13 px.
+   ========================================================================== */
+.cd-btn-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.cd-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --- Рубашка и открытая карта: кнопки той же ширины, что и карта --- */
+#cardDrawStage .ritual-actions {
+    width: min(100%, 372px, max(240px, calc((100vh - var(--app-header-padding-top) - var(--tg-safe-bottom) - 230px) * 0.762)));
+    width: min(100%, 372px, max(240px, calc((100dvh - var(--app-header-padding-top) - var(--tg-safe-bottom) - 230px) * 0.762)));
+    gap: 10px;
+    margin: 22px auto 0;
+}
+
+#cardDrawStage .ritual-actions .cd-btn {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+}
+
+/* --- Аудио --- */
+#step2-audio .cd-btn {
+    width: 100%;
+    max-width: 328px;
+    margin: 0 auto 12px;
+}
+
+#audioTitle {
+    font-size: 2rem;
+    color: var(--v2-ink);
+}
+
+.audio-player-card.v2p {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 328px;
+    padding: 8px 16px 8px 8px;
+    box-sizing: border-box;
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.7) 0%, rgba(236, 224, 248, 0.56) 100%);
+    border: 1.2px solid rgba(226, 196, 134, 0.7);
+    box-shadow: 0 8px 22px rgba(120, 90, 160, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.v2p-play {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #6a478f 0%, #4b2c70 100%);
+    border: 1px solid rgba(214, 178, 104, 0.85);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(75, 44, 112, 0.28);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.v2p-play:active {
+    transform: scale(0.95);
+}
+
+.v2p-ico {
+    width: 20px;
+    height: 20px;
+}
+
+.v2p-ico--pause {
+    display: none;
+}
+
+.v2p.is-playing .v2p-ico--play {
+    display: none;
+}
+
+.v2p.is-playing .v2p-ico--pause {
+    display: block;
+}
+
+.v2p-seek {
+    --p: 0%;
+    flex: 1;
+    min-width: 0;
+    height: 28px;
+    margin: 0;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    touch-action: pan-y;
+}
+
+.v2p-seek::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #b8913f 0%, #b8913f var(--p), rgba(107, 74, 144, 0.25) var(--p), rgba(107, 74, 144, 0.25) 100%);
+}
+
+.v2p-seek::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    margin-top: -7px;
+    border-radius: 50%;
+    background: #fffaf0;
+    border: 2px solid #b8913f;
+    box-shadow: 0 1px 6px rgba(120, 90, 40, 0.35);
+}
+
+.v2p-seek::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(107, 74, 144, 0.25);
+}
+
+.v2p-seek::-moz-range-progress {
+    height: 4px;
+    border-radius: 2px;
+    background: #b8913f;
+}
+
+.v2p-seek::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fffaf0;
+    border: 2px solid #b8913f;
+}
+
+.v2p-time {
+    flex-shrink: 0;
+    min-width: 40px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--v2-ink-2);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+/* --- Видео: финальная карточка --- */
+#step3-video .completion-card .cd-btn {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+#step3-video .completion-thanks-text {
+    color: var(--v2-ink);
 }
