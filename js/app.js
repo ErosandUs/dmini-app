@@ -1607,13 +1607,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let phaseName = 'Убывающая Луна';
         if (elongation < 7 || elongation > 353) phaseName = 'Новолуние';
-        else if (elongation < 83) phaseName = 'Растущий серп';
-        else if (elongation < 97) phaseName = 'Первая четверть';
         else if (elongation < 173) phaseName = 'Растущая Луна';
         else if (elongation <= 187) phaseName = 'Полнолуние';
-        else if (elongation < 263) phaseName = 'Убывающая Луна';
-        else if (elongation < 277) phaseName = 'Третья четверть';
-        else phaseName = 'Старая Луна';
+        else phaseName = 'Убывающая Луна';
 
         const lunarDay = Math.min(30, Math.max(1, Math.floor((elongation / 360) * 29.530588) + 1));
         const shadowD = buildMoonShadowPath(illumFraction, isWaning);
