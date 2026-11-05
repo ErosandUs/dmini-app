@@ -627,6 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shareBtn.addEventListener('click', () => {
             window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
             trackEventGoal('event_share_click');
+            trackEventGoal('share_any', { method: 'event' });
             const senderId = getSenderId();
             const directLinkWithPromo = (EVENT_CONFIG.isPromoActive && EVENT_CONFIG.promoReceiver)
                 ? `${EVENT_CONFIG.registrationLink}?promo=${EVENT_CONFIG.promoReceiver}`
@@ -717,11 +718,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Цели Метрики для анонса события. К каждой цели добавляется название события,
     // чтобы в отчётах разделять разные эфиры и практики.
-    function trackEventGoal(goal) {
+    function trackEventGoal(goal, extra) {
         try {
             if (typeof window.trackGoal === 'function') {
                 const eventTitle = (typeof EVENT_CONFIG !== 'undefined' && EVENT_CONFIG.title) ? EVENT_CONFIG.title : '';
-                window.trackGoal(goal, eventTitle ? { event: eventTitle } : undefined);
+                const params = Object.assign({}, eventTitle ? { event: eventTitle } : null, extra || null);
+                window.trackGoal(goal, Object.keys(params).length ? params : undefined);
             }
         } catch (_) {}
     }

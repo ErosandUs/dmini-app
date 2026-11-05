@@ -850,6 +850,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_direct');
         }
+        trackGoal('share_any', { method: 'direct' });
 
         const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\nhttps://clck.ru/3VB8wu\n\nЗаходи в приложение: ${BOT_LINK}`;
         openTelegramShare(shareText);
@@ -865,6 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof ym !== 'undefined') {
             ym(110909428, 'reachGoal', 'share_story');
         }
+        trackGoal('share_any', { method: 'story' });
 
         shareToStories(activeSharePath); 
         shareOptionsModal.classList.remove('active');
@@ -1914,6 +1916,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         triggerSelectionHaptic();
+        trackGoal('open_celestial');
         renderCelestialStep();
         if (step1Card) step1Card.style.display = 'none';
         if (step1_5Celestial) step1_5Celestial.style.display = 'block';
@@ -2378,6 +2381,7 @@ document.addEventListener('DOMContentLoaded', () => {
         shareAudioBtn.addEventListener('click', () => {
             triggerSoftHaptic();
             trackGoal('share_audio', { track: currentAudioName });
+            trackGoal('share_any', { method: 'audio', track: currentAudioName });
             const text = `🎧 Я прослушала трансформационное послание «${currentAudioName}». Узнай, что Вселенная хочет сказать тебе:\n${BOT_LINK}`;
             openTelegramShare(text);
         });
@@ -2469,7 +2473,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (audioPlayer) {
         audioPlayer.addEventListener('ended', () => {
-            trackGoal('audio_complete', { track: currentAudioName });
+            trackGoal('audio_complete', { track: currentAudioName, replay: audioReplayMode });
             if (audioReplayMode) return; // повтор: видеошага нет, кнопка «Энергии Вселенной» уже показана
             transitionToStep3();
         });
