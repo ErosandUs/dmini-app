@@ -1767,7 +1767,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. Послание неба и Заземление по фазе Луны
         const phaseMessages = (cfg && cfg.CELESTIAL_MESSAGES_BY_PHASE) ? cfg.CELESTIAL_MESSAGES_BY_PHASE : {};
-        const msgObj = phaseMessages[phaseName] || {
+        // Подфаза по освещённости (название фазы в виджете не меняется)
+        let phaseSub = '';
+        if (phaseName === 'Растущая Луна') {
+            if (illumination < 35) phaseSub = 'серп';
+            else if (illumination > 90) phaseSub = 'почти';
+        } else if (phaseName === 'Убывающая Луна') {
+            if (illumination < 15) phaseSub = 'серп';
+            else if (illumination < 50) phaseSub = 'середина';
+        }
+        const msgObj = (phaseSub && phaseMessages[phaseName + '|' + phaseSub]) || phaseMessages[phaseName] || {
             message: 'Луна ещё полна сил, но уже учится отпускать. Всё, что вчера казалось важным, можно уложить на дно и не тащить в завтра. Вы точно молодцы.',
             grounding: 'Тёплый чай и пять минут у окна без телефона'
         };
