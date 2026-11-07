@@ -3714,8 +3714,8 @@ body {
     filter: drop-shadow(0 0 22px rgba(255, 241, 204, 0.78)) drop-shadow(0 4px 14px rgba(132, 98, 168, 0.28));
 }
 
-/* --- Колокольчик утренних напоминаний (справа от Луны) ---
-   Нулевая высота + отрицательный margin компенсируют gap flex-колонки, поэтому раскладка экрана не сдвигается.
+/* --- Переключатель утренних напоминаний («таблетка» справа от Луны, прямо над виджетом) ---
+   Нулевая высота + отрицательный margin компенсируют gap flex-колонки: раскладка экрана не сдвигается.
    Только transition на цвет/transform/opacity, без бесконечных анимаций и теней. */
 .cd-bell-row {
     position: relative;
@@ -3730,25 +3730,27 @@ body {
 
 .cd-bell-btn {
     position: absolute;
-    top: 26px;
-    right: 10px;
-    width: 40px;
-    height: 40px;
-    display: flex;
+    top: 63px;
+    right: 6px;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    padding: 0;
-    border-radius: 50%;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px 0 9px;
+    border-radius: 16px;
     border: 1.2px solid rgba(226, 196, 134, 0.68);
-    background: rgba(255, 251, 246, 0.88);
-    color: #7e5e9e;
+    background: rgba(255, 251, 246, 0.92);
+    color: #6b4d8c;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
 }
 
 .cd-bell-btn:active {
-    transform: scale(0.92);
+    transform: scale(0.96);
 }
 
 .cd-bell-btn.is-busy {
@@ -3757,14 +3759,15 @@ body {
 }
 
 .cd-bell-btn.is-on {
-    background: #f1d78f;
-    color: #7a520c;
+    background: #f6e3ab;
+    color: #6f4a0a;
     border-color: rgba(196, 156, 78, 0.95);
 }
 
 .cd-bell-ico {
-    width: 22px;
-    height: 22px;
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.7;
@@ -3777,14 +3780,18 @@ body {
     fill-opacity: 0.85;
 }
 
+.cd-bell-label {
+    white-space: nowrap;
+}
+
 .cd-bell-toast {
     position: absolute;
-    top: 72px;
-    right: 10px;
+    top: 101px;
+    right: 6px;
     max-width: 240px;
     padding: 8px 12px;
     border-radius: 14px;
-    background: rgba(62, 42, 92, 0.9);
+    background: rgba(62, 42, 92, 0.92);
     color: #fff;
     font-size: 12.5px;
     line-height: 1.35;
