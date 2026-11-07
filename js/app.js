@@ -2483,8 +2483,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (audioPlayer) {
         audioPlayer.addEventListener('ended', () => {
             trackGoal('audio_complete', { track: currentAudioName, replay: audioReplayMode });
-            if (audioReplayMode) return; // повтор: видеошага нет, кнопка «Энергии Вселенной» уже показана
-            transitionToStep3();
+            // Без автоперехода: человек может продолжать медитировать. К видео — вручную кнопкой nextToVideoBtn.
+            if (avatarVideo) avatarVideo.pause();
         });
         audioPlayer.addEventListener('error', () => {
             if (audioReplayMode) {
