@@ -3731,7 +3731,7 @@ body {
 .cd-bell-btn {
     position: absolute;
     top: 63px;
-    right: 6px;
+    right: 0;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -3787,7 +3787,7 @@ body {
 .cd-bell-toast {
     position: absolute;
     top: 101px;
-    right: 6px;
+    right: 0;
     max-width: 240px;
     padding: 8px 12px;
     border-radius: 14px;
