@@ -17,6 +17,11 @@ const FINAL_VIDEOS_DATA = [
     "video/final_13.mp4?v=2",
     "video/final_14.mp4?v=2",
     "video/final_15.mp4?v=2",
+    "video/final_16.mp4?v=2",
+    "video/final_17.mp4?v=2",
+    "video/final_18.mp4?v=2",
+    "video/final_19.mp4?v=2",
+    "video/final_20.mp4?v=2"
 ];
 
 // 2. Полная база аудиопосланий
