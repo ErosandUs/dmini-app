@@ -3738,12 +3738,12 @@ body {
     height: 32px;
     padding: 0 12px 0 9px;
     border-radius: 16px;
-    border: 1.2px solid rgba(226, 196, 134, 0.68);
+    border: 1.2px solid var(--v2-gold-line, rgba(206, 170, 98, 0.6));
     background: rgba(255, 251, 246, 0.92);
-    color: #6b4d8c;
+    color: var(--v2-violet-deep, #4b2c70);
     font: inherit;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
@@ -3769,10 +3769,14 @@ body {
     width: 18px;
     height: 18px;
     fill: none;
-    stroke: currentColor;
+    stroke: var(--v2-gold, #b8913f);
     stroke-width: 1.7;
     stroke-linecap: round;
     stroke-linejoin: round;
+}
+
+.cd-bell-btn.is-on .cd-bell-ico {
+    stroke: currentColor;
 }
 
 .cd-bell-btn.is-on .cd-bell-ico path:first-child {
