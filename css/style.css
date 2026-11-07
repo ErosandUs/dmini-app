@@ -3674,7 +3674,8 @@ body {
     width: 100%;
     max-width: 420px;
     margin: 0 auto;
-    padding: calc(var(--app-header-padding-top, 0px) + 2px) 4px 18px 4px;
+    /* Луна стоит между кнопками Telegram, поэтому экран поднят на 38px (07.11.2026) */
+    padding: calc(var(--app-header-padding-top, 0px) - 36px) 4px 18px 4px;
     box-sizing: border-box;
 }
 
@@ -5007,7 +5008,7 @@ body {
 /* --- Чаша благодарности --- */
 #cooldownDashboard .cd-widget--gratitude {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 104px;
+    grid-template-columns: minmax(0, 1fr) 116px;
     grid-template-areas: "body art" "tag art";
     column-gap: 8px;
     row-gap: 10px;
@@ -5015,27 +5016,36 @@ body {
     padding: 16px 12px 16px 16px;
 }
 
+/* Чаша крупнее (07.11.2026): картинка шире колонки и заходит в поля виджета, высота виджета не растёт */
 #cooldownDashboard .cd-gratitude-art-wrap {
     grid-area: art;
-    width: 104px;
+    width: 116px;
     height: 91px;
 }
 
 #cooldownDashboard .cd-gratitude-art-img {
-    width: 104px;
-    height: 91px;
+    width: 144px;
+    height: 126px;
+    max-width: none;
+    margin: -17px -14px;
+    flex: 0 0 auto;
 }
 
 /* Узкие экраны: чаша меньше, чтобы кнопка не заходила на неё */
 @media (max-width: 340px) {
     #cooldownDashboard .cd-widget--gratitude {
-        grid-template-columns: minmax(0, 1fr) 80px;
+        grid-template-columns: minmax(0, 1fr) 90px;
     }
 
-    #cooldownDashboard .cd-gratitude-art-wrap,
-    #cooldownDashboard .cd-gratitude-art-img {
-        width: 80px;
+    #cooldownDashboard .cd-gratitude-art-wrap {
+        width: 90px;
         height: 70px;
+    }
+
+    #cooldownDashboard .cd-gratitude-art-img {
+        width: 104px;
+        height: 91px;
+        margin: -10px -7px;
     }
 }
 
