@@ -1,6 +1,6 @@
 const EVENT_CONFIG = {
     // 1.  Статус: true (показывать анонс и таймер) или false (скрыть всё)
-    isActive: false,
+    isActive: true,
 
     // 2. Название практики/медитации
     title: "САКРАЛЬНАЯ ЖЕНСТВЕННОСТЬ",
@@ -25,14 +25,14 @@ const EVENT_CONFIG = {
     imagePath: "images/event_banner.jpeg",
 
     // 5. Описание во всплывающем окне (Шаг 1)
-    description: "Открытый эфир уже доступен к просмотру! Поделись записью и практикой с подругой — соприкасаться с сакральными знаниями вместе интереснее и глубже ✨",
+    description: "9 ноября мы открываем курс "Сакральная женственность". Это пространство, где можно наконец отпустить контроль, снять панцирь напряжения и вернуть себе то самое состояние, когда внутри тихо, а в теле - легко и живо.",
 
     // 6. Предупреждение / примечание под описанием (красный текст). Оставьте пустой строкой "", чтобы скрыть блок:
     warningText: "",
 
     // 7. Текст кнопок в окне анонса:
     shareButtonText: "Поделиться записью 💌",
-    directButtonText: "Смотреть эфир",
+    directButtonText: "Смотреть программу",
 
     // 8. Текст сообщения для отправки подруге в Telegram при шеринге:
     shareMessage: "Привет! Вышел открытый эфир «{title}», и я сразу подумала о тебе ✨\nПосмотри обязательно, делюсь ссылкой на запись! 💫",
@@ -44,7 +44,7 @@ const EVENT_CONFIG = {
 
     // 9. Ссылки и промокоды:
     botUsername: "Djamiliakha_bot",
-    registrationLink: "https://youtu.be/qw7JHzLawZg?si=7QzByrIenbEwwtQb",
+    registrationLink: "https://djamiliakha.ru/sacral-woman",
     donationLink: "https://pay.cloudtips.ru/p/f430db35",
     promoReceiver: "ЛЮБОВЬ15",
     appsScriptUrl: "https://script.google.com/macros/s/AKfycbxvBYeGEZgc22LaqwFhE8wX7JyX94Ti1QhwssyJqeZP3JDCJN5ey_iE5XuEm2S0xXMm-w/exec",
