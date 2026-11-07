@@ -3714,6 +3714,92 @@ body {
     filter: drop-shadow(0 0 22px rgba(255, 241, 204, 0.78)) drop-shadow(0 4px 14px rgba(132, 98, 168, 0.28));
 }
 
+/* --- Колокольчик утренних напоминаний (справа от Луны) ---
+   Нулевая высота + отрицательный margin компенсируют gap flex-колонки, поэтому раскладка экрана не сдвигается.
+   Только transition на цвет/transform/opacity, без бесконечных анимаций и теней. */
+.cd-bell-row {
+    position: relative;
+    height: 0;
+    margin-bottom: -11px;
+    z-index: 6;
+}
+
+.cd-bell-row[hidden] {
+    display: none;
+}
+
+.cd-bell-btn {
+    position: absolute;
+    top: 26px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+    border: 1.2px solid rgba(226, 196, 134, 0.68);
+    background: rgba(255, 251, 246, 0.88);
+    color: #7e5e9e;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+}
+
+.cd-bell-btn:active {
+    transform: scale(0.92);
+}
+
+.cd-bell-btn.is-busy {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.cd-bell-btn.is-on {
+    background: #f1d78f;
+    color: #7a520c;
+    border-color: rgba(196, 156, 78, 0.95);
+}
+
+.cd-bell-ico {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.cd-bell-btn.is-on .cd-bell-ico path:first-child {
+    fill: currentColor;
+    fill-opacity: 0.85;
+}
+
+.cd-bell-toast {
+    position: absolute;
+    top: 72px;
+    right: 10px;
+    max-width: 240px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: rgba(62, 42, 92, 0.9);
+    color: #fff;
+    font-size: 12.5px;
+    line-height: 1.35;
+    text-align: left;
+    opacity: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.cd-bell-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* --- 2. СДВОЕННЫЙ ВИДЖЕТ: ЭНЕРГИИ ВСЕЛЕННОЙ + ГОРОСКОП --- */
 .cd-celestial-split-card {
     position: relative;

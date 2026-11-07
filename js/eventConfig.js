@@ -25,7 +25,7 @@ const EVENT_CONFIG = {
     imagePath: "images/event_banner.jpeg",
 
     // 5. Описание во всплывающем окне (Шаг 1)
-    description: "Открытый эфир уже доступен к просмотру! Поделись записью и практикой с подругой — соприкасаться с сакральными знаниями вместе интереснее и глубже ✨",
+    description: "Старт курса уже 9 ноября. Успейте присоединиться. Подробности ниже в описании.",
 
     // 6. Предупреждение / примечание под описанием (красный текст). Оставьте пустой строкой "", чтобы скрыть блок:
     warningText: "",
@@ -44,9 +44,16 @@ const EVENT_CONFIG = {
 
     // 9. Ссылки и промокоды:
     botUsername: "Djamiliakha_bot",
-    registrationLink: "https://youtu.be/qw7JHzLawZg?si=7QzByrIenbEwwtQb",
+    registrationLink: "https://djamiliakha.ru/sacral-woman",
     donationLink: "https://pay.cloudtips.ru/p/f430db35",
     promoReceiver: "ЛЮБОВЬ15",
     appsScriptUrl: "https://script.google.com/macros/s/AKfycbxvBYeGEZgc22LaqwFhE8wX7JyX94Ti1QhwssyJqeZP3JDCJN5ey_iE5XuEm2S0xXMm-w/exec",
-    horoscopeScriptUrl: "https://script.google.com/macros/s/AKfycby1ngpmw4NxcL9cP0_dziG-Dm6ImUweRkCiytfUtQC9g74Y8sryIh8PfsAlEYjZONjE/exec"
+    horoscopeScriptUrl: "https://script.google.com/macros/s/AKfycby1ngpmw4NxcL9cP0_dziG-Dm6ImUweRkCiytfUtQC9g74Y8sryIh8PfsAlEYjZONjE/exec",
+
+    // 10. Утренние напоминания о карте дня (колокольчик рядом с Луной):
+    // notifyScriptUrl — адрес отдельного Google Apps Script (Web App, /exec);
+    // notifyHour — час отправки по местному времени (используется только для текста подсказки,
+    // реальное время задаёт SEND_HOUR в Notifications.gs, значения должны совпадать).
+    notifyScriptUrl: "https://script.google.com/macros/s/AKfycbzcrHi-rcmLOgrM-YE99u1XbqJfIJo0QpAhEnfFatP5SthSTfQyYUAE5J7opK3Sln7g/exec",
+    notifyHour: 9
 };
