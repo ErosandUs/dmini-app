@@ -3714,9 +3714,11 @@ body {
     filter: drop-shadow(0 0 22px rgba(255, 241, 204, 0.78)) drop-shadow(0 4px 14px rgba(132, 98, 168, 0.28));
 }
 
-/* --- Переключатель утренних напоминаний («таблетка» справа от Луны, прямо над виджетом) ---
+/* --- Колокольчик утренних напоминаний (справа, прямо над виджетом) ---
+   Обычно это компактный круглый значок: включено = золотая заливка, выключено = светлая.
+   При нажатии на 2–3 секунды выезжает надпись справа налево («Уведомления включены/выключены»), затем сворачивается.
    Нулевая высота + отрицательный margin компенсируют gap flex-колонки: раскладка экрана не сдвигается.
-   Только transition на цвет/transform/opacity, без бесконечных анимаций и теней. */
+   Без бесконечных анимаций и теней; анимируются только ширина надписи, цвет и прозрачность. */
 .cd-bell-row {
     position: relative;
     height: 0;
@@ -3730,14 +3732,16 @@ body {
 
 .cd-bell-btn {
     position: absolute;
-    top: 63px;
+    top: 61px;
     right: 0;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    height: 32px;
-    padding: 0 12px 0 9px;
-    border-radius: 16px;
+    justify-content: flex-end;
+    height: 34px;
+    min-width: 34px;
+    padding: 0 7px;
+    box-sizing: border-box;
+    border-radius: 17px;
     border: 1.2px solid var(--v2-gold-line, rgba(206, 170, 98, 0.6));
     background: rgba(255, 251, 246, 0.92);
     color: var(--v2-violet-deep, #4b2c70);
@@ -3750,7 +3754,7 @@ body {
 }
 
 .cd-bell-btn:active {
-    transform: scale(0.96);
+    transform: scale(0.94);
 }
 
 .cd-bell-btn.is-busy {
@@ -3784,13 +3788,26 @@ body {
     fill-opacity: 0.85;
 }
 
+/* Надпись: в покое свёрнута до нуля (остаётся круглый значок), при .is-expanded выезжает влево от значка */
 .cd-bell-label {
+    order: -1;
+    max-width: 0;
+    margin-right: 0;
+    overflow: hidden;
     white-space: nowrap;
+    opacity: 0;
+    transition: max-width 0.3s ease, margin-right 0.3s ease, opacity 0.25s ease;
+}
+
+.cd-bell-btn.is-expanded .cd-bell-label {
+    max-width: 200px;
+    margin-right: 7px;
+    opacity: 1;
 }
 
 .cd-bell-toast {
     position: absolute;
-    top: 101px;
+    top: 99px;
     right: 0;
     max-width: 240px;
     padding: 8px 12px;
@@ -3809,6 +3826,14 @@ body {
 .cd-bell-toast.is-visible {
     opacity: 1;
     transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cd-bell-label,
+    .cd-bell-btn,
+    .cd-bell-toast {
+        transition: none;
+    }
 }
 
 /* --- 2. СДВОЕННЫЙ ВИДЖЕТ: ЭНЕРГИИ ВСЕЛЕННОЙ + ГОРОСКОП --- */

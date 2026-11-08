@@ -1,8 +1,9 @@
 /**
- * Колокольчик «Утренняя карта дня» (рядом с Луной на экране «Пространство дня»).
+ * Колокольчик «Утренняя карта дня» (справа, над виджетом на экране «Пространство дня»).
  *
- * Человек сам включает и выключает утренние напоминания. Всё хранится на сервере
- * (Google Apps Script + Таблица), поэтому статус одинаков на всех устройствах.
+ * Обычно это компактный круглый значок: заливка показывает, включены ли уведомления.
+ * При нажатии на 2–3 секунды выезжает надпись «Уведомления включены / выключены» и сворачивается обратно.
+ * Всё хранится на сервере (Google Apps Script + Таблица), поэтому статус одинаков на всех устройствах.
  * Серверная часть: sessions/2026-11-07_morning-notifications/gas/Notifications.gs
  *
  * Правила проекта:
@@ -17,11 +18,16 @@
     var REQUEST_TIMEOUT_MS = 15000;
     var STATUS_DELAY_MS = 1500;
     var TOAST_MS = 3200;
+    var LABEL_MS = 2600;
+
+    var TEXT_ON = 'Уведомления включены';
+    var TEXT_OFF = 'Уведомления выключены';
 
     var busy = false;
     var enabled = false;
     var toastTimer = null;
-    var row, btn, toast;
+    var labelTimer = null;
+    var row, btn, toast, label;
 
     function getTg() {
         return window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
@@ -47,11 +53,23 @@
         try { localStorage.setItem(CACHE_KEY, value ? '1' : '0'); } catch (_) {}
     }
 
+    // Только цвет и подписи: значок остаётся компактным
     function render(value) {
         enabled = Boolean(value);
         btn.classList.toggle('is-on', enabled);
         btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
         btn.setAttribute('aria-label', 'Утренние напоминания о карте дня: ' + (enabled ? 'включены' : 'выключены'));
+        if (label) label.textContent = enabled ? TEXT_ON : TEXT_OFF;
+    }
+
+    // Надпись выезжает справа налево на пару секунд и уходит обратно в колокольчик
+    function flashLabel() {
+        if (!label) return;
+        btn.classList.add('is-expanded');
+        if (labelTimer) clearTimeout(labelTimer);
+        labelTimer = setTimeout(function () {
+            btn.classList.remove('is-expanded');
+        }, LABEL_MS);
     }
 
     function showToast(text) {
@@ -95,7 +113,7 @@
 
     // Бот не смог написать человеку (он ни разу не нажимал «Старт» у бота)
     function showCantWrite() {
-        var message = 'Чтобы получать напоминания, откройте бота и нажмите «Старт». Затем снова включите колокольчик.';
+        var message = 'Чтобы получать напоминания, откройте бота и нажмите «Старт». Затем снова нажмите на колокольчик.';
         var tg = getTg();
         try {
             if (tg && typeof tg.showPopup === 'function' && (typeof tg.isVersionAtLeast !== 'function' || tg.isVersionAtLeast('6.2'))) {
@@ -132,13 +150,7 @@
                 if (data && data.status === 'success') {
                     render(data.subscribed);
                     writeCache(data.subscribed);
-                    if (data.subscribed) {
-                        var cfg = getConfig();
-                        var hour = cfg && cfg.notifyHour ? cfg.notifyHour : 9;
-                        showToast('Утренние напоминания включены ✨ Карта дня придёт в ' + hour + ':00 по вашему времени');
-                    } else {
-                        showToast('Утренние напоминания отключены');
-                    }
+                    flashLabel();
                 } else if (data && data.error === 'cant_write') {
                     showCantWrite();
                 } else {
@@ -175,6 +187,7 @@
         row = document.getElementById('notifyBellRow');
         btn = document.getElementById('notifyBellBtn');
         toast = document.getElementById('notifyBellToast');
+        label = document.getElementById('notifyBellLabel');
         if (!row || !btn) return;
 
         var tg = getTg();

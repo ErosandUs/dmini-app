@@ -25,17 +25,17 @@ const EVENT_CONFIG = {
     imagePath: "images/event_banner.jpeg",
 
     // 5. Описание во всплывающем окне (Шаг 1)
-    description: "Старт курса уже 9 ноября. Успейте присоединиться. Подробности ниже в описании.",
+    description: "Старт уже завтра ✨ Успейте присоединиться. Подробности — по кнопке ниже.",
 
     // 6. Предупреждение / примечание под описанием (красный текст). Оставьте пустой строкой "", чтобы скрыть блок:
     warningText: "",
 
     // 7. Текст кнопок в окне анонса:
-    shareButtonText: "Поделиться записью 💌",
-    directButtonText: "Смотреть эфир",
+    shareButtonText: "Пригласить подругу 💌",
+    directButtonText: "Узнать программу",
 
     // 8. Текст сообщения для отправки подруге в Telegram при шеринге:
-    shareMessage: "Привет! Вышел открытый эфир «{title}», и я сразу подумала о тебе ✨\nПосмотри обязательно, делюсь ссылкой на запись! 💫",
+    shareMessage: "Привет! Уже завтра стартует «{title}», и я сразу подумала о тебе ✨\nУспей присоединиться, программа и подробности по ссылке 💫\n\n{link}",
 
     // Выдача персонального промокода и скидок:
     // true  — включено: запрос в Google Таблицу за промокодом, показ Шага 2 с таймером 24ч;
@@ -50,10 +50,8 @@ const EVENT_CONFIG = {
     appsScriptUrl: "https://script.google.com/macros/s/AKfycbxvBYeGEZgc22LaqwFhE8wX7JyX94Ti1QhwssyJqeZP3JDCJN5ey_iE5XuEm2S0xXMm-w/exec",
     horoscopeScriptUrl: "https://script.google.com/macros/s/AKfycby1ngpmw4NxcL9cP0_dziG-Dm6ImUweRkCiytfUtQC9g74Y8sryIh8PfsAlEYjZONjE/exec",
 
-    // 10. Утренние напоминания о карте дня (колокольчик рядом с Луной):
-    // notifyScriptUrl — адрес отдельного Google Apps Script (Web App, /exec);
-    // notifyHour — час отправки по местному времени (используется только для текста подсказки,
-    // реальное время задаёт SEND_HOUR в Notifications.gs, значения должны совпадать).
-    notifyScriptUrl: "https://script.google.com/macros/s/AKfycbzcrHi-rcmLOgrM-YE99u1XbqJfIJo0QpAhEnfFatP5SthSTfQyYUAE5J7opK3Sln7g/exec",
-    notifyHour: 9
+    // 10. Утренние напоминания о карте дня (колокольчик справа над виджетом):
+    // notifyScriptUrl — адрес отдельного Google Apps Script (Web App, /exec).
+    // Время отправки (8:00 по местному времени) задаёт SEND_HOUR в самом скрипте Notifications.gs.
+    notifyScriptUrl: "https://script.google.com/macros/s/AKfycbzcrHi-rcmLOgrM-YE99u1XbqJfIJo0QpAhEnfFatP5SthSTfQyYUAE5J7opK3Sln7g/exec"
 };
