@@ -941,7 +941,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const absoluteMediaUrl = new URL(imagePath, window.location.href).toString();
+            // Для сторис берём готовый кадр 9:16 (карта сверху, внизу место под плашку и подпись),
+            // иначе редактор Telegram сам растягивает карту 3:4 и плашка закрывает послание
+            const storyPath = String(imagePath).replace(/^images\/(\d+)\.jpeg$/, 'images/story/$1.jpg');
+            const absoluteMediaUrl = new URL(storyPath, window.location.href).toString();
             const params = {
                 text: "Получи своё послание от Вселенной! @Djamilia_Kha ✨", 
                 widget_link: { 
