@@ -852,13 +852,68 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         trackGoal('share_any', { method: 'direct' });
 
-        const shareText = `Привет! Нашла классное приложение по метафорическим картам ✨\nhttps://clck.ru/3VB8wu\n\nЗаходи в приложение: ${BOT_LINK}`;
-        openTelegramShare(shareText);
-
-        if (shareOptionsModal) {
-            shareOptionsModal.classList.remove('active');
-        }
+        startGiftShare();
     });
+
+    // --- ПОДАРОК ПОДРУГЕ: карточка именно с этой картой (Telegram shareMessage, Bot API 8.0+) ---
+    // Приложение передаёт серверу только номер карты; картинку, подпись и кнопку собирает Apps Script.
+    let isGiftPreparing = false;
+
+    function getCardNumberFromPath(path) {
+        const m = /(\d+)\.jpeg$/.exec(path || '');
+        const n = m ? parseInt(m[1], 10) : NaN;
+        return (n >= 1 && n <= TOTAL_CARDS) ? n : null;
+    }
+
+    async function startGiftShare() {
+        if (isGiftPreparing) return;
+
+        const tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg || !tg.initData || typeof tg.shareMessage !== 'function' || !tg.isVersionAtLeast('8.0')) {
+            alert("Чтобы дарить карты, откройте приложение в Telegram и обновите его ✨");
+            return;
+        }
+
+        const cardNumber = getCardNumberFromPath(activeSharePath);
+        const scriptUrl = (typeof EVENT_CONFIG !== 'undefined') ? EVENT_CONFIG.notifyScriptUrl : '';
+        if (!cardNumber || !scriptUrl) {
+            alert("Не удалось подготовить подарок. Попробуйте ещё раз.");
+            return;
+        }
+
+        const originalLabel = shareToFriendBtn.textContent;
+        isGiftPreparing = true;
+        shareToFriendBtn.disabled = true;
+        shareToFriendBtn.textContent = 'Готовим подарок… ✨';
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        try {
+            const response = await fetch(scriptUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'prepareShare', initData: tg.initData, card: cardNumber }),
+                signal: controller.signal
+            });
+            const data = await response.json();
+
+            if (data && data.status === 'success' && data.msgId) {
+                if (shareOptionsModal) shareOptionsModal.classList.remove('active');
+                tg.shareMessage(data.msgId);
+            } else {
+                alert("Не удалось подготовить подарок. Попробуйте ещё раз немного позже.");
+            }
+        } catch (error) {
+            console.error("Ошибка подготовки подарка:", error);
+            alert("Не удалось подготовить подарок. Проверьте интернет и попробуйте ещё раз.");
+        } finally {
+            clearTimeout(timeoutId);
+            isGiftPreparing = false;
+            shareToFriendBtn.disabled = false;
+            shareToFriendBtn.textContent = originalLabel;
+        }
+    }
 
     // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
     shareToUniverseBtn.addEventListener('click', () => {
