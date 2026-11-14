@@ -7045,3 +7045,14 @@ html:not(.mandala-vip) #sheetGiftBar {
     35% { transform: translate(-50%, 0) scale(1.18); box-shadow: 0 0 0 6px rgba(240, 184, 96, 0.35); }
     100% { transform: translate(-50%, 0) scale(1); }
 }
+
+/* 14.11.2026: виджет «сакрального прогресса» в «Моей коллекции» открывается только там, где включена мандала (пока у VIP) */
+html:not(.mandala-vip) #sacredProgressWidget,
+html:not(.mandala-vip) #sacredProgressWidget:active {
+    cursor: default;
+    transform: none;
+}
+
+html:not(.mandala-vip) #sacredProgressWidget .sacred-widget-chevron {
+    display: none;
+}

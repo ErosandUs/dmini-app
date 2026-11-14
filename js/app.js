@@ -3267,8 +3267,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Виджет прогресса в «Моей коллекции» теперь ведёт на экран «Твой путь» (шторка оставлена в разметке, но не открывается)
-    // 14.11.2026: экран с мандалами пока только у VIP, остальным — прежняя шторка
-    const openPathOrSheet = () => (isUserVIP() ? openPathScreen() : openSacredBottomSheet());
+    // 14.11.2026: виджет открывает экран «Твой путь» с мандалами, только когда мандала включена
+    // (пока — у VIP, см. VIP_ONLY в js/mandala.js). У остальных виджет только показывает прогресс и не открывается.
+    const openPathOrSheet = () => { if (window.Mandala) openPathScreen(); };
     if (sacredProgressWidget) {
         sacredProgressWidget.addEventListener('click', openPathOrSheet);
         sacredProgressWidget.addEventListener('keydown', (e) => {
