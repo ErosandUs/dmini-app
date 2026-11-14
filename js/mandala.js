@@ -14,7 +14,6 @@
     const STATE_V = 3;                                  // 3 — живописные мандалы (области другие, раскраска с нуля)
     const ART_KEYS = ['p1', 'p2', 'p3', 'p4', 'p5'];    // мандала 1..5 → данные window.MANDALA_RICH[ключ]
     const LEVEL_COUNT = ART_KEYS.length;
-    const BOT_LINK = 'https://t.me/Djamiliakha_bot?start=go';
     const LAYER_NAMES = { center: 'Сердце', petals: 'Лепестки', leaves: 'Листья', outer: 'Внешние лепестки', gold: 'Золотые лепестки' };
     // Послание Джамили при завершении мандалы (черновики — на утверждении у Валентина)
     const FINISH_TEXT = {
@@ -272,7 +271,8 @@
         return localStorage.getItem('lastDrawTime') || 'none';
     }
 
-    function award(kind) {
+    function award(kind, origin) {
+        let flying = false;
         const key = cycleKey();
         if (state.cycle.key !== key) state.cycle = { key, card: false, audio: false, video: false };
 
@@ -282,8 +282,12 @@
             state.active = true;
             state.practiceAll += 1;
             const msg = kind === 'card' ? 'карта дня' : (kind === 'audio' ? 'аудиопослание' : 'видеопослание');
-            const show = () => toast(`🪷 +1 капля краски (${msg}). Раскрасьте лепесток в «Твой путь»`);
-            if (kind === 'card') setTimeout(show, 2600); else show();
+            // «+1 🪷» всплывает над картой, аудио или видео и улетает в счётчик капель
+            flying = flyDrop(origin, kind === 'card' ? 2600 : 0);
+            if (!flying) {
+                const show = () => toast(`🪷 +1 капля краски (${msg}). Раскрасьте лепесток в «Твой путь»`);
+                if (kind === 'card') setTimeout(show, 2600); else show();
+            }
 
             if (kind === 'card') {
                 const streak = readNum('practice_streak_count');
@@ -310,8 +314,101 @@
             return;
         }
         saveState();
-        renderChip();
+        if (!flying) { renderChip(); syncHud(); }   // при перелёте счётчик обновится, когда капля долетит
         if (isPathOpen()) renderPath();
+    }
+
+    // ---------- Счётчик капель и перелёт «+1» ----------
+    // На главном счётчик — плашка с лотосом (#giftCounterChip). На экранах аудио и видео (и когда плашки не видно)
+    // сверху по центру показывается такой же счётчик .drop-hud.
+    let hud = null, hudNum = null, hudPending = 0;
+
+    function totalDrops() {
+        const pr = getProgress();
+        return pr.dropsP + pr.dropsG;
+    }
+
+    function chipVisible() {
+        const chip = document.getElementById('giftCounterChip');
+        return !!(chip && chip.offsetParent !== null && !chip.classList.contains('is-mandala-hidden'));
+    }
+
+    function syncHud() {
+        if (!hud) return;
+        const daily = document.getElementById('daily');
+        const show = state.active && daily && daily.classList.contains('active') && !chipVisible();
+        hud.classList.toggle('is-on', !!show);
+        hudNum.textContent = String(totalDrops());
+    }
+
+    function setupHud() {
+        if (hud) return;
+        hud = document.createElement('div');
+        hud.className = 'drop-hud';
+        hud.setAttribute('aria-hidden', 'true');
+        hud.innerHTML = '<span class="drop-hud-ico">🪷</span><span class="drop-hud-num"></span>';
+        hudNum = hud.querySelector('.drop-hud-num');
+        document.body.appendChild(hud);
+        const daily = document.getElementById('daily');
+        const schedule = () => {
+            if (hudPending) return;
+            hudPending = requestAnimationFrame(() => { hudPending = 0; syncHud(); });
+        };
+        if (daily && 'MutationObserver' in window) {
+            new MutationObserver(schedule).observe(daily, { attributes: true, subtree: true, attributeFilter: ['style', 'class'] });
+        }
+        syncHud();
+    }
+
+    // Возвращает true, если перелёт будет (иначе показываем обычное сообщение)
+    function flyDrop(origin, delay) {
+        let reduce = false;
+        try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
+        if (reduce || !document.body || typeof document.body.animate !== 'function') return false;
+        setTimeout(() => {
+            let target = null;
+            if (chipVisible()) target = document.getElementById('giftCounterChip');
+            else if (hud) { hud.classList.add('is-on'); target = hud; }
+            const vw = window.innerWidth, vh = window.innerHeight;
+            let sx = vw / 2, sy = vh / 2;
+            const o = origin && origin.getBoundingClientRect ? origin.getBoundingClientRect() : null;
+            if (o && o.width && o.bottom > 0 && o.top < vh) {
+                sx = o.left + o.width / 2;
+                sy = Math.min(Math.max(o.top + o.height / 2, 80), vh - 80);
+            }
+            const t = target ? target.getBoundingClientRect() : { left: vw / 2, top: 20, width: 0, height: 0 };
+            const dx = t.left + t.width / 2 - sx, dy = t.top + t.height / 2 - sy;
+            const el = document.createElement('div');
+            el.className = 'drop-fly';
+            el.textContent = '+1 🪷';
+            el.style.left = sx + 'px';
+            el.style.top = sy + 'px';
+            document.body.appendChild(el);
+            haptic('light');
+            const anim = el.animate([
+                { transform: 'translate(-50%, -50%) scale(0.5)', opacity: 0 },
+                { transform: 'translate(-50%, -160%) scale(1.15)', opacity: 1, offset: 0.25 },
+                { transform: 'translate(-50%, -160%) scale(1)', opacity: 1, offset: 0.5 },
+                { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.45)`, opacity: 0.35 }
+            ], { duration: 1700, easing: 'cubic-bezier(0.45, 0, 0.2, 1)', fill: 'forwards' });
+            let landed = false;
+            const land = () => {
+                if (landed) return;
+                landed = true;
+                el.remove();
+                renderChip();
+                syncHud();
+                if (target) {
+                    target.classList.remove('is-bump');
+                    void target.offsetWidth;
+                    target.classList.add('is-bump');
+                    setTimeout(() => target.classList.remove('is-bump'), 700);
+                }
+            };
+            anim.onfinish = land;
+            setTimeout(land, 2600); // подстраховка, если анимация не доиграла (приложение свёрнуто)
+        }, delay || 0);
+        return true;
     }
 
     // ---------- Запуск: перенос накопленного и поводы при входе ----------
@@ -350,6 +447,7 @@
         saveState(true);
         renderChip();
         bindUi();
+        setupHud();
         pullCloud();
     }
 
@@ -364,13 +462,15 @@
         const ico = chip.querySelector('.cd-gift-ico');
         const val = document.getElementById('giftCounterValue');
         const lbl = document.getElementById('giftCounterLabel');
-        const waiting = pr.done || pr.complete || pr.soon ? 0 : pr.dropsP + pr.dropsG;
+        // Плашка — счётчик капель; светится, только когда есть что раскрасить
+        const waiting = pr.dropsP + pr.dropsG;
+        const canPaintNow = !(pr.done || pr.complete || pr.soon) && waiting > 0;
         if (ico) ico.textContent = '🪷';
         if (waiting > 0) {
             if (val) val.textContent = String(waiting);
             if (lbl) lbl.textContent = dropsWord(waiting);
-            chip.classList.add('has-drops');
-            chip.setAttribute('aria-label', `${waiting} ${dropsWord(waiting)} краски ждут. Открыть мандалу`);
+            chip.classList.toggle('has-drops', canPaintNow);
+            chip.setAttribute('aria-label', `${waiting} ${dropsWord(waiting)} краски. Открыть мандалу`);
         } else {
             const filled = pr.paintedP + pr.paintedG;
             if (val) val.textContent = String(filled);
@@ -513,7 +613,7 @@
                 const b = document.createElement('button');
                 b.type = 'button';
                 b.className = 'mrich-finish-open';
-                b.textContent = '✨ Послание мандалы, обои и сторис';
+                b.textContent = '✨ Послание мандалы';
                 b.addEventListener('click', () => openFinish(pr.art));
                 pal.appendChild(b);
             }
@@ -669,7 +769,6 @@
             p.textContent = FINISH_TEXT[art.key] || '';
             card.append(h, p,
                 button('Сохранить как обои', 'mrich-btn', () => openWallpaper(art)),
-                button('Поделиться в сторис', 'mrich-btn', () => shareStory(art)),
                 button('Любоваться', 'mrich-btn mrich-btn--ghost', closeOverlay));
         });
     }
@@ -680,8 +779,8 @@
         w.width = W; w.height = H;
         const c = w.getContext('2d');
         const g = c.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, '#342662');
-        g.addColorStop(1, '#181232');
+        g.addColorStop(0, '#f6ecf8');
+        g.addColorStop(1, '#fcece2');
         c.fillStyle = g;
         c.fillRect(0, 0, W, H);
         // мандала в мягком круге
@@ -696,11 +795,11 @@
         mc.fillStyle = rg;
         mc.fillRect(0, 0, size, size);
         c.drawImage(m, (W - size) / 2, 520);
-        c.fillStyle = '#efcd82';
+        c.fillStyle = '#a0742e';
         c.textAlign = 'center';
         c.font = '600 72px "Cormorant Garamond", Georgia, serif';
         c.fillText(art.title, W / 2, 330);
-        c.fillStyle = 'rgba(246, 236, 252, 0.85)';
+        c.fillStyle = '#6f5f82';
         c.font = '40px "Cormorant Garamond", Georgia, serif';
         c.fillText('Моя мандала', W / 2, 400);
         let url = '';
@@ -726,24 +825,41 @@
         });
     }
 
-    function shareStory(art) {
+    // Подарок мандалы подруге: сервер (Notifications.gs, prepareMandalaShare) готовит сообщение с картинкой
+    // мандалы и кнопкой в бота, Telegram показывает выбор чата. Золотая капля — только если Telegram подтвердил отправку.
+    let giftBusy = false;
+    function giftMandala(btn) {
         const tg = window.Telegram && window.Telegram.WebApp;
-        closeOverlay();
-        if (!tg || typeof tg.shareToStory !== 'function' || typeof tg.isVersionAtLeast !== 'function' || !tg.isVersionAtLeast('7.8')) {
-            toast('Поделиться в сторис можно в Telegram (нужна свежая версия) ✨');
+        if (!tg || !tg.initData || typeof tg.shareMessage !== 'function' || typeof tg.isVersionAtLeast !== 'function' || !tg.isVersionAtLeast('8.0')) {
+            toast('Дарить мандалу можно в Telegram (нужна свежая версия) ✨');
             return;
         }
-        try {
-            const media = new URL(`${art.base}story-${majorityVariant()}.jpg`, window.location.href).toString();
-            tg.shareToStory(media, {
-                text: `Моя мандала «${art.title}» раскрашена ✨ @Djamilia_Kha`,
-                widget_link: { url: BOT_LINK, name: 'Раскрасить свою 🪷' }
+        const url = typeof EVENT_CONFIG !== 'undefined' ? EVENT_CONFIG.notifyScriptUrl : '';
+        const art = getProgress().art || artOf(1);
+        if (!url || !art || giftBusy) return;
+        giftBusy = true;
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Готовим подарок… ✨';
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'prepareMandalaShare', initData: tg.initData, key: art.key, variant: majorityVariant() })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.status === 'success' && data.msgId) {
+                    tg.shareMessage(data.msgId, sent => { if (sent) award('gift'); });
+                } else {
+                    toast('Не удалось подготовить подарок. Попробуйте ещё раз немного позже.');
+                }
+            })
+            .catch(() => toast('Не удалось подготовить подарок. Проверьте интернет и попробуйте ещё раз.'))
+            .finally(() => {
+                giftBusy = false;
+                btn.disabled = false;
+                btn.textContent = label;
             });
-            // Telegram не сообщает, опубликована ли история, поэтому считаем открытие редактора
-            award('story');
-        } catch (_) {
-            toast('Не удалось открыть редактор сторис.');
-        }
     }
 
     // ---------- Кнопки экрана ----------
@@ -775,8 +891,8 @@
 
         const giftBtn = document.getElementById('mandalaGiftBtn');
         if (giftBtn) giftBtn.addEventListener('click', () => {
-            const legacy = document.getElementById('pathGiftBtn');
-            if (legacy) legacy.click();
+            haptic('select');
+            giftMandala(giftBtn);
         });
 
         const colLink = document.getElementById('mandalaCollectionLink');

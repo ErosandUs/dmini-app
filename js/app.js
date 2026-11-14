@@ -775,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof ym !== 'undefined') {
                     ym(110909428, 'reachGoal', 'get_card');
                 }
-                if (window.Mandala) window.Mandala.award('card');
+                if (window.Mandala) window.Mandala.award('card', card);
 
                 if (typeof window.updateEventTimer === 'function') {
                     window.updateEventTimer();
@@ -2924,7 +2924,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (audioPlayer) {
         audioPlayer.addEventListener('ended', () => {
             trackGoal('audio_complete', { track: currentAudioName, replay: audioReplayMode });
-            if (window.Mandala) window.Mandala.award('audio');
+            if (window.Mandala) window.Mandala.award('audio', avatarVideo);
             // Без автоперехода: человек может продолжать медитировать. К видео — вручную кнопкой nextToVideoBtn.
             if (avatarVideo) avatarVideo.pause();
         });
@@ -2943,7 +2943,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 finalVideoGoalSent = true;
                 trackGoal('final_video_complete');
             }
-            if (window.Mandala) window.Mandala.award('video');
+            if (window.Mandala) window.Mandala.award('video', finalVideoPlayer);
             // Без автовозврата: человек сам уходит кнопкой «На главный экран»
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
         });

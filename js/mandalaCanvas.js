@@ -61,11 +61,16 @@
 
         let A = null;             // картинки и карта областей
         let destroyed = false;
-        let staticCv, glowCv, paintedCv, insideCv, outsideCv;
+        let staticCv, glowCv, paintedCv, baseCv, goldCv;
+        let hasGlow = false, hasPainted = false, alive = false;
         const masks = {};
+        const paintCache = {};    // кусок картины в форме области: «id_v» → холст
         let selected = null, reveal = null, flash = null, wave = null, dimMode = false;
         const sparks = [];
-        let shimmer, sh;
+        // Перелив и волна считаются в уменьшенном размере и растягиваются: они мягкие, а кадр в разы дешевле
+        const LOW = 256, WAVE = 512;
+        let shimmer, sh, paintedLow, sprite;
+        let onScreen = true, lastFrame = 0;
 
         // ---------- маски ----------
         function maskOf(id) {
@@ -94,11 +99,65 @@
         }
 
         function regionPaint(id, v) {
+            const key = id + '_' + v;
+            if (paintCache[key]) return paintCache[key];
             const m = maskOf(id), t = mk(m.w, m.h), tc = t.getContext('2d');
             tc.drawImage(m.c, 0, 0);
             tc.globalCompositeOperation = 'source-in';
             tc.drawImage(A.V[v], m.x, m.y, m.w, m.h, 0, 0, m.w, m.h);
-            return { c: t, m };
+            return (paintCache[key] = { c: t, m });
+        }
+
+        // Неизменная основа (фон «Жемчужный рассвет», 14.11.2026): светлый перламутр с тонким золотым
+        // «цветком жизни» снаружи, внутри — белый перламутр и еле видный призрак картины. Считается один раз.
+        function buildBase() {
+            const outside = maskWhere(v => v === 255), inside = maskWhere(v => v !== 255);
+            baseCv = mk(S, S);
+            const s = baseCv.getContext('2d');
+            const g = s.createLinearGradient(0, 0, 0, S);
+            g.addColorStop(0, '#f6ecf8');
+            g.addColorStop(1, '#fcece2');
+            s.fillStyle = g;
+            s.fillRect(0, 0, S, S);
+            // узор «цветок жизни»: тонкие круги по шестиугольной сетке
+            s.strokeStyle = 'rgba(201, 160, 92, 0.17)';
+            s.lineWidth = 2;
+            const r = 64, h = r * Math.sqrt(3) / 2;
+            for (let row = -2; row < 14; row++) {
+                for (let col = -2; col < 12; col++) {
+                    const cx = col * r + (row % 2 ? r / 2 : 0), cy = row * h;
+                    s.beginPath();
+                    s.arc(cx, cy, r, 0, Math.PI * 2);
+                    s.stroke();
+                }
+            }
+            const ic = inside.getContext('2d');
+            ic.globalCompositeOperation = 'source-in';
+            ic.fillStyle = '#f7f0fa';
+            ic.fillRect(0, 0, S, S);
+            s.drawImage(inside, 0, 0);
+            ic.drawImage(A.V[1], 0, 0);
+            s.globalAlpha = 0.22;
+            s.drawImage(inside, 0, 0);
+            s.globalAlpha = 1;
+            // золотые линии темнее, чтобы читались на светлом
+            goldCv = mk(S, S);
+            const gc = goldCv.getContext('2d');
+            gc.drawImage(A.gold, 0, 0);
+            gc.globalCompositeOperation = 'source-in';
+            gc.fillStyle = '#be8e3e';
+            gc.fillRect(0, 0, S, S);
+        }
+
+        // Искра — готовая картинка-светлячок вместо градиента на каждую искру в каждом кадре
+        function buildSprite() {
+            sprite = mk(32, 32);
+            const c = sprite.getContext('2d'), g = c.createRadialGradient(16, 16, 0, 16, 16, 16);
+            g.addColorStop(0, 'rgba(255,246,214,1)');
+            g.addColorStop(0.35, 'rgba(240,190,90,0.9)');
+            g.addColorStop(1, 'rgba(220,160,60,0)');
+            c.fillStyle = g;
+            c.fillRect(0, 0, 32, 32);
         }
 
         function tinted(id, color) {
@@ -113,27 +172,10 @@
         // ---------- неподвижный слой ----------
         function refresh() {
             if (!A || destroyed) return;
-            staticCv = mk(S, S);
             const s = staticCv.getContext('2d');
-            s.fillStyle = '#221a44';
-            s.fillRect(0, 0, S, S);
-            // небо снаружи — из первой картины
-            const sky = mk(S, S), kc = sky.getContext('2d');
-            kc.drawImage(outsideCv, 0, 0);
-            kc.globalCompositeOperation = 'source-in';
-            kc.drawImage(A.V[0], 0, 0);
-            s.drawImage(sky, 0, 0);
-            // внутри — тёмная основа и еле видный призрак картины
-            const inner = mk(S, S), ic = inner.getContext('2d');
-            ic.drawImage(insideCv, 0, 0);
-            ic.globalCompositeOperation = 'source-in';
-            ic.fillStyle = '#2a2052';
-            ic.fillRect(0, 0, S, S);
-            s.drawImage(inner, 0, 0);
-            ic.drawImage(A.V[0], 0, 0);
-            s.globalAlpha = 0.13;
-            s.drawImage(inner, 0, 0);
+            s.globalCompositeOperation = 'source-over';
             s.globalAlpha = 1;
+            s.drawImage(baseCv, 0, 0);
 
             const mineOf = opts.isMine || (() => false);
             // узор (клинья, ободки) проявляется картиной первого раскрашенного соседа
@@ -147,11 +189,15 @@
                 s.globalAlpha = 1;
             });
 
-            paintedCv = mk(S, S);
             const pc = paintedCv.getContext('2d');
-            glowCv = mk(S, S);
+            pc.globalCompositeOperation = 'source-over';
+            pc.clearRect(0, 0, S, S);
             const gc = glowCv.getContext('2d');
+            gc.globalCompositeOperation = 'source-over';
+            gc.clearRect(0, 0, S, S);
             const mineCv = dimMode ? mk(S, S) : null;
+            hasGlow = false;
+            hasPainted = false;
             for (const r of paintable) {
                 const v = opts.paintOf(r.id);
                 const m = maskOf(r.id);
@@ -162,13 +208,15 @@
                     s.drawImage(p.c, m.x, m.y);
                     s.globalAlpha = 1;
                     pc.drawImage(m.c, m.x, m.y);
+                    hasPainted = true;
                     if (mineCv && mine) mineCv.getContext('2d').drawImage(m.c, m.x, m.y);
                 } else if (!dimMode && opts.canPaint && opts.canPaint(r)) {
                     gc.drawImage(m.c, m.x, m.y);
+                    hasGlow = true;
                 }
             }
             gc.globalCompositeOperation = 'source-in';
-            gc.fillStyle = '#fff3d6';
+            gc.fillStyle = '#f0b860';
             gc.fillRect(0, 0, S, S);
             // «Мои мазки»: свои области подсвечены тёплым светом
             if (mineCv) {
@@ -180,12 +228,26 @@
                 s.drawImage(mineCv, 0, 0);
                 s.globalCompositeOperation = 'source-over';
             }
+            // маска раскрашенного в уменьшенном виде — для перелива
+            const lc = paintedLow.getContext('2d');
+            lc.clearRect(0, 0, LOW, LOW);
+            lc.drawImage(paintedCv, 0, 0, LOW, LOW);
             kick();
         }
 
         // ---------- кадр ----------
         let rafId = 0, pollId = 0;
-        const visible = () => !document.hidden && host.isConnected && host.offsetParent !== null;
+        // Видимость узнаём от IntersectionObserver, а не замером раскладки в каждом кадре
+        let io = null;
+        if ('IntersectionObserver' in window) {
+            io = new IntersectionObserver(entries => {
+                onScreen = entries[entries.length - 1].isIntersecting;
+                if (onScreen) kick();
+            });
+            io.observe(host);
+        }
+        const visible = () => !document.hidden && onScreen && (io !== null || host.offsetParent !== null);
+        const busyNow = () => !!(reveal || flash || wave || sparks.length || selected);
         function kick() {
             if (destroyed || rafId || !A) return;
             clearTimeout(pollId);
@@ -196,38 +258,45 @@
         function frame(now) {
             rafId = 0;
             if (destroyed) return;
-            if (!visible()) { pollId = setTimeout(kick, 500); return; }
+            if (!visible()) { pollId = setTimeout(kick, 600); return; }
+            // Без движения хватает ~30 кадров: мерцание и перелив медленные
+            if (!busyNow() && now - lastFrame < 30) { rafId = requestAnimationFrame(frame); return; }
+            lastFrame = now;
+            draw(now);
+            // Раскрашенная мандала вращается средствами CSS: в покое холст не перерисовываем, и вращение остаётся плавным
+            const idleAnim = !reduceMotion && !alive && (hasGlow || (hasPainted && !dimMode));
+            if (busyNow() || idleAnim) rafId = requestAnimationFrame(frame);
+        }
+
+        function draw(now) {
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1;
             ctx.drawImage(staticCv, 0, 0);
 
-            if (!reduceMotion) {
-                // мерцание свободных областей
-                ctx.globalAlpha = 0.05 + 0.07 * (0.5 + 0.5 * Math.sin(now / 520));
+            // мерцание свободных областей
+            if (hasGlow) {
+                ctx.globalAlpha = reduceMotion ? 0.16 : 0.06 + 0.16 * (0.5 + 0.5 * Math.sin(now / 520));
                 ctx.drawImage(glowCv, 0, 0);
                 ctx.globalAlpha = 1;
-                // перелив по раскрашенному: медленный бегущий блик
-                if (!dimMode) {
-                    sh.globalCompositeOperation = 'source-over';
-                    sh.clearRect(0, 0, S, S);
-                    const a = now / 4200, cx = S / 2 + Math.cos(a) * S * 0.7, cy = S / 2 + Math.sin(a) * S * 0.7;
-                    const g = sh.createLinearGradient(cx - 260, cy - 260, cx + 260, cy + 260);
-                    g.addColorStop(0, 'rgba(255,255,255,0)');
-                    g.addColorStop(0.5, 'rgba(255,240,250,.55)');
-                    g.addColorStop(1, 'rgba(255,255,255,0)');
-                    sh.fillStyle = g;
-                    sh.fillRect(0, 0, S, S);
-                    sh.globalCompositeOperation = 'destination-in';
-                    sh.drawImage(paintedCv, 0, 0);
-                    ctx.globalCompositeOperation = 'screen';
-                    ctx.globalAlpha = 0.45;
-                    ctx.drawImage(shimmer, 0, 0);
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.globalAlpha = 1;
-                }
-            } else {
-                ctx.globalAlpha = 0.1;
-                ctx.drawImage(glowCv, 0, 0);
+            }
+            // перелив по раскрашенному: медленный бегущий блик (в уменьшенном размере)
+            if (hasPainted && !dimMode && !reduceMotion && !alive) {
+                sh.globalCompositeOperation = 'source-over';
+                sh.clearRect(0, 0, LOW, LOW);
+                const k = LOW / S, a = now / 4200;
+                const cx = (S / 2 + Math.cos(a) * S * 0.7) * k, cy = (S / 2 + Math.sin(a) * S * 0.7) * k, w = 260 * k;
+                const g = sh.createLinearGradient(cx - w, cy - w, cx + w, cy + w);
+                g.addColorStop(0, 'rgba(255,255,255,0)');
+                g.addColorStop(0.5, 'rgba(255,240,250,.55)');
+                g.addColorStop(1, 'rgba(255,255,255,0)');
+                sh.fillStyle = g;
+                sh.fillRect(0, 0, LOW, LOW);
+                sh.globalCompositeOperation = 'destination-in';
+                sh.drawImage(paintedLow, 0, 0);
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.globalAlpha = 0.3;
+                ctx.drawImage(shimmer, 0, 0, S, S);
+                ctx.globalCompositeOperation = 'source-over';
                 ctx.globalAlpha = 1;
             }
 
@@ -251,25 +320,26 @@
                 ctx.globalAlpha = 1;
             }
 
-            ctx.drawImage(A.gold, 0, 0);
+            ctx.drawImage(goldCv, 0, 0);
 
+            // волна по золотым контурам при завершении (в уменьшенном размере)
             if (wave) {
                 const k = (now - wave.t0) / 2600;
                 if (k < 1.3) {
-                    const r = k * S * 0.75, wc = wave.c.getContext('2d');
+                    const q = WAVE / S, r = k * S * 0.75, wc = wave.c.getContext('2d');
                     wc.globalCompositeOperation = 'source-over';
-                    wc.clearRect(0, 0, S, S);
-                    const g = wc.createRadialGradient(S / 2, S / 2, Math.max(0, r - 90), S / 2, S / 2, r + 10);
+                    wc.clearRect(0, 0, WAVE, WAVE);
+                    const g = wc.createRadialGradient(WAVE / 2, WAVE / 2, Math.max(0, r - 90) * q, WAVE / 2, WAVE / 2, (r + 10) * q);
                     g.addColorStop(0, 'rgba(255,240,200,0)');
                     g.addColorStop(0.8, 'rgba(255,240,200,1)');
                     g.addColorStop(1, 'rgba(255,240,200,0)');
                     wc.fillStyle = g;
-                    wc.fillRect(0, 0, S, S);
+                    wc.fillRect(0, 0, WAVE, WAVE);
                     wc.globalCompositeOperation = 'destination-in';
-                    wc.drawImage(A.gold, 0, 0);
+                    wc.drawImage(wave.gold, 0, 0);
                     ctx.globalCompositeOperation = 'lighter';
-                    ctx.drawImage(wave.c, 0, 0);
-                    ctx.drawImage(wave.c, 0, 0);
+                    ctx.drawImage(wave.c, 0, 0, S, S);
+                    ctx.drawImage(wave.c, 0, 0, S, S);
                     ctx.globalCompositeOperation = 'source-over';
                     if (Math.random() < 0.8) {
                         const a = Math.random() * Math.PI * 2;
@@ -278,26 +348,19 @@
                 } else wave = null;
             }
 
+            // искры — готовая картинка-светлячок
             if (sparks.length) {
-                ctx.globalCompositeOperation = 'lighter';
                 for (let i = sparks.length - 1; i >= 0; i--) {
                     const p = sparks[i];
                     p.x += p.vx; p.y += p.vy; p.vy += 0.02; p.life -= 0.018;
                     if (p.life <= 0) { sparks.splice(i, 1); continue; }
-                    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 3);
-                    g.addColorStop(0, 'rgba(255,236,180,' + p.life + ')');
-                    g.addColorStop(1, 'rgba(255,200,120,0)');
-                    ctx.fillStyle = g;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.r * 3, 0, Math.PI * 2);
-                    ctx.fill();
+                    const d = p.r * 6;
+                    ctx.globalAlpha = p.life;
+                    ctx.drawImage(sprite, p.x - d / 2, p.y - d / 2, d, d);
                 }
+                ctx.globalAlpha = 1;
                 ctx.globalCompositeOperation = 'source-over';
             }
-
-            // кадры нужны постоянно только при движении; иначе — редкая перерисовка ради мерцания
-            const busy = reveal || flash || wave || sparks.length || selected;
-            if (busy || !reduceMotion) rafId = requestAnimationFrame(frame);
         }
 
         // ---------- проявление кистью ----------
@@ -390,7 +453,7 @@
 
         // ---------- для хозяина ----------
         function select(id) {
-            selected = id && A ? { id, t: tinted(id, '#ffe9b0') } : null;
+            selected = id && A ? { id, t: tinted(id, '#e9a94a') } : null;
             kick();
         }
 
@@ -407,11 +470,17 @@
 
         function celebrate() {
             if (!A) return;
-            wave = { t0: performance.now(), c: mk(S, S) };
+            const goldLow = mk(WAVE, WAVE);
+            goldLow.getContext('2d').drawImage(A.gold, 0, 0, WAVE, WAVE);   // волна светится по светлому золоту
+            wave = { t0: performance.now(), c: mk(WAVE, WAVE), gold: goldLow };
             kick();
         }
 
-        function setAlive(on) { host.classList.toggle('is-alive', !!on && !reduceMotion); }
+        function setAlive(on) {
+            alive = !!on;
+            host.classList.toggle('is-alive', alive && !reduceMotion);
+            kick();
+        }
 
         function setDim(on) { dimMode = !!on; refresh(); }
 
@@ -420,13 +489,14 @@
             const c = mk(S, S), cc = c.getContext('2d');
             if (!A) return c;
             cc.drawImage(staticCv, 0, 0);
-            cc.drawImage(A.gold, 0, 0);
+            cc.drawImage(goldCv, 0, 0);
             return c;
         }
 
         function destroy() {
             destroyed = true;
             if (reveal) clearTimeout(reveal.timer);
+            if (io) io.disconnect();
             cancelAnimationFrame(rafId);
             clearTimeout(pollId);
             cv.removeEventListener('click', onClick);
@@ -435,10 +505,14 @@
         const ready = loadAssets(art).then(a => {
             if (destroyed) return;
             A = a;
-            shimmer = mk(S, S);
+            shimmer = mk(LOW, LOW);
             sh = shimmer.getContext('2d');
-            outsideCv = maskWhere(v => v === 255);
-            insideCv = maskWhere(v => v !== 255);
+            paintedLow = mk(LOW, LOW);
+            staticCv = mk(S, S);
+            paintedCv = mk(S, S);
+            glowCv = mk(S, S);
+            buildBase();
+            buildSprite();
             refresh();
         });
 
