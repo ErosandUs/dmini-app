@@ -176,6 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.location.search.includes('vip=1')) return true;
         return false;
     }
+    // Мандала (js/mandala.js) запускается после app.js и спрашивает VIP здесь: список VIP один на всё приложение
+    window.isUserVIP = isUserVIP;
 
     // --- ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ ИЗ INDEX.HTML ---
     const appScriptTag = document.getElementById('appScript');
@@ -248,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sacredGateToast = document.getElementById('sacredGateToast');
     const backFromCelestialTopBtn = document.getElementById('backFromCelestialTopBtn');
     const backFromCollectionBtn = document.getElementById('backFromCollectionBtn');
+    const backFromPathBtn = document.getElementById('backFromPathBtn');
     const backFromVideoBtn = document.getElementById('backFromVideoBtn');
     
     let isFlipped = false;
@@ -280,6 +283,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function isDashboardSleeping() {
         return Boolean(cooldownDashboard && cooldownDashboard.classList.contains('is-sleeping'));
+    }
+
+    // Замки на «Послании небес» и «Видеотеке» выключены классом .locks-off в разметке (решение 14.11.2026).
+    // Вернуть замки: убрать класс locks-off у #cooldownDashboard в index.html.
+    function areLocksOff() {
+        return Boolean(cooldownDashboard && cooldownDashboard.classList.contains('locks-off'));
+    }
+
+    function isWidgetLocked() {
+        return isDashboardSleeping() && !areLocksOff();
     }
 
     // Рубашка карты (спящее состояние) или сегодняшняя открытая карта (пробуждённое)
@@ -322,6 +335,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             cdTodayCardName.innerText = `Карта №${currentCardNumber}${trackLabel}`;
         }
+
+        // Пока видео к сегодняшней карте не открывали — «Продолжить», после видео — «Слушать практику»
+        const cdReplayAudioLabel = document.getElementById('cdReplayAudioLabel');
+        if (cdReplayAudioLabel) {
+            let videoSeen = false;
+            try {
+                const todayKey = (localStorage.getItem('lastDrawTime') || '0') + '_' + currentCardNumber;
+                videoSeen = localStorage.getItem('finalVideoSeenKey') === todayKey;
+            } catch (e) {}
+            cdReplayAudioLabel.textContent = videoSeen ? 'Слушать практику' : 'Продолжить';
+        }
     }
 
     // Единая функция показа дашборда «Пространство дня» в одном из двух состояний:
@@ -339,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cooldownDashboard.classList.toggle('is-sleeping', !isAwake);
 
         [cooldownMoonWidget, cooldownVideoWidget].forEach(widget => {
-            if (widget) widget.setAttribute('aria-disabled', isAwake ? 'false' : 'true');
+            if (widget) widget.setAttribute('aria-disabled', (isAwake || areLocksOff()) ? 'false' : 'true');
         });
 
         setHeaderTitle('Пространство дня');
@@ -751,6 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof ym !== 'undefined') {
                     ym(110909428, 'reachGoal', 'get_card');
                 }
+                if (window.Mandala) window.Mandala.award('card');
 
                 if (typeof window.updateEventTimer === 'function') {
                     window.updateEventTimer();
@@ -844,6 +869,11 @@ document.addEventListener('DOMContentLoaded', () => {
         shareOptionsModal.classList.remove('active');
     });
 
+    // Нажатие мимо окна закрывает его (как у видео и выбора знака)
+    shareOptionsModal.addEventListener('click', (e) => {
+        if (e.target === shareOptionsModal) shareOptionsModal.classList.remove('active');
+    });
+
     // --- НАДЕЖНАЯ ОТПРАВКА В ЛС ---
     shareToFriendBtn.addEventListener('click', () => {
         triggerSoftHaptic();
@@ -865,8 +895,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return (n >= 1 && n <= TOTAL_CARDS) ? n : null;
     }
 
-    async function startGiftShare() {
+    async function startGiftShare(sourceBtn) {
         if (isGiftPreparing) return;
+        const busyBtn = sourceBtn || shareToFriendBtn;
 
         const tg = window.Telegram && window.Telegram.WebApp;
         if (!tg || !tg.initData || typeof tg.shareMessage !== 'function' || !tg.isVersionAtLeast('8.0')) {
@@ -881,10 +912,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const originalLabel = shareToFriendBtn.textContent;
+        const originalLabel = busyBtn.textContent;
         isGiftPreparing = true;
-        shareToFriendBtn.disabled = true;
-        shareToFriendBtn.textContent = 'Готовим подарок… ✨';
+        busyBtn.disabled = true;
+        busyBtn.textContent = 'Готовим подарок… ✨';
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -900,7 +931,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data && data.status === 'success' && data.msgId) {
                 if (shareOptionsModal) shareOptionsModal.classList.remove('active');
-                tg.shareMessage(data.msgId);
+                // Колбэк получает true, только если Telegram подтвердил отправку (окно могли просто закрыть)
+                tg.shareMessage(data.msgId, (sent) => {
+                    if (sent) registerShareReward('gift');
+                });
             } else {
                 alert("Не удалось подготовить подарок. Попробуйте ещё раз немного позже.");
             }
@@ -910,9 +944,251 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             clearTimeout(timeoutId);
             isGiftPreparing = false;
-            shareToFriendBtn.disabled = false;
-            shareToFriendBtn.textContent = originalLabel;
+            busyBtn.disabled = false;
+            busyBtn.textContent = originalLabel;
         }
+    }
+
+    // --- СЧЁТЧИК «СВЕТА ПЕРЕДАНО»: подарки подругам и сторис ---
+    // gift_sent_count — подарки, подтверждённые Telegram; story_share_count — открытия редактора сторис
+    // (одна и та же карта в сутки засчитывается один раз).
+    const GIFT_TITLES = [
+        { min: 30, title: 'Проводница света' },
+        { min: 10, title: 'Хранительница круга' },
+        { min: 3, title: 'Дарительница света' },
+        { min: 1, title: 'Подарила свет' }
+    ];
+    const giftCounterChip = document.getElementById('giftCounterChip');
+    const giftCounterValue = document.getElementById('giftCounterValue');
+    const giftCounterLabel = document.getElementById('giftCounterLabel');
+
+    // 1 луч, 2–4 луча, 5–20 лучей, 21 луч, 22–24 луча ...
+    function getRaysWord(n) {
+        const mod100 = n % 100;
+        const mod10 = n % 10;
+        if (mod100 >= 11 && mod100 <= 14) return 'лучей';
+        if (mod10 === 1) return 'луч';
+        if (mod10 >= 2 && mod10 <= 4) return 'луча';
+        return 'лучей';
+    }
+    const giftDisplayText = document.getElementById('giftDisplayText');
+    const giftToastEl = document.getElementById('giftToast');
+    let giftToastTimer = null;
+
+    function readCounter(key) {
+        try {
+            const n = parseInt(localStorage.getItem(key) || '0', 10);
+            return isNaN(n) || n < 0 ? 0 : n;
+        } catch (_) {
+            return 0;
+        }
+    }
+
+    function getGiftStats() {
+        const gifts = readCounter('gift_sent_count');
+        const stories = readCounter('story_share_count');
+        return { gifts, stories, total: gifts + stories };
+    }
+
+    function getGiftTitle(total) {
+        const item = GIFT_TITLES.find(t => total >= t.min);
+        return item ? item.title : '';
+    }
+
+    function renderGiftCounter() {
+        const s = getGiftStats();
+        // С этапа 2 плашку на главной ведёт личная мандала (js/mandala.js)
+        if (window.Mandala) {
+            window.Mandala.renderChip();
+            return;
+        }
+        if (giftCounterValue) giftCounterValue.textContent = String(s.total);
+        if (giftCounterLabel) giftCounterLabel.textContent = getRaysWord(s.total);
+        if (giftCounterChip) giftCounterChip.setAttribute('aria-label', `Лучей света передано: ${s.total}`);
+        if (giftDisplayText) {
+            const title = getGiftTitle(s.total);
+            giftDisplayText.textContent = `Лучей света передано: ${s.total} (подругам: ${s.gifts} · в сторис: ${s.stories})` + (title ? ` · ${title}` : '');
+        }
+    }
+
+    function showGiftToast(text) {
+        if (!giftToastEl) return;
+        giftToastEl.textContent = text;
+        giftToastEl.classList.add('is-visible');
+        clearTimeout(giftToastTimer);
+        giftToastTimer = setTimeout(() => giftToastEl.classList.remove('is-visible'), 3200);
+    }
+
+    // kind: 'gift' — подарок подруге, 'story' — сторис
+    function registerShareReward(kind, cardNumber) {
+        try {
+            if (kind === 'story') {
+                const today = new Date().toISOString().slice(0, 10);
+                const dayKey = `story_counted_${cardNumber || 0}`;
+                if (localStorage.getItem(dayKey) !== today) {
+                    localStorage.setItem(dayKey, today);
+                    localStorage.setItem('story_share_count', String(readCounter('story_share_count') + 1));
+                }
+            } else {
+                localStorage.setItem('gift_sent_count', String(readCounter('gift_sent_count') + 1));
+                trackGoal('gift_sent_confirmed');
+            }
+        } catch (_) {}
+
+        // С этапа 2 лепестки и сообщение даёт личная мандала
+        if (window.Mandala) {
+            window.Mandala.award(kind === 'story' ? 'story' : 'gift');
+            return;
+        }
+        renderGiftCounter();
+        // 14.11.2026: пока мандалы только у VIP, остальным — без счёта лучей
+        showGiftToast(kind === 'story' ? 'Сторис открыта ✨' : 'Подарок отправлен 💌');
+    }
+
+    if (giftCounterChip) {
+        giftCounterChip.addEventListener('click', () => {
+            triggerSoftHaptic();
+            openPathScreen();
+        });
+    }
+    renderGiftCounter();
+
+    // --- ЭКРАН «ТВОЙ ПУТЬ»: виджеты вместо шторки ---
+    const pathEls = {
+        support: document.getElementById('pathSupportText'),
+        total: document.getElementById('pathTotal'),
+        title: document.getElementById('pathTitle'),
+        fill: document.getElementById('pathGiftFill'),
+        hint: document.getElementById('pathNextHint'),
+        gifts: document.getElementById('pathGifts'),
+        stories: document.getElementById('pathStories'),
+        streak: document.getElementById('pathStreak'),
+        collection: document.getElementById('pathCollectionCount'),
+        collectionCard: document.getElementById('pathCollectionCard'),
+        sealsRow: document.getElementById('pathSeals'),
+        sealsFraction: document.getElementById('pathSealsFraction'),
+        sealHint: document.getElementById('pathSealHint'),
+        giftBtn: document.getElementById('pathGiftBtn')
+    };
+    const GIFT_STEPS = [1, 3, 10, 30]; // пороги титулов (совпадают с GIFT_TITLES)
+
+    function renderPathScreen() {
+        const s = getGiftStats();
+        const title = getGiftTitle(s.total);
+
+        if (pathEls.total) pathEls.total.textContent = String(s.total);
+        if (pathEls.title) pathEls.title.textContent = title || 'Пока без титула';
+        if (pathEls.gifts) pathEls.gifts.textContent = String(s.gifts);
+        if (pathEls.stories) pathEls.stories.textContent = String(s.stories);
+
+        // Полоса до следующего титула
+        const nextStep = GIFT_STEPS.find(n => n > s.total);
+        let ratio = 1;
+        let hintText = 'Высшая ступень достигнута ✨ Спасибо, что несёте свет.';
+        if (nextStep !== undefined) {
+            const prevStep = [...GIFT_STEPS].reverse().find(n => n <= s.total) || 0;
+            ratio = (s.total - prevStep) / (nextStep - prevStep);
+            const nextTitle = GIFT_TITLES.find(t => t.min === nextStep).title;
+            const left = nextStep - s.total;
+            hintText = `До титула «${nextTitle}» осталось ${left}. Подарите карту подруге или поделитесь ею в сторис.`;
+        }
+        if (pathEls.fill) pathEls.fill.style.transform = `scaleX(${Math.max(0, Math.min(1, ratio))})`;
+        if (pathEls.hint) pathEls.hint.textContent = hintText;
+
+        // Ритм и коллекция
+        const streak = parseInt(localStorage.getItem('practice_streak_count') || '1', 10) || 1;
+        if (pathEls.streak) pathEls.streak.textContent = `${streak} ${getDaysDeclension(streak)}`;
+        const uniqueIds = new Set();
+        getNormalizedCollection().forEach(item => uniqueIds.add(item.id));
+        const unique = uniqueIds.size;
+        if (pathEls.collection) pathEls.collection.textContent = `${unique} / ${TOTAL_CARDS}`;
+
+        // Тихая подпись под заголовком (текст текущего ранга из прежнего расчёта)
+        const rankText = document.getElementById('fieldContributionText');
+        if (pathEls.support && rankText) pathEls.support.textContent = rankText.textContent;
+
+        // Видьи: одна строка круглых печатей
+        if (pathEls.sealsRow) {
+            pathEls.sealsRow.innerHTML = '';
+            let openCount = 0;
+            SACRED_SEALS.forEach(seal => {
+                const isOpen = unique >= seal.count;
+                if (isOpen) openCount++;
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = `path-seal ${isOpen ? 'is-open' : 'is-locked'}`;
+                b.setAttribute('aria-label', seal.title);
+                b.textContent = isOpen ? seal.icon : '🔒';
+                b.addEventListener('click', () => {
+                    triggerSoftHaptic();
+                    pathEls.sealsRow.querySelectorAll('.path-seal').forEach(x => x.classList.remove('is-selected'));
+                    b.classList.add('is-selected');
+                    const left = Math.max(0, seal.count - unique);
+                    if (pathEls.sealHint) {
+                        pathEls.sealHint.textContent = isOpen
+                            ? `«${seal.title}»: ${seal.desc}.`
+                            : `«${seal.title}»: ${seal.desc}. Осталось ${left} ${getCardsDeclension(left)}.`;
+                    }
+                });
+                pathEls.sealsRow.appendChild(b);
+            });
+            if (pathEls.sealsFraction) pathEls.sealsFraction.textContent = `${openCount} / ${SACRED_SEALS.length}`;
+            const nextSeal = SACRED_SEALS.find(seal => unique < seal.count);
+            if (pathEls.sealHint) {
+                pathEls.sealHint.textContent = nextSeal
+                    ? `Следующая: «${nextSeal.title}», осталось ${nextSeal.count - unique} ${getCardsDeclension(nextSeal.count - unique)}. Нажмите на печать, чтобы прочитать её смысл.`
+                    : 'Все видьи открыты ✨';
+            }
+        }
+    }
+
+    function openPathScreen() {
+        hideAllVeilBubbles();
+        triggerSelectionHaptic();
+        tabContents.forEach(c => c.classList.remove('active'));
+        const pathSec = document.getElementById('path');
+        if (pathSec) pathSec.classList.add('active');
+        setHeaderTitle('Твой путь');
+        try {
+            calculateSacredProgress();
+        } catch (e) {
+            console.error('Ошибка расчета сакрального прогресса:', e);
+        }
+        renderPathScreen();
+        if (window.Mandala) window.Mandala.renderPath();
+        if (typeof syncFieldCounterVisibility === 'function') {
+            syncFieldCounterVisibility();
+        }
+        if (typeof window.hideEventTimer === 'function') {
+            window.hideEventTimer();
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // «Подарить карту подруге» с экрана «Твой путь»: берём последнюю вытянутую карту
+    if (pathEls.giftBtn) {
+        pathEls.giftBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
+            let hasCard = false;
+            try { hasCard = !!localStorage.getItem('lastDrawnCardNumber'); } catch (_) {}
+            if (!hasCard) {
+                showGiftToast('Сначала вытяните карту дня, и её можно будет подарить ✨');
+                return;
+            }
+            activeSharePath = currentCardPath;
+            startGiftShare(pathEls.giftBtn);
+        });
+    }
+
+    if (pathEls.collectionCard) {
+        const openCol = () => { triggerSoftHaptic(); openCollectionFromDashboard(); };
+        pathEls.collectionCard.addEventListener('click', openCol);
+        pathEls.collectionCard.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openCol();
+            }
+        });
     }
 
     // --- ОТПРАВКА КАРТОЧКИ В STORIES ---
@@ -953,6 +1229,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
             webApp.shareToStory(absoluteMediaUrl, params);
+            // Telegram не сообщает, опубликована ли история, поэтому считаем открытие редактора
+            registerShareReward('story', getCardNumberFromPath(imagePath));
         } catch (error) {
             console.error("Ошибка при вызове сторис:", error);
             alert("Не удалось открыть редактор сторис.");
@@ -962,7 +1240,58 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // ЛОГИКА ОТРИСОВКИ КОЛЛЕКЦИИ (СВАЙПЕР)
     // ==========================================
-    let collectionSwiper = null; 
+    let collectionSwiper = null;
+
+    // Ширина карты в коллекции по высоте экрана: дата, карта, строка «возвращалась» и «Поделиться картой»
+    // помещаются без прокрутки. Предел 320 px (как раньше), минимум 240 px. Пропорция карты 896×1200.
+    function fitCollectionCard() {
+        const sc = document.getElementById('collectionSwiperContainer');
+        const sec = document.getElementById('collection');
+        if (!sc || !sec || !sec.classList.contains('active') || sc.style.display === 'none') return;
+
+        let safeBottom = 0;
+        const probe = document.createElement('div');
+        probe.style.cssText = 'position:absolute;visibility:hidden;height:var(--tg-safe-bottom, 0px);';
+        document.body.appendChild(probe);
+        safeBottom = probe.getBoundingClientRect().height || 0;
+        probe.remove();
+
+        const top = sc.getBoundingClientRect().top + window.scrollY;
+        const hasPeek = sc.classList.contains('has-peek');
+        const byWidth = Math.min(320, sc.clientWidth - (hasPeek ? 52 : 0));
+
+        // Высота над картинкой (дата) и под ней (строка «возвращалась», кнопка) берётся из самих слайдов:
+        // на узкой карте строка «возвращалась» переносится, поэтому считаем в два прохода
+        const measureAround = () => {
+            let above = 36, below = 0;
+            sc.querySelectorAll('.swiper-slide').forEach(slide => {
+                const date = slide.querySelector('.collection-date');
+                const img = slide.querySelector('.collection-card-img');
+                const btn = slide.querySelector('.collection-share-btn');
+                if (!date || !img || !btn) return;
+                const d = date.getBoundingClientRect(), i = img.getBoundingClientRect(), b = btn.getBoundingClientRect();
+                above = Math.max(above, i.top - d.top);
+                below = Math.max(below, b.bottom - i.bottom);
+            });
+            return { above, below };
+        };
+
+        let w = byWidth;
+        for (let pass = 0; pass < 2; pass++) {
+            sc.style.setProperty('--col-card-w', w + 'px');
+            const { above, below } = measureAround();
+            const imgH = window.innerHeight - top - above - below - safeBottom - 12;
+            w = Math.round(Math.max(240, Math.min(byWidth, imgH * (896 / 1200))));
+        }
+        sc.style.setProperty('--col-card-w', w + 'px');
+    }
+
+    window.addEventListener('resize', () => {
+        const sec = document.getElementById('collection');
+        if (!sec || !sec.classList.contains('active')) return;
+        fitCollectionCard();
+        if (collectionSwiper) collectionSwiper.update();
+    });
 
     function renderCollection() {
         calculateSacredProgress();
@@ -1036,11 +1365,27 @@ document.addEventListener('DOMContentLoaded', () => {
         if (collectionSwiper) {
             collectionSwiper.destroy(true, true);
         }
-        
+
+        // Если карт больше одной: текущая карта по центру, по бокам выглядывают соседние,
+        // на краях карты стрелки «‹» / «›» (лишняя на первой/последней карте скрыта)
+        const hasManyCards = collection.length > 1;
+        swiperContainer.classList.toggle('has-peek', hasManyCards);
+        const prevBtn = document.getElementById('collectionPrevBtn');
+        const nextBtn = document.getElementById('collectionNextBtn');
+        [prevBtn, nextBtn].forEach(btn => { if (btn) btn.style.display = hasManyCards ? '' : 'none'; });
+
+        fitCollectionCard();
+
         collectionSwiper = new Swiper(".collectionSwiper", {
-            slidesPerView: 1,
-            spaceBetween: 20,
+            slidesPerView: hasManyCards ? 'auto' : 1,
+            centeredSlides: hasManyCards,
+            spaceBetween: hasManyCards ? 12 : 20,
             autoHeight: true,
+            navigation: hasManyCards && prevBtn && nextBtn ? {
+                prevEl: prevBtn,
+                nextEl: nextBtn,
+                disabledClass: 'is-hidden'
+            } : false,
             on: {
                 slideChange: function () {
                     triggerSelectionHaptic();
@@ -1155,6 +1500,15 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // «На главный экран» после видео: основной выход из практики
+    const finishToMainBtn = document.getElementById('finishToMainBtn');
+    if (finishToMainBtn) {
+        finishToMainBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
+            resetToStart();
+        });
+    }
+
     // Кнопка «Энергии Вселенной» после видео: сразу открывает гид дня (возврат оттуда — «← Назад» на главный экран)
     resetPracticeBtn.addEventListener('click', () => {
         triggerSoftHaptic();
@@ -1201,8 +1555,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             avatarVideo.play().catch(err => console.log("Видео заблокировано:", err));
         }
-        if (nextToVideoBtn) nextToVideoBtn.style.display = audioReplayMode ? 'none' : 'block';
-        if (backToMainAfterAudioBtn) backToMainAfterAudioBtn.style.display = audioReplayMode ? 'block' : 'none';
+        // Видео к этой карте ещё не открывали (например, вышли между аудио и видео) — предлагаем его и при повторе
+        let videoPending = true;
+        try { videoPending = localStorage.getItem('finalVideoSeenKey') !== audioKey; } catch (e) {}
+        const showVideoBtn = !audioReplayMode || videoPending;
+        if (nextToVideoBtn) nextToVideoBtn.style.display = showVideoBtn ? 'block' : 'none';
+        if (backToMainAfterAudioBtn) backToMainAfterAudioBtn.style.display = showVideoBtn ? 'none' : 'block';
         if (shareAudioBtn) shareAudioBtn.style.display = 'block';
     }
 
@@ -1977,7 +2335,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e && typeof e.stopPropagation === 'function') {
             e.stopPropagation();
         }
-        if (isDashboardSleeping()) {
+        if (isWidgetLocked()) {
             triggerSoftHaptic();
             showVeilBubble('cdCelestialGateBubble');
             return;
@@ -2018,7 +2376,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e && typeof e.stopPropagation === 'function') {
             e.stopPropagation();
         }
-        if (isDashboardSleeping()) {
+        if (isWidgetLocked()) {
             triggerSoftHaptic();
             showVeilBubble('cdVideoGateBubble');
             return;
@@ -2060,6 +2418,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const cooldownCelestialFullCard = document.getElementById('cooldownCelestialFullCard');
     const cooldownGratitudeWidget = document.getElementById('cooldownGratitudeWidget');
     const cdGratitudeBtn = document.getElementById('cdGratitudeBtn');
+
+    // Миниатюра открытой карты дня: открывает коллекцию на последней карте (она первая в карусели)
+    bindWidgetActivation(document.getElementById('cdTodayAwakeDeck'), openCollectionFromDashboard);
 
     bindWidgetActivation(cooldownMoonWidget, openCelestialFromDashboard);
     bindWidgetActivation(cooldownHoroscopeWidget, openCelestialFromDashboard);
@@ -2425,7 +2786,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    [backToCardBtn, backFromCelestialTopBtn, backFromCollectionBtn, backFromVideoBtn].forEach(btn => {
+    [backToCardBtn, backFromCelestialTopBtn, backFromCollectionBtn, backFromVideoBtn, backFromPathBtn].forEach(btn => {
         if (btn) {
             btn.addEventListener('click', () => {
                 triggerSoftHaptic();
@@ -2433,6 +2794,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
+    // «← Назад» на экранах карты и аудио. Пока карта летит или переворачивается, кнопка ждёт:
+    // иначе переворот завершится уже на скрытом экране и запустит кулдаун незаметно
+    const backFromRitualBtn = document.getElementById('backFromRitualBtn');
+    const backFromAudioBtn = document.getElementById('backFromAudioBtn');
+    if (backFromRitualBtn) {
+        backFromRitualBtn.addEventListener('click', () => {
+            if (window.isCardDrawing || isTransitioningToRitual) return;
+            triggerSoftHaptic();
+            resetToStart();
+        });
+    }
+    if (backFromAudioBtn) {
+        backFromAudioBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
+            resetToStart();
+        });
+    }
 
     if (nextToVideoBtn) {
         nextToVideoBtn.addEventListener('click', () => {
@@ -2467,6 +2846,10 @@ document.addEventListener('DOMContentLoaded', () => {
         step2Audio.style.display = 'none';
         if (step3Video) step3Video.style.display = 'flex';
         setHeaderTitle('Видеопослание');
+        // Запоминаем, что видео к этой карте открыто: при повторе аудио кнопку видео больше не показываем
+        try {
+            localStorage.setItem('finalVideoSeenKey', (localStorage.getItem('lastDrawTime') || '0') + '_' + currentCardNumber);
+        } catch (e) {}
         window.scrollTo({ top: 0, behavior: 'auto' });
         
         // === ИСПОЛЬЗУЕМ ДАННЫЕ ИЗ appData.js ===
@@ -2541,6 +2924,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (audioPlayer) {
         audioPlayer.addEventListener('ended', () => {
             trackGoal('audio_complete', { track: currentAudioName, replay: audioReplayMode });
+            if (window.Mandala) window.Mandala.award('audio');
             // Без автоперехода: человек может продолжать медитировать. К видео — вручную кнопкой nextToVideoBtn.
             if (avatarVideo) avatarVideo.pause();
         });
@@ -2559,8 +2943,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 finalVideoGoalSent = true;
                 trackGoal('final_video_complete');
             }
+            if (window.Mandala) window.Mandala.award('video');
+            // Без автовозврата: человек сам уходит кнопкой «На главный экран»
             if (replayFinalVideo) replayFinalVideo.style.display = 'flex';
-            autoResetTimeout = setTimeout(resetToStart, 20000); 
         });
     }
 
@@ -2881,12 +3266,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Виджет прогресса в «Моей коллекции» теперь ведёт на экран «Твой путь» (шторка оставлена в разметке, но не открывается)
+    // 14.11.2026: экран с мандалами пока только у VIP, остальным — прежняя шторка
+    const openPathOrSheet = () => (isUserVIP() ? openPathScreen() : openSacredBottomSheet());
     if (sacredProgressWidget) {
-        sacredProgressWidget.addEventListener('click', openSacredBottomSheet);
+        sacredProgressWidget.addEventListener('click', openPathOrSheet);
         sacredProgressWidget.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                openSacredBottomSheet();
+                openPathOrSheet();
             }
         });
     }

@@ -23,7 +23,7 @@
     <!-- Официальный скрипт Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <link rel="stylesheet" href="css/style.css?v=53">
+    <link rel="stylesheet" href="css/style.css?v=65">
     <link rel="stylesheet" href="css/cardFlip.css?v=2">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
@@ -106,6 +106,13 @@
         <div id="step1-card">
             <!-- Полноэкранный ритуал карты (открывается кнопкой «Вытянуть карту дня ✨» на дашборде) -->
             <div id="cardDrawStage" class="ritual-stage" style="display: none;">
+                <!-- Выход на главный экран (как на остальных экранах) -->
+                <div class="screen-topbar step-backbar">
+                    <button type="button" class="back-to-hub-btn" id="backFromRitualBtn">
+                        <span class="back-to-hub-arrow">←</span>
+                        <span>Назад</span>
+                    </button>
+                </div>
                 <!-- Сакральный золотой лотос-разделитель над картой -->
                 <div class="completion-top-divider ritual-top-divider" id="ritualTopLotusDivider" aria-hidden="true">
                     <span class="completion-divider-line completion-divider-line--left"></span>
@@ -154,7 +161,7 @@
             </div>
 
             <!-- Интерактивный экран кулдауна: «Пространство дня» -->
-            <div id="cooldownDashboard" class="cooldown-dashboard is-sleeping">
+            <div id="cooldownDashboard" class="cooldown-dashboard is-sleeping locks-off">
                 <div class="cd-intro" style="display: none;">
                     <span class="cd-status-pill">✨ Пространство дня открыто</span>
                     <p class="cd-intro-sub">Нажмите на нужный виджет ниже, чтобы открыть раздел</p>
@@ -170,6 +177,15 @@
                         <span class="cd-bell-label" id="notifyBellLabel" aria-hidden="true">Уведомления</span>
                     </button>
                     <div class="cd-bell-toast" id="notifyBellToast" role="status" aria-live="polite"></div>
+                </div>
+
+                <!-- Счётчик «Света передано» слева от Луны (зеркально колокольчику): нулевая высота, раскладку не сдвигает. Управляется js/app.js -->
+                <div class="cd-gift-row">
+                    <button type="button" class="cd-gift-chip" id="giftCounterChip" aria-label="Лучей света передано: 0">
+                        <span class="cd-gift-ico" aria-hidden="true">✨</span>
+                        <span class="cd-gift-value" id="giftCounterValue">0</span>
+                        <span class="cd-gift-label" id="giftCounterLabel">лучей</span>
+                    </button>
                 </div>
 
                 <!-- 1. Венец неба: Центрированная Луна с золотыми орбитами и звёздными лучами -->
@@ -317,7 +333,7 @@
                     <!-- Пробуждённое состояние: миниатюра открытой карты, кнопки практики и таймер -->
                     <div class="cd-today-awake" id="cdTodayAwakeState">
                         <div class="cd-today-card-row">
-                            <div class="cd-today-deck">
+                            <div class="cd-today-deck cd-today-deck--awake" id="cdTodayAwakeDeck" role="button" tabindex="0" aria-label="Открыть карту дня в коллекции">
                                 <img id="cdTodayCardThumbBack" src="images/0.jpeg" alt="" aria-hidden="true" class="cd-today-card-thumb cd-today-card-thumb--back" decoding="async">
                                 <img id="cdTodayCardThumb" src="images/0.jpeg" alt="Карта дня" class="cd-today-card-thumb" decoding="async">
                             </div>
@@ -329,7 +345,7 @@
                                             <path d="M12.2 7.5a3.5 3.5 0 0 1 0 5"/>
                                             <path d="M14.5 5.3a6.5 6.5 0 0 1 0 9.4"/>
                                         </svg>
-                                        <span>Слушать практику</span>
+                                        <span id="cdReplayAudioLabel">Слушать практику</span>
                                     </button>
                                     <button type="button" class="cd-btn cd-btn--secondary cd-btn--block" id="cdShareCardBtn">
                                         <svg class="cd-btn-svg" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -398,6 +414,7 @@
                             <div class="cd-event-banner-title" id="cdEventTitle">Слово Джамили</div>
                             <div class="cd-event-when" id="cdEventSub">Мысли и послания в канале</div>
                         </div>
+                        <span class="cd-tile-chevron" aria-hidden="true">›</span>
                     </div>
                 </div>
 
@@ -690,6 +707,13 @@
         </div>
 
         <div id="step2-audio" style="display: none;">
+            <!-- Выход на главный экран (как на остальных экранах) -->
+            <div class="screen-topbar step-backbar">
+                <button type="button" class="back-to-hub-btn" id="backFromAudioBtn">
+                    <span class="back-to-hub-arrow">←</span>
+                    <span>Назад</span>
+                </button>
+            </div>
             <div class="audio-container">
                 <div class="mandala-glow-wrap">
                     <div class="mandala-sun-aura" aria-hidden="true"></div>
@@ -805,10 +829,16 @@
 
                     <p class="completion-thanks-text">Благодарим за прохождение<br>практики</p>
 
-                    <button type="button" class="cd-btn cd-btn--primary cd-btn--block" id="resetPracticeBtn">
+                    <button type="button" class="cd-btn cd-btn--primary cd-btn--block" id="finishToMainBtn">
+                        <span class="cd-btn-inner">
+                            <span>На главный экран</span>
+                            <svg class="cd-btn-svg" viewBox="0 0 24 24" aria-hidden="true" style="color:#f0cf86"><path d="M12 2 Q12.7 11.3 22 12 Q12.7 12.7 12 22 Q11.3 12.7 2 12 Q11.3 11.3 12 2 Z" fill="currentColor"/></svg>
+                        </span>
+                    </button>
+                    <button type="button" class="cd-btn cd-btn--secondary cd-btn--block" id="resetPracticeBtn">
                         <span class="cd-btn-inner">
                             <span>Энергии Вселенной</span>
-                            <svg class="cd-btn-svg" viewBox="0 0 24 24" aria-hidden="true" style="color:#f0cf86"><path d="M12 2 Q12.7 11.3 22 12 Q12.7 12.7 12 22 Q11.3 12.7 2 12 Q11.3 11.3 12 2 Z" fill="currentColor"/></svg>
+                            <svg class="cd-btn-svg" viewBox="0 0 24 24" aria-hidden="true" style="color:#b8913f"><path d="M12 2 Q12.7 11.3 22 12 Q12.7 12.7 12 22 Q11.3 12.7 2 12 Q11.3 11.3 12 2 Z" fill="currentColor"/></svg>
                         </span>
                     </button>
                 </div>
@@ -891,6 +921,7 @@
                 </div>
                 <div class="sacred-rank-row">
                     <span id="sacredRankText" class="rank-text">Искательница смыслов ✦</span>
+                    <span class="sacred-widget-chevron" aria-hidden="true">›</span>
                 </div>
             </div>
         </div>
@@ -903,6 +934,118 @@
 
         <div class="swiper collectionSwiper" id="collectionSwiperContainer" style="display: none;">
             <div class="swiper-wrapper" id="collectionWrapper">
+            </div>
+            <!-- Стрелки листания на краях текущей карты (видны при 2+ картах; на первой/последней карте лишняя скрыта) -->
+            <button type="button" class="collection-nav collection-nav--prev" id="collectionPrevBtn" aria-label="Предыдущая карта" style="display: none;">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.5 6.5 10l5.5 5.5"/></svg>
+            </button>
+            <button type="button" class="collection-nav collection-nav--next" id="collectionNextBtn" aria-label="Следующая карта" style="display: none;">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4.5 13.5 10 8 15.5"/></svg>
+            </button>
+        </div>
+    </section>
+
+    <!-- Экран «Твой путь»: виджеты (заменяет шторку; старая шторка оставлена в разметке, но не открывается) -->
+    <section id="path" class="tab-content">
+        <div class="screen-topbar">
+            <button type="button" class="back-to-hub-btn" id="backFromPathBtn">
+                <span class="back-to-hub-arrow">←</span>
+                <span>Назад</span>
+            </button>
+            <h2 class="screen-topbar-title">Твой путь</h2>
+        </div>
+
+        <!-- Этап 2 (14.11.2026): личная мандала. Логика и отрисовка — js/mandala.js. Старые виджеты ниже скрыты классом is-retired, не удалены -->
+        <div class="mandala-block" id="mandalaBlock">
+            <div class="mandala-tabs" role="tablist">
+                <button type="button" class="mandala-tab is-active" role="tab" aria-selected="true" data-mtab="mine">Моя мандала</button>
+                <button type="button" class="mandala-tab" role="tab" aria-selected="false" data-mtab="shared">Общая мандала</button>
+            </div>
+
+            <div class="mandala-pane" id="mandalaPaneMine">
+                <div class="mandala-hint" id="mandalaHint" hidden>
+                    <p>Это Ваша мандала, раскрашивайте её сами. Практика дарит капли краски: карта дня, аудио до конца, видео до конца. Нажмите на мерцающую область и выберите одну из трёх картин — она проявится кистью. Золотые лепестки проявляются золотыми каплями — их дают подарки подругам и сторис.</p>
+                    <button type="button" class="mandala-hint-close" id="mandalaHintClose">Понятно</button>
+                </div>
+
+                <!-- 14.11.2026: живописная мандала на тёмном небе (движок js/mandalaCanvas.js) -->
+                <div class="mandala-paper mandala-paper--night">
+                    <div class="mandala-art" id="mandalaArt"></div>
+                </div>
+
+                <div class="mandala-palette mandala-palette--night" id="mandalaPalette" role="group" aria-label="Выбор картины" hidden></div>
+
+                <p class="mandala-caption" id="mandalaCaption"></p>
+                <div class="mandala-levels" id="mandalaLevels" role="img"></div>
+                <p class="mandala-subcaption" id="mandalaSubcaption"></p>
+
+                <div class="mandala-legend" aria-hidden="true">
+                    <span><i class="mandala-legend-dot mandala-legend-dot--practice"></i>практика</span>
+                    <span><i class="mandala-legend-dot mandala-legend-dot--gold"></i>подарки</span>
+                </div>
+
+                <button type="button" class="cd-btn cd-btn--primary cd-btn--block" id="mandalaGiftBtn">Подарить карту подруге 💌</button>
+
+                <div class="mandala-meta">
+                    <span id="mandalaStreak"></span>
+                    <button type="button" class="mandala-link" id="mandalaCollectionLink">Моя коллекция ›</button>
+                </div>
+            </div>
+
+            <div class="mandala-pane" id="mandalaPaneShared" hidden>
+                <!-- Этап 3: общая мандала (логика — js/mandalaShared.js, сервер — Apps Script Field.gs) -->
+                <p class="mandala-shared-slogan">Раскрасим мир вместе</p>
+                <div class="mandala-paper">
+                    <div class="mandala-art" id="sharedArt"></div>
+                </div>
+                <div class="mandala-palette" id="sharedPalette" role="group" aria-label="Выбор оттенка" hidden></div>
+                <p class="mandala-caption" id="sharedCaption"></p>
+                <p class="mandala-subcaption" id="sharedSub"></p>
+                <div class="mandala-meta mandala-meta--center">
+                    <button type="button" class="mandala-link" id="sharedMineBtn">Показать мои мазки</button>
+                </div>
+                <p class="mandala-shared-motto">Каждый цвет — чья-то любовь</p>
+            </div>
+        </div>
+
+        <p class="path-support is-retired" id="pathSupportText"></p>
+
+        <div class="path-stack is-retired">
+            <!-- 1. Главный виджет: Света передано -->
+            <div class="path-card path-card--gold">
+                <div class="path-eyebrow">Лучи света</div>
+                <div class="path-hero-row">
+                    <span class="path-total" id="pathTotal">0</span>
+                    <span class="path-title" id="pathTitle">Пока без титула</span>
+                </div>
+                <div class="path-track"><div class="path-fill" id="pathGiftFill"></div></div>
+                <div class="path-hint" id="pathNextHint"></div>
+                <div class="path-mini-row">
+                    <div class="path-mini"><span class="path-mini-label">Подругам</span><b id="pathGifts">0</b></div>
+                    <div class="path-mini"><span class="path-mini-label">В сторис</span><b id="pathStories">0</b></div>
+                </div>
+                <button type="button" class="cd-btn cd-btn--primary cd-btn--block" id="pathGiftBtn">Подарить карту подруге 💌</button>
+            </div>
+
+            <!-- 2. Ритм и коллекция -->
+            <div class="path-row">
+                <div class="path-card path-card--small">
+                    <div class="path-small-ico" aria-hidden="true">🕯</div>
+                    <div class="path-mini-label">Ритм</div>
+                    <b class="path-small-value" id="pathStreak">1 день</b>
+                </div>
+                <div class="path-card path-card--small path-card--link" id="pathCollectionCard" role="button" tabindex="0" aria-label="Моя коллекция">
+                    <div class="path-small-ico" aria-hidden="true">🪷</div>
+                    <div class="path-mini-label">Коллекция ›</div>
+                    <b class="path-small-value" id="pathCollectionCount">0 / 71</b>
+                </div>
+            </div>
+
+            <!-- 3. Видьи -->
+            <div class="path-card">
+                <div class="path-seals-head"><span class="path-seals-title">Видьи</span><span class="path-mini-label" id="pathSealsFraction">0 / 5</span></div>
+                <div class="path-seals-row" id="pathSeals"></div>
+                <div class="path-hint" id="pathSealHint"></div>
             </div>
         </div>
     </section>
@@ -989,6 +1132,10 @@
                 <span class="streak-icon">🕯</span>
                 <span class="streak-text" id="streakDisplayText">Ритм осознанности: 1 день в потоке ✨</span>
             </div>
+            <div class="sheet-streak-bar" id="sheetGiftBar">
+                <span class="streak-icon">💌</span>
+                <span class="streak-text" id="giftDisplayText">Лучей света передано: 0</span>
+            </div>
             <div class="achievements-grid" id="achievementsGrid">
                 <!-- Печати генерируются через JS -->
             </div>
@@ -1023,6 +1170,9 @@
     <!-- Тёплое уведомление для «спящих» виджетов -->
     <div id="sacredGateToast" class="sacred-gate-toast" role="status" aria-live="polite"></div>
 
+    <!-- Короткая плашка после подарка/сторис («Света передано: N») -->
+    <div id="giftToast" class="gift-toast" role="status" aria-live="polite"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script>
     
     <script src="js/eventConfig.js?v=13" defer></script>
@@ -1030,7 +1180,12 @@
     <script src="js/appData.js?v=12" defer></script> 
     
     <script src="js/cardFlip.js?v=2" defer></script>
-    <script id="appScript" src="js/app.js?v=65" defer></script>
+    <script id="appScript" src="js/app.js?v=73" defer></script>
+    <!-- 14.11.2026: живописные мандалы. js/mandalaArt.js (плоские SVG) больше не подключается, файл оставлен -->
+    <script src="js/mandalaCanvas.js?v=1" defer></script>
+    <script src="js/mandala-p1.js?v=1" defer></script>
+    <script src="js/mandala.js?v=6" defer></script>
+    <script src="js/mandalaShared.js?v=1" defer></script>
     <script src="js/eventPopup.js?v=20" defer></script>
     <script src="js/notifications.js?v=2" defer></script>
 </body>
