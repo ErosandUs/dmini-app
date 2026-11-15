@@ -1019,6 +1019,44 @@ document.addEventListener('DOMContentLoaded', () => {
         giftToastTimer = setTimeout(() => giftToastEl.classList.remove('is-visible'), 3200);
     }
 
+    // 15.11.2026: Telegram не сообщает, опубликована ли сторис. Поэтому награду за сторис даём не при нажатии,
+    // а когда человек вернулся из редактора в приложение, и только если пробыл там не меньше STORY_MIN_AWAY_MS.
+    // Возвращение — первый из сигналов: Telegram 'activated', снова видимая страница, фокус окна,
+    // первое касание экрана (пока редактор открыт поверх, коснуться приложения нельзя).
+    const STORY_MIN_AWAY_MS = 5000;
+    let storyWait = null;
+    function afterStoryReturn(onPublished, onTooFast) {
+        if (storyWait) storyWait.stop();
+        const t0 = Date.now();
+        const tg = window.Telegram && window.Telegram.WebApp;
+        let armed = false; // касание засчитываем не сразу: само нажатие на кнопку — не возвращение
+        const armTimer = setTimeout(() => { armed = true; }, 700);
+        const done = () => {
+            const w = storyWait;
+            if (!w) return;
+            w.stop();
+            const ok = Date.now() - t0 >= STORY_MIN_AWAY_MS;
+            // чуть подождать, пока экран приложения снова отрисуется, — иначе перелёт капель не будет виден
+            setTimeout(() => { if (ok) onPublished(); else if (onTooFast) onTooFast(); }, 450);
+        };
+        const onVis = () => { if (!document.hidden) done(); };
+        const onTouch = () => { if (armed) done(); };
+        const stop = () => {
+            clearTimeout(armTimer);
+            document.removeEventListener('visibilitychange', onVis);
+            window.removeEventListener('focus', done);
+            document.removeEventListener('pointerdown', onTouch, true);
+            if (tg && typeof tg.offEvent === 'function') tg.offEvent('activated', done);
+            storyWait = null;
+        };
+        storyWait = { stop };
+        document.addEventListener('visibilitychange', onVis);
+        window.addEventListener('focus', done);
+        document.addEventListener('pointerdown', onTouch, true);
+        if (tg && typeof tg.onEvent === 'function') tg.onEvent('activated', done);
+    }
+    window.afterStoryReturn = afterStoryReturn;
+
     // kind: 'gift' — подарок подруге, 'story' — сторис
     function registerShareReward(kind, cardNumber) {
         try {
@@ -1042,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderGiftCounter();
         // 14.11.2026: пока мандалы только у VIP, остальным — без счёта лучей
-        showGiftToast(kind === 'story' ? 'Сторис открыта ✨' : 'Подарок отправлен 💌');
+        showGiftToast(kind === 'story' ? 'Спасибо, что поделились ✨' : 'Подарок отправлен 💌');
     }
 
     if (giftCounterChip) {
@@ -1228,9 +1266,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     name: "Получить послание 💫" 
                 }
             };
+            const storyCard = getCardNumberFromPath(imagePath);
             webApp.shareToStory(absoluteMediaUrl, params);
-            // Telegram не сообщает, опубликована ли история, поэтому считаем открытие редактора
-            registerShareReward('story', getCardNumberFromPath(imagePath));
+            // 15.11.2026: награда — после возвращения из редактора (см. afterStoryReturn), а не в момент нажатия
+            afterStoryReturn(
+                () => registerShareReward('story', storyCard),
+                () => { if (window.Mandala) window.Mandala.storyTooFast(); }
+            );
         } catch (error) {
             console.error("Ошибка при вызове сторис:", error);
             alert("Не удалось открыть редактор сторис.");

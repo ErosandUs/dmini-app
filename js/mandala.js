@@ -305,11 +305,13 @@
             state.active = true;
             const today = dayKey();
             if (state.storyDay === today) {
-                toast('Сторис открыта ✨ Золотые капли за сторис сегодня уже получены');
+                toast('Спасибо, что поделились ✨ Золотые капли за сторис сегодня уже получены');
             } else {
                 state.storyDay = today;
                 state.goldAll += 3;
-                toast('✨ Сторис: +3 золотые капли');
+                // 15.11.2026: начисляется после возвращения из редактора — крупный золотой перелёт и надпись
+                flying = flyDrop(origin, 0, { text: '+3 ✨', gold: true });
+                toast('Спасибо, что поделились! ✨ +3 золотые капли');
             }
         } else {
             return;
@@ -362,13 +364,16 @@
     }
 
     // Возвращает true, если перелёт будет (иначе показываем обычное сообщение)
-    function flyDrop(origin, delay) {
+    // opt (15.11.2026): text — надпись («+3 ✨» за сторис), gold — золотой вариант
+    function flyDrop(origin, delay, opt) {
+        opt = opt || {};
         let reduce = false;
         try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
         if (reduce || !document.body || typeof document.body.animate !== 'function') return false;
         setTimeout(() => {
             let target = null;
             if (chipVisible()) target = document.getElementById('giftCounterChip');
+            else if (isPathOpen()) target = document.getElementById('mandalaSubcaption');   // строка с каплями на экране мандалы
             else if (hud) { hud.classList.add('is-on'); target = hud; }
             const vw = window.innerWidth, vh = window.innerHeight;
             let sx = vw / 2, sy = vh / 2;
@@ -380,8 +385,8 @@
             const t = target ? target.getBoundingClientRect() : { left: vw / 2, top: 20, width: 0, height: 0 };
             const dx = t.left + t.width / 2 - sx, dy = t.top + t.height / 2 - sy;
             const el = document.createElement('div');
-            el.className = 'drop-fly';
-            el.textContent = '+1 🪷';
+            el.className = opt.gold ? 'drop-fly drop-fly--gold' : 'drop-fly';
+            el.textContent = opt.text || '+1 🪷';
             el.style.left = sx + 'px';
             el.style.top = sy + 'px';
             document.body.appendChild(el);
@@ -391,7 +396,7 @@
                 { transform: 'translate(-50%, -160%) scale(1.15)', opacity: 1, offset: 0.25 },
                 { transform: 'translate(-50%, -160%) scale(1)', opacity: 1, offset: 0.5 },
                 { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.45)`, opacity: 0.35 }
-            ], { duration: 1700, easing: 'cubic-bezier(0.45, 0, 0.2, 1)', fill: 'forwards' });
+            ], { duration: opt.gold ? 2300 : 1700, easing: 'cubic-bezier(0.45, 0, 0.2, 1)', fill: 'forwards' });
             let landed = false;
             const land = () => {
                 if (landed) return;
@@ -407,7 +412,7 @@
                 }
             };
             anim.onfinish = land;
-            setTimeout(land, 2600); // подстраховка, если анимация не доиграла (приложение свёрнуто)
+            setTimeout(land, 3200); // подстраховка, если анимация не доиграла (приложение свёрнуто)
         }, delay || 0);
         return true;
     }
@@ -865,7 +870,12 @@
 
     // Сторис с картиной мандалы (15.11.2026: кнопка вернулась на экран мандалы и видна всегда).
     // Картинка — готовая images/mandala/<ключ>/story-<картина>.jpg 9:16 на GitHub Pages.
-    function shareStory() {
+    // Вернулся из редактора сторис слишком быстро — капель нет
+    function storyTooFast() {
+        toast('Золотые капли — за опубликованную сторис ✨');
+    }
+
+    function shareStory(btn) {
         const tg = window.Telegram && window.Telegram.WebApp;
         if (!tg || typeof tg.shareToStory !== 'function' || typeof tg.isVersionAtLeast !== 'function' || !tg.isVersionAtLeast('7.8')) {
             toast('Поделиться в сторис можно в Telegram (нужна свежая версия) ✨');
@@ -879,8 +889,9 @@
                 text: `Моя мандала «${art.title}» 🪷 @Djamilia_Kha`,
                 widget_link: { url: BOT_LINK, name: 'Раскрасить свою 🪷' }
             });
-            // Telegram не сообщает, опубликована ли история, поэтому считаем открытие редактора
-            award('story');
+            // Telegram не сообщает, опубликована ли история: капли — после возвращения из редактора (app.js, afterStoryReturn)
+            if (typeof window.afterStoryReturn === 'function') window.afterStoryReturn(() => award('story', btn), storyTooFast);
+            else award('story', btn);
         } catch (_) {
             toast('Не удалось открыть редактор сторис.');
         }
@@ -922,7 +933,7 @@
         const storyBtn = document.getElementById('mandalaStoryBtn');
         if (storyBtn) storyBtn.addEventListener('click', () => {
             haptic('select');
-            shareStory();
+            shareStory(storyBtn);
         });
 
         const colLink = document.getElementById('mandalaCollectionLink');
@@ -938,7 +949,7 @@
         const vip = typeof window.isUserVIP === 'function' && window.isUserVIP();
         if (VIP_ONLY && !vip) return;
         document.documentElement.classList.add('mandala-vip');
-        window.Mandala = { award, renderPath, renderChip, getProgress };
+        window.Mandala = { award, renderPath, renderChip, getProgress, storyTooFast };
         init();
         if (vip) {
             // Тест: капли пополняются до VIP_DROPS, плашка на главной видна сразу
