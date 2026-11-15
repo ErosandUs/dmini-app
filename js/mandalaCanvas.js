@@ -108,29 +108,13 @@
             return (paintCache[key] = { c: t, m });
         }
 
-        // Неизменная основа (фон «Жемчужный рассвет», 14.11.2026): светлый перламутр с тонким золотым
-        // «цветком жизни» снаружи, внутри — белый перламутр и еле видный призрак картины. Считается один раз.
+        // Неизменная основа: внутри мандалы белый перламутр и еле видный призрак картины. Считается один раз.
+        // 15.11.2026: снаружи мандалы холст прозрачный. Фон «Жемчужный рассвет» и «цветок жизни» — неподвижный
+        // фон карточки в CSS (.mandala-paper--pearl), чтобы узор был по всей карточке и не вращался с мандалой.
         function buildBase() {
-            const outside = maskWhere(v => v === 255), inside = maskWhere(v => v !== 255);
+            const inside = maskWhere(v => v !== 255);
             baseCv = mk(S, S);
             const s = baseCv.getContext('2d');
-            const g = s.createLinearGradient(0, 0, 0, S);
-            g.addColorStop(0, '#f6ecf8');
-            g.addColorStop(1, '#fcece2');
-            s.fillStyle = g;
-            s.fillRect(0, 0, S, S);
-            // узор «цветок жизни»: тонкие круги по шестиугольной сетке
-            s.strokeStyle = 'rgba(201, 160, 92, 0.17)';
-            s.lineWidth = 2;
-            const r = 64, h = r * Math.sqrt(3) / 2;
-            for (let row = -2; row < 14; row++) {
-                for (let col = -2; col < 12; col++) {
-                    const cx = col * r + (row % 2 ? r / 2 : 0), cy = row * h;
-                    s.beginPath();
-                    s.arc(cx, cy, r, 0, Math.PI * 2);
-                    s.stroke();
-                }
-            }
             const ic = inside.getContext('2d');
             ic.globalCompositeOperation = 'source-in';
             ic.fillStyle = '#f7f0fa';
@@ -175,6 +159,7 @@
             const s = staticCv.getContext('2d');
             s.globalCompositeOperation = 'source-over';
             s.globalAlpha = 1;
+            s.clearRect(0, 0, S, S);   // снаружи прозрачно — старое надо стирать
             s.drawImage(baseCv, 0, 0);
 
             const mineOf = opts.isMine || (() => false);
@@ -271,6 +256,7 @@
         function draw(now) {
             ctx.globalCompositeOperation = 'source-over';
             ctx.globalAlpha = 1;
+            ctx.clearRect(0, 0, S, S);
             ctx.drawImage(staticCv, 0, 0);
 
             // мерцание свободных областей

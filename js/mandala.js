@@ -14,6 +14,7 @@
     const STATE_V = 3;                                  // 3 — живописные мандалы (области другие, раскраска с нуля)
     const ART_KEYS = ['p1', 'p2', 'p3', 'p4', 'p5'];    // мандала 1..5 → данные window.MANDALA_RICH[ключ]
     const LEVEL_COUNT = ART_KEYS.length;
+    const BOT_LINK = 'https://t.me/Djamiliakha_bot?start=go';
     const LAYER_NAMES = { center: 'Сердце', petals: 'Лепестки', leaves: 'Листья', outer: 'Внешние лепестки', gold: 'Золотые лепестки' };
     // Послание Джамили при завершении мандалы (черновики — на утверждении у Валентина)
     const FINISH_TEXT = {
@@ -768,7 +769,7 @@
             p.className = 'mrich-card-text';
             p.textContent = FINISH_TEXT[art.key] || '';
             card.append(h, p,
-                button('Сохранить как обои', 'mrich-btn', () => openWallpaper(art)),
+                button('Сохранить мандалу', 'mrich-btn', () => openWallpaper(art)),
                 button('Любоваться', 'mrich-btn mrich-btn--ghost', closeOverlay));
         });
     }
@@ -797,16 +798,16 @@
         c.drawImage(m, (W - size) / 2, 520);
         c.fillStyle = '#a0742e';
         c.textAlign = 'center';
-        c.font = '600 72px "Cormorant Garamond", Georgia, serif';
-        c.fillText(art.title, W / 2, 330);
+        c.font = '600 96px "Cormorant Garamond", Georgia, serif';   // 15.11: надпись крупнее (было 72 и 40)
+        c.fillText(art.title, W / 2, 320);
         c.fillStyle = '#6f5f82';
-        c.font = '40px "Cormorant Garamond", Georgia, serif';
-        c.fillText('Моя мандала', W / 2, 400);
+        c.font = '54px "Cormorant Garamond", Georgia, serif';
+        c.fillText('Моя мандала', W / 2, 410);
         let url = '';
         try { url = w.toDataURL('image/jpeg', 0.92); } catch (_) {}
         overlay(card => {
             const h = document.createElement('h3');
-            h.textContent = 'Ваши обои';
+            h.textContent = 'Ваша мандала';
             card.appendChild(h);
             const p = document.createElement('p');
             p.className = 'mrich-card-text';
@@ -862,6 +863,29 @@
             });
     }
 
+    // Сторис с картиной мандалы (15.11.2026: кнопка вернулась на экран мандалы и видна всегда).
+    // Картинка — готовая images/mandala/<ключ>/story-<картина>.jpg 9:16 на GitHub Pages.
+    function shareStory() {
+        const tg = window.Telegram && window.Telegram.WebApp;
+        if (!tg || typeof tg.shareToStory !== 'function' || typeof tg.isVersionAtLeast !== 'function' || !tg.isVersionAtLeast('7.8')) {
+            toast('Поделиться в сторис можно в Telegram (нужна свежая версия) ✨');
+            return;
+        }
+        const art = getProgress().art || artOf(1);
+        if (!art) return;
+        try {
+            const media = new URL(`${art.base}story-${majorityVariant()}.jpg`, window.location.href).toString();
+            tg.shareToStory(media, {
+                text: `Моя мандала «${art.title}» 🪷 @Djamilia_Kha`,
+                widget_link: { url: BOT_LINK, name: 'Раскрасить свою 🪷' }
+            });
+            // Telegram не сообщает, опубликована ли история, поэтому считаем открытие редактора
+            award('story');
+        } catch (_) {
+            toast('Не удалось открыть редактор сторис.');
+        }
+    }
+
     // ---------- Кнопки экрана ----------
     function bindUi() {
         const tabs = document.querySelectorAll('.mandala-tab');
@@ -893,6 +917,12 @@
         if (giftBtn) giftBtn.addEventListener('click', () => {
             haptic('select');
             giftMandala(giftBtn);
+        });
+
+        const storyBtn = document.getElementById('mandalaStoryBtn');
+        if (storyBtn) storyBtn.addEventListener('click', () => {
+            haptic('select');
+            shareStory();
         });
 
         const colLink = document.getElementById('mandalaCollectionLink');
