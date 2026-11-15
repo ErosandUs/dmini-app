@@ -426,7 +426,46 @@
             return 255;
         }
 
+        // 15.11.2026: долгое нажатие (opts.onLongPress, сейчас — сброс раскраски у тестеров).
+        // Пока палец держит, у пальца растёт золотое кольцо; сдвиг пальца отменяет.
+        const LONG_MS = 1000;
+        let lp = null, longFired = false;
+        function lpCancel() {
+            if (!lp) return;
+            clearTimeout(lp.timer);
+            lp.ring.remove();
+            lp = null;
+        }
+        function onDown(ev) {
+            if (!opts.onLongPress || !A || reveal || (ev.button !== undefined && ev.button > 0)) return;
+            lpCancel();
+            longFired = false;
+            const hr = host.getBoundingClientRect();
+            const ring = document.createElement('div');
+            ring.className = 'mrich-hold';
+            ring.style.left = (ev.clientX - hr.left) + 'px';
+            ring.style.top = (ev.clientY - hr.top) + 'px';
+            host.appendChild(ring);
+            lp = { x: ev.clientX, y: ev.clientY, ring, timer: setTimeout(() => {
+                lpCancel();
+                longFired = true;
+                opts.onLongPress();
+            }, LONG_MS) };
+        }
+        function onMove(ev) {
+            if (lp && Math.hypot(ev.clientX - lp.x, ev.clientY - lp.y) > 12) lpCancel();
+        }
+        if (opts.onLongPress) {
+            cv.addEventListener('pointerdown', onDown);
+            cv.addEventListener('pointermove', onMove);
+            cv.addEventListener('pointerup', lpCancel);
+            cv.addEventListener('pointercancel', lpCancel);
+            cv.addEventListener('pointerleave', lpCancel);
+            cv.addEventListener('contextmenu', ev => ev.preventDefault());   // без системного меню на долгое нажатие
+        }
+
         function onClick(ev) {
+            if (longFired) { longFired = false; return; }   // после долгого нажатия выбор картины не открываем
             if (!A || reveal) return;
             const rect = cv.getBoundingClientRect();
             if (!rect.width) return;
@@ -481,6 +520,7 @@
 
         function destroy() {
             destroyed = true;
+            lpCancel();
             if (reveal) clearTimeout(reveal.timer);
             if (io) io.disconnect();
             cancelAnimationFrame(rafId);

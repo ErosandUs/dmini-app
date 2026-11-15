@@ -6802,6 +6802,40 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
+/* 15.11: долгое нажатие (сброс раскраски у тестеров) — без системного меню iPhone и выделения */
+.mrich-canvas {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Золотое кольцо под пальцем: замыкается за 1 с (как LONG_MS в mandalaCanvas.js) */
+.mrich-hold {
+    position: absolute;
+    z-index: 3;
+    width: 64px;
+    height: 64px;
+    margin: -32px 0 0 -32px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: conic-gradient(#d9a441 calc(var(--hold, 0) * 1%), rgba(255, 255, 255, 0.35) 0);
+    -webkit-mask: radial-gradient(circle, transparent 23px, #000 24px);
+    mask: radial-gradient(circle, transparent 23px, #000 24px);
+    box-shadow: 0 0 18px rgba(240, 184, 96, 0.6);
+    animation: mrichHold 1s linear forwards;
+}
+
+@property --hold {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0;
+}
+
+@keyframes mrichHold {
+    from { --hold: 0; opacity: 0.4; transform: scale(0.7); }
+    to { --hold: 100; opacity: 1; transform: scale(1); }
+}
+
 /* Раскрашенная мандала живёт: медленно вращается и «дышит» светом */
 .mrich.is-alive .mrich-canvas {
     animation: mrichSpin 140s linear infinite;

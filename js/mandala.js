@@ -57,6 +57,7 @@
             firstSeen: 0,
             lastVisit: 0,
             hintSeen: false,
+            resetAt: 0,         // 15.11.2026: время сброса раскраски тестером (при слиянии с облаком побеждает более поздний)
             active: false       // было ли хоть одно действие (показывать ли плашку на главной)
         };
     }
@@ -120,10 +121,29 @@
                 try { remote = JSON.parse(value); } catch (_) {}
                 if (!remote || typeof remote !== 'object' || remote.v !== STATE_V) { pushCloud(); return; }
                 const before = JSON.stringify(state);
-                ['practiceAll', 'goldAll', 'practiceSpent', 'goldSpent'].forEach(k => {
+                ['practiceAll', 'goldAll'].forEach(k => {
                     state[k] = Math.max(state[k] || 0, remote[k] || 0);
                 });
-                if ((remote.level || 1) > state.level || (remote.done && !state.done)) {
+                const rReset = remote.resetAt || 0, lReset = state.resetAt || 0;
+                if (rReset !== lReset) {
+                    // Был сброс раскраски: раскраска и потраченное — с той стороны, где сброс позже,
+                    // иначе раскраска с другого устройства вернулась бы
+                    if (rReset > lReset) {
+                        state.resetAt = rReset;
+                        state.level = remote.level || 1;
+                        state.done = !!remote.done;
+                        state.paint = remote.paint || {};
+                        state.practiceSpent = remote.practiceSpent || 0;
+                        state.goldSpent = remote.goldSpent || 0;
+                    }
+                } else {
+                    ['practiceSpent', 'goldSpent'].forEach(k => {
+                        state[k] = Math.max(state[k] || 0, remote[k] || 0);
+                    });
+                }
+                if (rReset !== lReset) {
+                    // уже решено выше
+                } else if ((remote.level || 1) > state.level || (remote.done && !state.done)) {
                     state.level = remote.level || 1;
                     state.done = !!remote.done;
                     state.paint = remote.paint || {};
@@ -530,7 +550,8 @@
                 label: `Моя мандала «${pr.art.title}»`,
                 paintOf,
                 canPaint: canPaintRegion,
-                onTap
+                onTap,
+                onLongPress: isVip() ? askReset : null
             });
             view.ready.catch(() => {
                 box.innerHTML = '<p class="mandala-error">Не удалось загрузить мандалу. Проверьте интернет и откройте экран снова.</p>';
@@ -897,6 +918,34 @@
         }
     }
 
+    // ---------- Сброс раскраски (15.11.2026, только VIP-тестеры): долгое нажатие на мандалу ----------
+    function askReset() {
+        haptic('success');
+        const q = 'Сбросить раскраску мандалы? Все области станут чистыми, капли вернутся.';
+        const tg = window.Telegram && window.Telegram.WebApp;
+        if (tg && typeof tg.showConfirm === 'function' && typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast('6.2')) {
+            try { tg.showConfirm(q, ok => { if (ok) resetPaint(); }); return; } catch (_) {}
+        }
+        if (window.confirm(q)) resetPaint();
+    }
+
+    function resetPaint() {
+        closeOverlay();
+        hidePalette();
+        state.paint = {};
+        state.level = 1;
+        state.done = false;
+        state.practiceSpent = 0;
+        state.goldSpent = 0;
+        Object.keys(state.flags).forEach(f => { if (f.indexOf('finished_') === 0) delete state.flags[f]; });
+        state.resetAt = Date.now();
+        saveState();
+        if (view) view.setAlive(false);
+        renderChip();
+        renderPath();
+        toast('Раскраска сброшена ✨');
+    }
+
     // ---------- Кнопки экрана ----------
     function bindUi() {
         const tabs = document.querySelectorAll('.mandala-tab');
@@ -945,8 +994,12 @@
 
     // Запуск после app.js (его обработчик DOMContentLoaded зарегистрирован раньше): там объявлен window.isUserVIP.
     // Пока VIP_ONLY, у остальных мандала не включается вовсе: app.js работает как без неё.
+    function isVip() {
+        return typeof window.isUserVIP === 'function' && !!window.isUserVIP();
+    }
+
     function start() {
-        const vip = typeof window.isUserVIP === 'function' && window.isUserVIP();
+        const vip = isVip();
         if (VIP_ONLY && !vip) return;
         document.documentElement.classList.add('mandala-vip');
         window.Mandala = { award, renderPath, renderChip, getProgress, storyTooFast };
