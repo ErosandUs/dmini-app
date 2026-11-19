@@ -6802,6 +6802,12 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
+/* 19.11: мандала с ровным внешним кругом (edgeFade: false в данных) — без дымки */
+.mrich--nofade .mrich-canvas {
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
 /* 15.11: долгое нажатие (сброс раскраски у тестеров) — без системного меню iPhone и выделения */
 .mrich-canvas {
     -webkit-touch-callout: none;
@@ -6932,6 +6938,14 @@ body {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+}
+
+/* 19.11: переход к следующей мандале — главная кнопка у раскрашенной */
+.mrich-next-open {
+    background: linear-gradient(135deg, #7b5aa6, #5a3f86);
+    color: #fff;
+    border-color: rgba(214, 170, 90, 0.8);
+    box-shadow: 0 0 18px rgba(240, 184, 96, 0.45);
 }
 
 .mrich-overlay {

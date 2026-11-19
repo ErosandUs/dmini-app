@@ -51,6 +51,8 @@
         const paintable = regions.filter(r => r.layer !== 'decor');
 
         host.classList.add('mrich');
+        // 19.11.2026: дымка по краю нужна «Лотосу» (лепестки выходят за круг); ровному кругу (p2) она приглушила бы край
+        host.classList.toggle('mrich--nofade', art.edgeFade === false);
         host.innerHTML = '';
         const cv = mk(S, S);
         cv.className = 'mrich-canvas';

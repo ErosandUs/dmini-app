@@ -22,7 +22,14 @@
             'Каждая капля на этом пути - день, когда вы выбирали себя: карту, тишину, свой внутренний голос. ' +
             'А золотые лепестки - свет, которым вы поделились с подругами.\n\n' +
             'Так растёт наш внутренний сад: шаг за шагом, с любовью.\n\n' +
-            'Я РАСКРЫВАЮСЬ, КАК ЛОТОС НА РАССВЕТЕ.\n\nДжамиля Ха'
+            'Я РАСКРЫВАЮСЬ, КАК ЛОТОС НА РАССВЕТЕ.\n\nДжамиля Ха',
+        // 19.11.2026: черновик, ждёт утверждения Валентина (sessions/2026-11-14_mandala-rich-integration/texts-djamilia.md)
+        p2: '🌝🌝🌝\nВаша Хранительница проснулась.\n\n' +
+            'Она держит у сердца Цветок жизни - так и мы храним в себе то, что по-настоящему ценно. ' +
+            'Луна над ней и полумесяц под ней напоминают: всё живое растёт по своим циклам, шаг за шагом.\n\n' +
+            'Каждая капля здесь - ваш день, ваш выбор, ваше присутствие. А золотой свет вы собрали, делясь им с подругами.\n\n' +
+            'Разве это не красиво - видеть, как ваш свет складывается в целый образ?\n\n' +
+            'Я ХРАНЮ СВЕТ В СВОЁМ СЕРДЦЕ.\n\nДжамиля Ха'
     };
 
     function artOf(level) {
@@ -188,7 +195,9 @@
     }
 
     // Раскрашенная мандала остаётся «живой», пока не готова картина следующей; потом открывается следующая
-    function maybeAdvance() {
+    // 19.11.2026: следующая мандала открывается не сама, а кнопкой «✨ Открыть следующую мандалу» (byUser),
+    // чтобы раскрашенная оставалась живой с посланием, пока человек не решит перейти
+    function maybeAdvance(byUser) {
         const pr = getProgress();
         if (!pr.complete || state.done) return false;
         if (state.level >= LEVEL_COUNT) {
@@ -196,7 +205,7 @@
             saveState();
             return true;
         }
-        if (!artOf(state.level + 1)) return false;
+        if (!byUser || !artOf(state.level + 1)) return false;
         const finished = state.level;
         state.level = finished + 1;
         state.paint = {};
@@ -587,6 +596,9 @@
             const parts = [];
             if (pr.done) {
                 parts.push('Спасибо, что несёте свет. Продолжайте практику и дарите карты подругам.');
+            } else if (pr.complete && artOf(pr.level + 1)) {
+                parts.push(`Ваша следующая мандала «${artOf(pr.level + 1).title}» уже ждёт.`);
+                if (allDrops > 0) parts.push(`${allDrops} ${dropsWord(allDrops)} краски готовы для неё.`);
             } else if (pr.soon || pr.complete) {
                 parts.push('Следующая мандала готовится.');
                 if (allDrops > 0) parts.push(`${allDrops} ${dropsWord(allDrops)} краски дождутся её.`);
@@ -603,10 +615,11 @@
                     parts.push(`Капли краски дарит практика: карта дня, аудио до конца, видео до конца. Осталось ${leftP} ${plural(leftP, 'область', 'области', 'областей')}.`);
                 }
                 if (leftP === 0 && leftG > 0) {
-                    parts.push(`Почти готово! Осталось ${leftG} ${plural(leftG, 'золотой лепесток', 'золотых лепестка', 'золотых лепестков')}: подарите карту подруге или поделитесь в сторис.`);
+                    const gf = pr.art.goldForms || ['золотой лепесток', 'золотых лепестка', 'золотых лепестков'];
+                    parts.push(`Почти готово! Осталось ${leftG} ${plural(leftG, gf[0], gf[1], gf[2])}: подарите мандалу подруге или поделитесь в сторис.`);
                     if (pr.dropsP > 0) parts.push(`${pr.dropsP} ${dropsWord(pr.dropsP)} ждут следующей мандалы.`);
                 } else if (leftG > 0 && pr.dropsG === 0) {
-                    parts.push('Золотые лепестки проявляются золотыми каплями: их дают подарки подругам и сторис.');
+                    parts.push(pr.art.goldHint || 'Золотые лепестки проявляются золотыми каплями: их дают подарки подругам и сторис.');
                 }
             }
             sub.textContent = parts.join(' ');
@@ -643,8 +656,22 @@
                 b.textContent = '✨ Послание мандалы';
                 b.addEventListener('click', () => openFinish(pr.art));
                 pal.appendChild(b);
+                if (artOf(pr.level + 1)) {
+                    const n = document.createElement('button');
+                    n.type = 'button';
+                    n.className = 'mrich-finish-open mrich-next-open';
+                    n.textContent = '✨ Открыть следующую мандалу';
+                    n.addEventListener('click', openNext);
+                    pal.appendChild(n);
+                }
             }
         }
+    }
+
+    function openNext() {
+        haptic('success');
+        closeOverlay();
+        if (maybeAdvance(true)) renderPath();
     }
 
     // ---------- Раскраска ----------
@@ -680,7 +707,7 @@
         const isGold = region.layer === 'gold';
         if ((isGold ? pr.dropsG : pr.dropsP) <= 0) {
             showMessage(isGold
-                ? 'Золотые лепестки проявляются золотыми каплями. Их дают подарки подругам и сторис.'
+                ? (pr.art.goldHint || 'Золотые лепестки проявляются золотыми каплями. Их дают подарки подругам и сторис.')
                 : 'Капли краски дарит практика: карта дня, аудио до конца, видео до конца.');
             return;
         }
@@ -696,7 +723,7 @@
         pal.innerHTML = '';
         const label = document.createElement('span');
         label.className = 'mandala-palette-label';
-        label.textContent = `${LAYER_NAMES[region.layer] || 'Область'}: какой картиной проявить?`;
+        label.textContent = `${region.name || LAYER_NAMES[region.layer] || 'Область'}: какой картиной проявить?`;
         pal.appendChild(label);
         const row = document.createElement('div');
         row.className = 'mandala-palette-row mrich-swatches';
