@@ -53,5 +53,12 @@ const EVENT_CONFIG = {
     // 10. Утренние напоминания о карте дня (колокольчик справа над виджетом):
     // notifyScriptUrl — адрес отдельного Google Apps Script (Web App, /exec).
     // Время отправки (8:00 по местному времени) задаёт SEND_HOUR в самом скрипте Notifications.gs.
-    notifyScriptUrl: "https://script.google.com/macros/s/AKfycbzcrHi-rcmLOgrM-YE99u1XbqJfIJo0QpAhEnfFatP5SthSTfQyYUAE5J7opK3Sln7g/exec"
+    notifyScriptUrl: "https://script.google.com/macros/s/AKfycbzcrHi-rcmLOgrM-YE99u1XbqJfIJo0QpAhEnfFatP5SthSTfQyYUAE5J7opK3Sln7g/exec",
+
+    // 11. Ориентиры стоимости наборов красок по СБП для каждой мандалы (₽)
+    mandalaPrices: {
+        p1: { fullRub: 390, goldRub: 190 },
+        p2: { fullRub: 490, goldRub: 240 },
+        default: { fullRub: 490, goldRub: 240 }
+    }
 };

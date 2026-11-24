@@ -1,25 +1,29 @@
-// --- ЛИЧНАЯ МАНДАЛА-РАСКРАСКА (этап 2, 14.11.2026) ---
-// Практика даёт капли краски: карта, аудио до конца, видео до конца (по разу за цикл карты).
-// Подарок подруге (+1), сторис (+3 раз в сутки) и «Подарки от Джамили» дают золотые капли.
-// Человек сам выбирает область и одну из трёх картин. Мандала закрыта, когда раскрашены все области.
-// Хранение: localStorage + копия в Telegram CloudStorage.
-// 14.11.2026: живописные мандалы — отрисовка в js/mandalaCanvas.js, данные в js/mandala-<ключ>.js.
+// --- ЛИЧНАЯ МАНДАЛА-РАСКРАСКА (этап 2, 14.11.2026; экономика 24.11.2026) ---
+// Практика даёт серебряные талисманы: карта (+1), аудио до конца (+1), видео до конца (+1), полный цикл дня (+1).
+// Задание мандалы «Поделиться светом» (5 шагов на мандалу): +3 серебряных за шаг и +6 за завершение 5/5.
+// 3 серебряных талисмана можно превратить в 1 золотой; «Подарки от Джамили» дают редкие золотые талисманы.
+// Хранение: localStorage + Telegram CloudStorage + серверный учёт в Google Apps Script (Economy.js).
 (function () {
     'use strict';
 
     const STATE_KEY = 'mandala_state_v1';
     const CLOUD_KEY = 'mandala_state_v1';
-    const VIP_ONLY = true;                              // 14.11.2026: тест на телефоне — мандалы только у VIP. Для всех: false
-    const VIP_DROPS = 999;                              // у VIP капли пополняются до этого числа при каждом входе
+    const VIP_ONLY = true;                              // 24.11.2026: экран мандал открывается только VIP; остальным — медальон и «в разработке»
     const STATE_V = 3;                                  // 3 — живописные мандалы (области другие, раскраска с нуля)
     const ART_KEYS = ['p1', 'p2', 'p3', 'p4', 'p5'];    // мандала 1..5 → данные window.MANDALA_RICH[ключ]
     const LEVEL_COUNT = ART_KEYS.length;
     const BOT_LINK = 'https://t.me/Djamiliakha_bot?start=go';
+    const CONVERT_RATE = 3;                             // 3 серебряных -> 1 золотой
+    const QUEST_TARGET = 5;                             // шагов задания на каждую мандалу
+    const QUEST_STEP_SILVER = 3;                        // +3 серебряных за шаг задания
+    const QUEST_BONUS_SILVER = 6;                       // +6 серебряных бонус при закрытии 5/5
+    const TEST_PACK_SILVER = 30;
+    const TEST_PACK_GOLD = 10;
     const LAYER_NAMES = { center: 'Сердце', petals: 'Лепестки', leaves: 'Листья', outer: 'Внешние лепестки', gold: 'Золотые лепестки' };
     // Послание Джамили при завершении мандалы (черновики — на утверждении у Валентина)
     const FINISH_TEXT = {
         p1: '✨✨✨\nВаш лотос раскрылся.\n\n' +
-            'Каждая капля на этом пути - день, когда вы выбирали себя: карту, тишину, свой внутренний голос. ' +
+            'Каждый талисман на этом пути - день, когда вы выбирали себя: карту, тишину, свой внутренний голос. ' +
             'А золотые лепестки - свет, которым вы поделились с подругами.\n\n' +
             'Так растёт наш внутренний сад: шаг за шагом, с любовью.\n\n' +
             'Я РАСКРЫВАЮСЬ, КАК ЛОТОС НА РАССВЕТЕ.\n\nДжамиля Ха',
@@ -27,7 +31,7 @@
         p2: '🌝🌝🌝\nВаша Хранительница проснулась.\n\n' +
             'Она держит у сердца Цветок жизни - так и мы храним в себе то, что по-настоящему ценно. ' +
             'Луна над ней и полумесяц под ней напоминают: всё живое растёт по своим циклам, шаг за шагом.\n\n' +
-            'Каждая капля здесь - ваш день, ваш выбор, ваше присутствие. А золотой свет вы собрали, делясь им с подругами.\n\n' +
+            'Каждый талисман здесь - ваш день, ваш выбор, ваше присутствие. А золотой свет вы собрали, делясь им с подругами.\n\n' +
             'Разве это не красиво - видеть, как ваш свет складывается в целый образ?\n\n' +
             'Я ХРАНЮ СВЕТ В СВОЁМ СЕРДЦЕ.\n\nДжамиля Ха'
     };
@@ -51,22 +55,37 @@
     function emptyState() {
         return {
             v: STATE_V,
-            practiceAll: 0,     // заработано капель за всё время
-            goldAll: 0,         // заработано золотых капель за всё время
-            practiceSpent: 0,   // потрачено капель
-            goldSpent: 0,       // потрачено золотых капель
+            practiceAll: 0,     // заработано серебряных талисманов за всё время
+            goldAll: 0,         // заработано золотых талисманов за всё время
+            boughtP: 0,         // куплено серебряных талисманов (авторитет — сервер)
+            boughtG: 0,         // куплено золотых талисманов (авторитет — сервер)
+            practiceSpent: 0,   // потрачено серебряных (раскраска + конвертация)
+            goldSpent: 0,       // потрачено золотых на раскраску
             level: 1,           // текущая мандала 1..5 (дальше — когда готова её картина)
             done: false,        // все пять раскрашены
             paint: {},          // раскраска текущей мандалы: { номер области: { l: 'gold' | 'p', c: картина 0..2 } }
-            flags: {},          // одноразовые поводы: welcome, migrated, level_1, day30, moon_YYYY-MM-DD …
-            cycle: { key: '', card: false, audio: false, video: false },
+            flags: {},          // одноразовые поводы: welcome, migrated, finished_p1, day30, moon_YYYY-MM-DD …
+            quests: {},         // задания по уровням: { '1': { shares: 0..5, done: false } }
+            cycle: { key: '', card: false, audio: false, video: false, fullBonus: false },
             storyDay: '',
             firstSeen: 0,
             lastVisit: 0,
             hintSeen: false,
             resetAt: 0,         // 15.11.2026: время сброса раскраски тестером (при слиянии с облаком побеждает более поздний)
-            active: false       // было ли хоть одно действие (показывать ли плашку на главной)
+            active: false       // было ли хоть одно действие
         };
+    }
+
+    function normalizeQuests(rawQuests) {
+        const out = {};
+        if (!rawQuests || typeof rawQuests !== 'object') return out;
+        Object.keys(rawQuests).forEach(k => {
+            const q = rawQuests[k];
+            if (!q || typeof q !== 'object') return;
+            const shares = Math.max(0, Math.min(QUEST_TARGET, parseInt(q.shares, 10) || 0));
+            out[k] = { shares, done: !!q.done || shares >= QUEST_TARGET };
+        });
+        return out;
     }
 
     function loadState() {
@@ -74,6 +93,10 @@
             const raw = JSON.parse(localStorage.getItem(STATE_KEY) || 'null');
             if (raw && typeof raw === 'object') {
                 const s = Object.assign(emptyState(), raw);
+                s.cycle = Object.assign({ key: '', card: false, audio: false, video: false, fullBonus: false }, raw.cycle || {});
+                s.quests = normalizeQuests(raw.quests);
+                s.boughtP = Math.max(0, parseInt(s.boughtP, 10) || 0);
+                s.boughtG = Math.max(0, parseInt(s.boughtG, 10) || 0);
                 if (raw.v !== STATE_V) {
                     // Прежние версии (плоские мандалы): раскраска заново, все заработанные капли возвращаются
                     s.v = STATE_V;
@@ -128,7 +151,7 @@
                 try { remote = JSON.parse(value); } catch (_) {}
                 if (!remote || typeof remote !== 'object' || remote.v !== STATE_V) { pushCloud(); return; }
                 const before = JSON.stringify(state);
-                ['practiceAll', 'goldAll'].forEach(k => {
+                ['practiceAll', 'goldAll', 'boughtP', 'boughtG'].forEach(k => {
                     state[k] = Math.max(state[k] || 0, remote[k] || 0);
                 });
                 const rReset = remote.resetAt || 0, lReset = state.resetAt || 0;
@@ -142,10 +165,17 @@
                         state.paint = remote.paint || {};
                         state.practiceSpent = remote.practiceSpent || 0;
                         state.goldSpent = remote.goldSpent || 0;
+                        state.quests = normalizeQuests(remote.quests);
                     }
                 } else {
                     ['practiceSpent', 'goldSpent'].forEach(k => {
                         state[k] = Math.max(state[k] || 0, remote[k] || 0);
+                    });
+                    const rq = normalizeQuests(remote.quests);
+                    Object.keys(rq).forEach(k => {
+                        const lq = state.quests[k] || { shares: 0, done: false };
+                        const shares = Math.max(lq.shares || 0, rq[k].shares || 0);
+                        state.quests[k] = { shares, done: !!(lq.done || rq[k].done || shares >= QUEST_TARGET) };
                     });
                 }
                 if (rReset !== lReset) {
@@ -170,7 +200,126 @@
         } catch (_) {}
     }
 
+    // ---------- Серверная синхронизация (Google Apps Script / Economy.js) ----------
+    function buildEconomySnapshot() {
+        return {
+            v: state.v,
+            practiceAll: state.practiceAll || 0,
+            goldAll: state.goldAll || 0,
+            boughtP: state.boughtP || 0,
+            boughtG: state.boughtG || 0,
+            practiceSpent: state.practiceSpent || 0,
+            goldSpent: state.goldSpent || 0,
+            level: state.level || 1,
+            done: !!state.done,
+            paint: state.paint || {},
+            flags: state.flags || {},
+            quests: state.quests || {},
+            storyDay: state.storyDay || '',
+            firstSeen: state.firstSeen || 0,
+            resetAt: state.resetAt || 0
+        };
+    }
+
+    function applyServerState(srv) {
+        if (!srv || typeof srv !== 'object') return;
+        const before = JSON.stringify(state);
+        if (typeof srv.boughtP === 'number') state.boughtP = Math.max(0, srv.boughtP);
+        if (typeof srv.boughtG === 'number') state.boughtG = Math.max(0, srv.boughtG);
+
+        const sReset = Number(srv.resetAt) || 0;
+        const lReset = Number(state.resetAt) || 0;
+        if (sReset > lReset) {
+            state.resetAt = sReset;
+            state.level = srv.level || 1;
+            state.done = !!srv.done;
+            state.paint = srv.paint || {};
+            state.practiceSpent = srv.practiceSpent || 0;
+            state.goldSpent = srv.goldSpent || 0;
+            state.quests = normalizeQuests(srv.quests);
+            state.practiceAll = Math.max(0, Number(srv.practiceAll) || 0);
+            state.goldAll = Math.max(0, Number(srv.goldAll) || 0);
+        } else if (sReset === lReset) {
+            if (typeof srv.practiceAll === 'number') state.practiceAll = Math.max(state.practiceAll, srv.practiceAll);
+            if (typeof srv.goldAll === 'number') state.goldAll = Math.max(state.goldAll, srv.goldAll);
+            if (typeof srv.practiceSpent === 'number') state.practiceSpent = Math.max(state.practiceSpent, srv.practiceSpent);
+            if (typeof srv.goldSpent === 'number') state.goldSpent = Math.max(state.goldSpent, srv.goldSpent);
+            if ((srv.level || 1) > state.level || (srv.done && !state.done)) {
+                state.level = srv.level || 1;
+                state.done = !!srv.done;
+                state.paint = srv.paint || {};
+            } else if ((srv.level || 1) === state.level && srv.paint && typeof srv.paint === 'object') {
+                state.paint = Object.assign({}, srv.paint, state.paint);
+            }
+            const sq = normalizeQuests(srv.quests);
+            Object.keys(sq).forEach(k => {
+                const lq = state.quests[k] || { shares: 0, done: false };
+                const shares = Math.max(lq.shares || 0, sq[k].shares || 0);
+                state.quests[k] = { shares, done: !!(lq.done || sq[k].done || shares >= QUEST_TARGET) };
+            });
+            if (srv.flags && typeof srv.flags === 'object') {
+                state.flags = Object.assign({}, srv.flags, state.flags);
+            }
+        }
+        if (JSON.stringify(state) !== before) {
+            saveState(true);
+            renderChip();
+            syncHud();
+            if (isPathOpen()) renderPath();
+        }
+    }
+
+    function callEconomyApi(payload) {
+        const tg = window.Telegram && window.Telegram.WebApp;
+        const url = typeof EVENT_CONFIG !== 'undefined' ? EVENT_CONFIG.notifyScriptUrl : '';
+        if (!url || !tg || !tg.initData) return Promise.resolve(null);
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(Object.assign({}, payload, { initData: tg.initData }))
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.status === 'success' && data.state) {
+                    applyServerState(data.state);
+                }
+                return data;
+            })
+            .catch(() => null);
+    }
+
+    function syncEconomy() {
+        return callEconomyApi({ action: 'economySync', state: buildEconomySnapshot() });
+    }
+
+    function sendEconomyEvent(evt) {
+        return callEconomyApi({
+            action: 'economyEvent',
+            event: evt,
+            state: buildEconomySnapshot()
+        });
+    }
+
     // ---------- Прогресс ----------
+    function ensureQuest(level) {
+        const k = String(level || state.level || 1);
+        if (!state.quests || typeof state.quests !== 'object') state.quests = {};
+        if (!state.quests[k] || typeof state.quests[k] !== 'object') {
+            state.quests[k] = { shares: 0, done: false };
+        }
+        const q = state.quests[k];
+        q.shares = Math.max(0, Math.min(QUEST_TARGET, parseInt(q.shares, 10) || 0));
+        q.done = !!q.done || q.shares >= QUEST_TARGET;
+        return q;
+    }
+
+    function questOf(level) {
+        const k = String(level || state.level || 1);
+        const q = (state.quests && state.quests[k]) || { shares: 0, done: false };
+        const shares = Math.max(0, Math.min(QUEST_TARGET, parseInt(q.shares, 10) || 0));
+        return { shares, target: QUEST_TARGET, done: !!q.done || shares >= QUEST_TARGET };
+    }
+
     function getProgress() {
         const level = Math.min(state.level, LEVEL_COUNT);
         const art = artOf(level);
@@ -188,8 +337,9 @@
             paintedP,
             paintedG,
             complete: !!art && paintedP >= caps.practice && paintedG >= caps.gold,
-            dropsP: Math.max(0, state.practiceAll - state.practiceSpent),
-            dropsG: Math.max(0, state.goldAll - state.goldSpent),
+            dropsP: Math.max(0, (state.practiceAll || 0) + (state.boughtP || 0) - (state.practiceSpent || 0)),
+            dropsG: Math.max(0, (state.goldAll || 0) + (state.boughtG || 0) - (state.goldSpent || 0)),
+            quest: questOf(level),
             done: !!state.done
         };
     }
@@ -197,6 +347,7 @@
     // Раскрашенная мандала остаётся «живой», пока не готова картина следующей; потом открывается следующая
     // 19.11.2026: следующая мандала открывается не сама, а кнопкой «✨ Открыть следующую мандалу» (byUser),
     // чтобы раскрашенная оставалась живой с посланием, пока человек не решит перейти
+    // 24.11.2026: фикс бага двойного золота — золотой талисман выдаётся только при завершении мандалы в paintRegion()
     function maybeAdvance(byUser) {
         const pr = getProgress();
         if (!pr.complete || state.done) return false;
@@ -209,9 +360,9 @@
         const finished = state.level;
         state.level = finished + 1;
         state.paint = {};
-        giveOnce('level_' + finished, 'за раскрашенную мандалу');
-        toast(`Открыта новая мандала: «${artOf(state.level).title}» 🪷`);
+        ensureQuest(state.level);
         saveState();
+        sendEconomyEvent({ type: 'advance', level: state.level });
         return true;
     }
 
@@ -223,9 +374,17 @@
         if (m10 >= 2 && m10 <= 4) return few;
         return many;
     }
-    const dropsWord = n => plural(n, 'капля', 'капли', 'капель');
+    const talismanWord = n => plural(n, 'талисман', 'талисмана', 'талисманов');
+    const silverWord = n => plural(n, 'серебряный талисман', 'серебряных талисмана', 'серебряных талисманов');
     const petalsWord = n => plural(n, 'лепесток', 'лепестка', 'лепестков');
-    const goldDropsWord = n => plural(n, 'золотая капля', 'золотые капли', 'золотых капель');
+    const goldWord = n => plural(n, 'золотой талисман', 'золотых талисмана', 'золотых талисманов');
+
+    function talismanSvg(gold, size) {
+        const s = size || 18;
+        return '<svg class="talisman-ico ' + (gold ? 'talisman-ico--gold' : 'talisman-ico--silver') +
+            '" width="' + s + '" height="' + s + '" viewBox="0 0 80 80" aria-hidden="true">' +
+            '<use href="#' + (gold ? 'talisman-gold' : 'talisman-silver') + '"></use></svg>';
+    }
 
     function dayKey(ts) {
         const d = new Date(ts || Date.now());
@@ -267,7 +426,7 @@
     const toastQueue = [];
     let toastBusy = false;
     function toast(text) {
-        if (!state.active) return; // пока человек не начал путь, тихо копим
+        if (!isVip() || !state.active) return; // пока раздел закрыт для не-VIP или человек не начал путь, тихо копим
         toastQueue.push(text);
         if (!toastBusy) nextToast();
     }
@@ -287,7 +446,7 @@
     // ---------- Начисления ----------
     function djamiliaGift(reason) {
         state.goldAll += 1;
-        toast(`🎁 Подарок от Джамили: золотая капля ${reason}`);
+        toast(`🎁 Подарок от Джамили: золотой талисман ${reason}`);
     }
 
     function giveOnce(flag, reason) {
@@ -301,85 +460,157 @@
         return localStorage.getItem('lastDrawTime') || 'none';
     }
 
+    function isPremium() {
+        return typeof window.isTelegramPremium === 'function' && !!window.isTelegramPremium();
+    }
+
     function award(kind, origin) {
         let flying = false;
         const key = cycleKey();
-        if (state.cycle.key !== key) state.cycle = { key, card: false, audio: false, video: false };
+        if (state.cycle.key !== key) state.cycle = { key, card: false, audio: false, video: false, fullBonus: false };
 
         if (kind === 'card' || kind === 'audio' || kind === 'video') {
             if (state.cycle[kind]) return;
             state.cycle[kind] = true;
             state.active = true;
             state.practiceAll += 1;
+            let gotFullBonus = false;
+            if (state.cycle.card && state.cycle.audio && state.cycle.video && !state.cycle.fullBonus) {
+                state.cycle.fullBonus = true;
+                state.practiceAll += 1;
+                gotFullBonus = true;
+            }
             const msg = kind === 'card' ? 'карта дня' : (kind === 'audio' ? 'аудиопослание' : 'видеопослание');
-            // «+1 🪷» всплывает над картой, аудио или видео и улетает в счётчик капель
+            // «+1» с серебряным талисманом всплывает над картой, аудио или видео и улетает в счётчик
             flying = flyDrop(origin, kind === 'card' ? 2600 : 0);
             if (!flying) {
-                const show = () => toast(`🪷 +1 капля краски (${msg}). Раскрасьте лепесток в «Твой путь»`);
-                if (kind === 'card') setTimeout(show, 2600); else show();
+                const text = gotFullBonus
+                    ? '🌙 +2 серебряных талисмана (полный день практики ✨)'
+                    : `🌙 +1 серебряный талисман (${msg}). Раскрасьте лепесток в «Твой путь»`;
+                if (kind === 'card') setTimeout(() => toast(text), 2600); else toast(text);
+            } else if (gotFullBonus) {
+                setTimeout(() => toast('✨ +1 серебряный талисман бонусом за весь цикл дня'), 1400);
             }
 
+            let bonusFlags = [];
             if (kind === 'card') {
                 const streak = readNum('practice_streak_count');
-                if (streak >= 7 && streak % 7 === 0) giveOnce('streak7_' + dayKey(), `за ${streak} дней практики подряд`);
-                if (state.firstSeen && Date.now() - state.firstSeen >= 30 * 86400000) giveOnce('day30', 'за 30 дней с нами');
+                if (streak >= 7 && streak % 7 === 0) {
+                    const f = 'streak7_' + dayKey();
+                    if (giveOnce(f, `за ${streak} дней практики подряд`)) bonusFlags.push(f);
+                }
+                if (state.firstSeen && Date.now() - state.firstSeen >= 30 * 86400000) {
+                    if (giveOnce('day30', 'за 30 дней с нами')) bonusFlags.push('day30');
+                }
             }
-        } else if (kind === 'gift') {
-            if (window.MandalaShared) window.MandalaShared.onShare();
-            state.active = true;
-            state.goldAll += 1;
-            toast('💌 Подарок отправлен: +1 золотая капля');
-        } else if (kind === 'story') {
+            saveState();
+            sendEconomyEvent({
+                type: 'practice',
+                kind,
+                cycleKey: key,
+                fullBonus: gotFullBonus,
+                bonusFlags
+            });
+        } else if (kind === 'gift' || kind === 'story') {
+            if (kind === 'story' && !isPremium()) return;
             if (window.MandalaShared) window.MandalaShared.onShare();
             state.active = true;
             const today = dayKey();
-            if (state.storyDay === today) {
-                toast('Спасибо, что поделились ✨ Золотые капли за сторис сегодня уже получены');
+            if (kind === 'story' && state.storyDay === today) {
+                toast('Спасибо, что поделились ✨ Серебряные талисманы за сторис сегодня уже получены');
+                saveState();
+                return;
+            }
+            if (kind === 'story') state.storyDay = today;
+
+            const q = ensureQuest(state.level);
+            if (q.shares < QUEST_TARGET) {
+                q.shares += 1;
+                let delta = QUEST_STEP_SILVER;
+                let completedNow = false;
+                if (q.shares >= QUEST_TARGET) {
+                    q.done = true;
+                    completedNow = true;
+                    delta += QUEST_BONUS_SILVER;
+                }
+                state.practiceAll += delta;
+                flying = flyDrop(origin, 0, { count: '+' + delta });
+                if (completedNow) {
+                    toast(`✨ Задание мандалы выполнено (${QUEST_TARGET}/${QUEST_TARGET}): +${delta} серебряных талисманов!`);
+                } else {
+                    const via = kind === 'story' ? '✨ Сторис' : '💌 Подарок подруге';
+                    toast(`${via}: +${delta} серебряных талисмана (${q.shares}/${QUEST_TARGET})`);
+                }
+                saveState();
+                sendEconomyEvent({
+                    type: kind,
+                    level: state.level,
+                    shares: q.shares,
+                    questDone: q.done,
+                    deltaSilver: delta,
+                    storyDay: state.storyDay
+                });
             } else {
-                state.storyDay = today;
-                state.goldAll += 3;
-                // 15.11.2026: начисляется после возвращения из редактора — крупный золотой перелёт и надпись
-                flying = flyDrop(origin, 0, { text: '+3 ✨', gold: true });
-                toast('Спасибо, что поделились! ✨ +3 золотые капли');
+                toast(kind === 'story'
+                    ? 'Спасибо, что поделились ✨ Задание этой мандалы уже выполнено'
+                    : '💌 Подарок отправлен от души! Задание этой мандалы уже выполнено ✨');
+                saveState();
             }
         } else {
             return;
         }
-        saveState();
-        if (!flying) { renderChip(); syncHud(); }   // при перелёте счётчик обновится, когда капля долетит
+        if (!flying) { renderChip(); syncHud(); }   // при перелёте счётчик обновится, когда талисман долетит
         if (isPathOpen()) renderPath();
     }
 
-    // ---------- Счётчик капель и перелёт «+1» ----------
-    // На главном счётчик — плашка с лотосом (#giftCounterChip). На экранах аудио и видео (и когда плашки не видно)
-    // сверху по центру показывается такой же счётчик .drop-hud.
-    let hud = null, hudNum = null, hudPending = 0;
-
-    function totalDrops() {
+    function convertSilverToGold(btn) {
         const pr = getProgress();
-        return pr.dropsP + pr.dropsG;
+        if (pr.dropsP < CONVERT_RATE) return;
+        haptic('select');
+        state.practiceSpent += CONVERT_RATE;
+        state.goldAll += 1;
+        state.active = true;
+        saveState();
+        const flying = flyDrop(btn, 0, { count: '+1', gold: true });
+        toast('✨ 3 серебряных талисмана превратились в 1 золотой');
+        if (!flying) { renderChip(); syncHud(); }
+        if (isPathOpen()) renderPath();
+        sendEconomyEvent({ type: 'convert', costSilver: CONVERT_RATE, gainGold: 1 });
     }
 
+    // ---------- Счётчик талисманов и перелёт «+1» ----------
+    // На главном счётчик и точка входа — кнопка-медальон (#mandalaCrownBtn). На экранах аудио и видео
+    // (и когда медальона не видно) сверху по центру показывается такой же счётчик .drop-hud.
+    let hud = null, hudSilver = null, hudGold = null, hudPending = 0;
+
     function chipVisible() {
+        const crown = document.getElementById('mandalaCrownBtn');
+        if (crown && crown.offsetParent !== null) return true;
         const chip = document.getElementById('giftCounterChip');
         return !!(chip && chip.offsetParent !== null && !chip.classList.contains('is-mandala-hidden'));
     }
 
     function syncHud() {
-        if (!hud) return;
+        if (!hud || !isVip()) return;
         const daily = document.getElementById('daily');
         const show = state.active && daily && daily.classList.contains('active') && !chipVisible();
         hud.classList.toggle('is-on', !!show);
-        hudNum.textContent = String(totalDrops());
+        const pr = getProgress();
+        if (hudSilver) hudSilver.textContent = String(pr.dropsP);
+        if (hudGold) hudGold.textContent = String(pr.dropsG);
     }
 
     function setupHud() {
-        if (hud) return;
+        if (hud || !isVip()) return;
         hud = document.createElement('div');
         hud.className = 'drop-hud';
         hud.setAttribute('aria-hidden', 'true');
-        hud.innerHTML = '<span class="drop-hud-ico">🪷</span><span class="drop-hud-num"></span>';
-        hudNum = hud.querySelector('.drop-hud-num');
+        hud.innerHTML =
+            '<span class="drop-hud-item">' + talismanSvg(false, 18) + '<span class="drop-hud-num drop-hud-silver">0</span></span>' +
+            '<span class="drop-hud-sep" aria-hidden="true">·</span>' +
+            '<span class="drop-hud-item">' + talismanSvg(true, 18) + '<span class="drop-hud-num drop-hud-gold">0</span></span>';
+        hudSilver = hud.querySelector('.drop-hud-silver');
+        hudGold = hud.querySelector('.drop-hud-gold');
         document.body.appendChild(hud);
         const daily = document.getElementById('daily');
         const schedule = () => {
@@ -393,17 +624,27 @@
     }
 
     // Возвращает true, если перелёт будет (иначе показываем обычное сообщение)
-    // opt (15.11.2026): text — надпись («+3 ✨» за сторис), gold — золотой вариант
+    // opt: count/text — надпись («+3», «+9»), gold — золотой вариант
     function flyDrop(origin, delay, opt) {
+        if (!isVip()) return false;
         opt = opt || {};
         let reduce = false;
         try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) {}
         if (reduce || !document.body || typeof document.body.animate !== 'function') return false;
         setTimeout(() => {
             let target = null;
-            if (chipVisible()) target = document.getElementById('giftCounterChip');
-            else if (isPathOpen()) target = document.getElementById('mandalaSubcaption');   // строка с каплями на экране мандалы
-            else if (hud) { hud.classList.add('is-on'); target = hud; }
+            const crown = document.getElementById('mandalaCrownBtn');
+            if (isPathOpen()) {
+                target = document.querySelector(opt.gold ? '.mandala-talisman-pill--gold' : '.mandala-talisman-pill--silver')
+                    || document.getElementById('mandalaSubcaption');
+            } else if (crown && crown.offsetParent !== null) {
+                target = crown;
+            } else if (chipVisible()) {
+                target = document.getElementById('giftCounterChip');
+            } else if (hud) {
+                hud.classList.add('is-on');
+                target = hud;
+            }
             const vw = window.innerWidth, vh = window.innerHeight;
             let sx = vw / 2, sy = vh / 2;
             const o = origin && origin.getBoundingClientRect ? origin.getBoundingClientRect() : null;
@@ -415,7 +656,8 @@
             const dx = t.left + t.width / 2 - sx, dy = t.top + t.height / 2 - sy;
             const el = document.createElement('div');
             el.className = opt.gold ? 'drop-fly drop-fly--gold' : 'drop-fly';
-            el.textContent = opt.text || '+1 🪷';
+            const label = opt.count || opt.text || '+1';
+            el.innerHTML = '<span>' + label + '</span>' + talismanSvg(!!opt.gold, opt.gold ? 28 : 22);
             el.style.left = sx + 'px';
             el.style.top = sy + 'px';
             document.body.appendChild(el);
@@ -478,40 +720,68 @@
         if (now - state.firstSeen >= 30 * 86400000 && collection.length) giveOnce('day30', 'за 30 дней с нами');
 
         state.lastVisit = now;
+        ensureQuest(state.level);
         maybeAdvance();
         saveState(true);
         renderChip();
         bindUi();
         setupHud();
         pullCloud();
+        setTimeout(syncEconomy, 1200);
     }
 
-    // ---------- Плашка на главной ----------
+    // ---------- Кнопка-медальон на главной (вместо Луны и старой боковой плашки) ----------
+    function thumbFallbackArt(level) {
+        for (let l = level; l >= 1; l--) {
+            const a = artOf(l);
+            if (a) return a;
+        }
+        return artOf(1);
+    }
+
     function renderChip() {
         const chip = document.getElementById('giftCounterChip');
-        if (!chip) return;
-        const pr = getProgress();
-        const visible = state.active;
-        chip.classList.toggle('is-mandala-hidden', !visible);
-        if (!visible) return;
-        const ico = chip.querySelector('.cd-gift-ico');
-        const val = document.getElementById('giftCounterValue');
-        const lbl = document.getElementById('giftCounterLabel');
-        // Плашка — счётчик капель; светится, только когда есть что раскрасить
-        const waiting = pr.dropsP + pr.dropsG;
-        const canPaintNow = !(pr.done || pr.complete || pr.soon) && waiting > 0;
-        if (ico) ico.textContent = '🪷';
-        if (waiting > 0) {
-            if (val) val.textContent = String(waiting);
-            if (lbl) lbl.textContent = dropsWord(waiting);
-            chip.classList.toggle('has-drops', canPaintNow);
-            chip.setAttribute('aria-label', `${waiting} ${dropsWord(waiting)} краски. Открыть мандалу`);
-        } else {
-            const filled = pr.paintedP + pr.paintedG;
-            if (val) val.textContent = String(filled);
-            if (lbl) lbl.textContent = petalsWord(filled);
+        if (chip) {
+            chip.classList.add('is-mandala-hidden');
             chip.classList.remove('has-drops');
-            chip.setAttribute('aria-label', `Моя мандала: раскрашено ${filled} ${petalsWord(filled)}. Открыть «Твой путь»`);
+        }
+        const btn = document.getElementById('mandalaCrownBtn');
+        const pill = document.getElementById('mandalaCrownPill');
+        const canvas = document.getElementById('mandalaCrownCanvas');
+        const vip = isVip();
+        const pr = getProgress();
+        const waiting = pr.dropsP + pr.dropsG;
+        const canPaintNow = vip && !(pr.done || pr.complete || pr.soon) && waiting > 0;
+        const filled = pr.paintedP + pr.paintedG;
+
+        if (pill) {
+            if (!vip) pill.textContent = 'Раскрасить';
+            else if (canPaintNow) pill.textContent = `Раскрасить · ${waiting}`;
+            else if (pr.done) pill.textContent = 'Моя мандала ✨';
+            else pill.textContent = 'Моя мандала';
+        }
+        if (btn) {
+            btn.classList.toggle('has-drops', canPaintNow);
+            if (!vip) {
+                btn.setAttribute('aria-label', 'Моя мандала. Раскраска скоро откроется');
+            } else if (canPaintNow) {
+                btn.setAttribute('aria-label', `${waiting} ${talismanWord(waiting)}. Раскрасить мандалу`);
+            } else {
+                btn.setAttribute('aria-label', `Моя мандала: раскрашено ${filled} ${petalsWord(filled)}. Открыть «Твой путь»`);
+            }
+        }
+        if (canvas && window.MandalaCanvas && window.MandalaCanvas.renderThumb) {
+            const art = vip ? (pr.art || thumbFallbackArt(pr.level)) : artOf(1);
+            if (art) {
+                const paint = vip && pr.art ? state.paint : {};
+                const key = art.key + ':' + (vip && pr.art ? JSON.stringify(paint) : 'empty');
+                if (canvas._thumbKey !== key) {
+                    canvas._thumbKey = key;
+                    window.MandalaCanvas.renderThumb(canvas, art, paint).catch(() => {
+                        if (canvas._thumbKey === key) canvas._thumbKey = '';
+                    });
+                }
+            }
         }
     }
 
@@ -525,6 +795,42 @@
     let viewLevel = 0;
     let selectedId = 0;
     let selectedPt = null;
+    let highlightUnpainted = false;
+
+    function updateZoomUi(scale, min, max) {
+        const s = typeof scale === 'number' ? scale : 1;
+        const lo = typeof min === 'number' ? min : 1;
+        const hi = typeof max === 'number' ? max : 3.5;
+        const isBase = s <= lo + 0.01;
+        const outBtn = document.getElementById('mandalaZoomOutBtn');
+        const resetBtn = document.getElementById('mandalaZoomResetBtn');
+        const inBtn = document.getElementById('mandalaZoomInBtn');
+        if (outBtn) outBtn.disabled = isBase;
+        if (resetBtn) {
+            resetBtn.disabled = isBase;
+            resetBtn.textContent = isBase ? '1×' : s.toFixed(1).replace(/\.0$/, '') + '×';
+        }
+        if (inBtn) inBtn.disabled = s >= hi - 0.01;
+    }
+
+    function syncToolsUi(pr) {
+        const tools = document.getElementById('mandalaTools');
+        const hlBtn = document.getElementById('mandalaHighlightBtn');
+        const hasArt = !!(pr && !pr.soon && window.MandalaCanvas);
+        if (tools) tools.hidden = !hasArt;
+        const showHl = hasArt && !pr.complete && !pr.done;
+        if (!showHl && highlightUnpainted) {
+            highlightUnpainted = false;
+            if (view && view.setHighlightUnpainted) view.setHighlightUnpainted(false);
+        }
+        if (hlBtn) {
+            hlBtn.hidden = !showHl;
+            hlBtn.classList.toggle('is-active', highlightUnpainted);
+            hlBtn.setAttribute('aria-pressed', highlightUnpainted ? 'true' : 'false');
+        }
+        if (view && view.getZoom) updateZoomUi(view.getZoom(), 1, 3.5);
+        else updateZoomUi(1, 1, 3.5);
+    }
 
     function paintOf(id) {
         const p = state.paint[id];
@@ -542,13 +848,17 @@
         if (!box) return;
         maybeAdvance();
         const pr = getProgress();
-        if (!view || viewLevel !== pr.level) hidePalette();
+        if (!view || viewLevel !== pr.level) {
+            hidePalette();
+            highlightUnpainted = false;
+        }
         renderTexts(pr);
         if (pr.soon || !window.MandalaCanvas) {
             if (view) { view.destroy(); view = null; viewLevel = 0; }
-            box.classList.remove('mrich', 'is-alive');
+            box.classList.remove('mrich', 'is-alive', 'mrich--nospin');
             box.innerHTML = '<div class="mrich-soon"><p class="mrich-soon-title">Следующая мандала готовится</p>' +
-                '<p class="mrich-soon-text">Капли краски копятся и дождутся её.</p></div>';
+                '<p class="mrich-soon-text">Талисманы копятся и дождутся её.</p></div>';
+            syncToolsUi(pr);
             return;
         }
         if (!view || viewLevel !== pr.level) {
@@ -560,17 +870,20 @@
                 paintOf,
                 canPaint: canPaintRegion,
                 onTap,
-                onLongPress: isVip() ? askReset : null
+                onLongPress: isVip() ? askReset : null,
+                onZoomChange: updateZoomUi
             });
             view.ready.catch(() => {
                 box.innerHTML = '<p class="mandala-error">Не удалось загрузить мандалу. Проверьте интернет и откройте экран снова.</p>';
                 view = null;
                 viewLevel = 0;
+                syncToolsUi({ soon: true });
             });
         } else {
             view.refresh();
         }
         if (view) view.setAlive(pr.complete);
+        syncToolsUi(pr);
     }
 
     function renderTexts(pr) {
@@ -592,34 +905,79 @@
             else cap.textContent = `«${pr.art.title}» · раскрашено ${filled} из ${total}`;
         }
 
+        const silverCountEl = document.getElementById('mandalaSilverCount');
+        const goldCountEl = document.getElementById('mandalaGoldCount');
+        if (silverCountEl) silverCountEl.textContent = String(pr.dropsP);
+        if (goldCountEl) goldCountEl.textContent = String(pr.dropsG);
+
+        const convertBtn = document.getElementById('mandalaConvertBtn');
+        if (convertBtn) {
+            convertBtn.hidden = !!(pr.done || pr.soon);
+            convertBtn.disabled = pr.dropsP < CONVERT_RATE;
+        }
+
+        const questCard = document.getElementById('mandalaQuestCard');
+        const questProgress = document.getElementById('mandalaQuestProgress');
+        const questFill = document.getElementById('mandalaQuestFill');
+        const questDesc = document.getElementById('mandalaQuestDesc');
+        if (questCard && pr.quest) {
+            questCard.hidden = !!(pr.done || pr.soon);
+            questCard.classList.toggle('is-done', pr.quest.done);
+            if (questProgress) {
+                questProgress.textContent = pr.quest.done
+                    ? `${pr.quest.target} / ${pr.quest.target} ✨`
+                    : `${pr.quest.shares} / ${pr.quest.target}`;
+            }
+            if (questFill) {
+                questFill.style.width = Math.round((pr.quest.shares / pr.quest.target) * 100) + '%';
+            }
+            if (questDesc) {
+                if (pr.quest.done) {
+                    questDesc.textContent = 'Задание этой мандалы выполнено! Новое откроется на следующей мандале.';
+                } else if (isPremium()) {
+                    questDesc.textContent = 'Подарите карту/мандалу подруге или выложите сторис: +3 🌙 за шаг и +6 🌙 за 5/5.';
+                } else {
+                    questDesc.textContent = 'Подарите карту или мандалу подруге: +3 🌙 за шаг и +6 🌙 за 5/5.';
+                }
+            }
+        }
+
+        const storyBtn = document.getElementById('mandalaStoryBtn');
+        if (storyBtn) storyBtn.hidden = !isPremium();
+
+        const buyBtn = document.getElementById('mandalaBuyBtn');
+        if (buyBtn) buyBtn.hidden = !!(pr.done || pr.soon);
+
         if (sub) {
             const parts = [];
             if (pr.done) {
                 parts.push('Спасибо, что несёте свет. Продолжайте практику и дарите карты подругам.');
             } else if (pr.complete && artOf(pr.level + 1)) {
                 parts.push(`Ваша следующая мандала «${artOf(pr.level + 1).title}» уже ждёт.`);
-                if (allDrops > 0) parts.push(`${allDrops} ${dropsWord(allDrops)} краски готовы для неё.`);
+                if (allDrops > 0) parts.push(`${allDrops} ${talismanWord(allDrops)} готовы для неё.`);
             } else if (pr.soon || pr.complete) {
                 parts.push('Следующая мандала готовится.');
-                if (allDrops > 0) parts.push(`${allDrops} ${dropsWord(allDrops)} краски дождутся её.`);
-                else parts.push('Капли за практику и подарки будут копиться для неё.');
+                if (allDrops > 0) parts.push(`${allDrops} ${talismanWord(allDrops)} дождутся её.`);
+                else parts.push('Талисманы за практику и подарки будут копиться для неё.');
             } else {
                 const canP = leftP > 0 ? Math.min(pr.dropsP, leftP) : 0;
                 const canG = Math.min(pr.dropsG, leftG);
                 if (canP + canG > 0) {
                     const have = [];
-                    if (pr.dropsP > 0) have.push(`${pr.dropsP} ${dropsWord(pr.dropsP)}`);
-                    if (pr.dropsG > 0) have.push(`${pr.dropsG} ${goldDropsWord(pr.dropsG)}`);
+                    if (pr.dropsP > 0) have.push(`${pr.dropsP} ${silverWord(pr.dropsP)}`);
+                    if (pr.dropsG > 0) have.push(`${pr.dropsG} ${goldWord(pr.dropsG)}`);
                     parts.push(`У Вас ${have.join(' и ')}. Нажмите на мерцающую область и выберите картину.`);
                 } else if (leftP > 0) {
-                    parts.push(`Капли краски дарит практика: карта дня, аудио до конца, видео до конца. Осталось ${leftP} ${plural(leftP, 'область', 'области', 'областей')}.`);
+                    parts.push(`Практика приносит до 4 🌙 за день, а задание мандалы — ещё 21 🌙. Осталось ${leftP} ${plural(leftP, 'область', 'области', 'областей')}.`);
                 }
                 if (leftP === 0 && leftG > 0) {
                     const gf = pr.art.goldForms || ['золотой лепесток', 'золотых лепестка', 'золотых лепестков'];
-                    parts.push(`Почти готово! Осталось ${leftG} ${plural(leftG, gf[0], gf[1], gf[2])}: подарите мандалу подруге или поделитесь в сторис.`);
-                    if (pr.dropsP > 0) parts.push(`${pr.dropsP} ${dropsWord(pr.dropsP)} ждут следующей мандалы.`);
+                    parts.push(`Почти готово! Осталось ${leftG} ${plural(leftG, gf[0], gf[1], gf[2])}: превратите 3 🌙 → 1 ☀️ или выберите набор красок.`);
+                    if (pr.dropsP > 0 && pr.dropsP < CONVERT_RATE) parts.push(`${pr.dropsP} ${silverWord(pr.dropsP)} уже в копилке.`);
                 } else if (leftG > 0 && pr.dropsG === 0) {
-                    parts.push(pr.art.goldHint || 'Золотые лепестки проявляются золотыми каплями: их дают подарки подругам и сторис.');
+                    parts.push(pr.dropsP >= CONVERT_RATE
+                        ? 'Золотые лепестки проявляются золотыми талисманами — можно превратить 3 серебряных в 1 золотой.'
+                        : 'Золотые лепестки проявляются золотыми талисманами (обмен 3 🌙 → 1 ☀️ или подарки Джамили).');
                 }
             }
             sub.textContent = parts.join(' ');
@@ -671,7 +1029,10 @@
     function openNext() {
         haptic('success');
         closeOverlay();
-        if (maybeAdvance(true)) renderPath();
+        if (maybeAdvance(true)) {
+            renderChip();
+            renderPath();
+        }
     }
 
     // ---------- Раскраска ----------
@@ -707,8 +1068,8 @@
         const isGold = region.layer === 'gold';
         if ((isGold ? pr.dropsG : pr.dropsP) <= 0) {
             showMessage(isGold
-                ? (pr.art.goldHint || 'Золотые лепестки проявляются золотыми каплями. Их дают подарки подругам и сторис.')
-                : 'Капли краски дарит практика: карта дня, аудио до конца, видео до конца.');
+                ? 'Золотые лепестки проявляются золотыми талисманами: их можно получить превратив 3 серебряных в 1 золотой или в подарок от Джамили.'
+                : 'Серебряные талисманы дарит практика (до 4 за день) и задание «Поделиться светом».');
             return;
         }
 
@@ -753,13 +1114,15 @@
             state.practiceSpent += 1;
         }
         const pt = selectedPt;
-        state.paint[id] = { l: layer === 'gold' ? 'gold' : 'p', c: v };
+        const paintedLayer = layer === 'gold' ? 'gold' : 'p';
+        state.paint[id] = { l: paintedLayer, c: v };
         saveState();
         haptic('light');
         const pal = paletteEl();
         if (pal) { pal.hidden = true; pal.innerHTML = ''; }
         selectedId = 0;
         selectedPt = null;
+        sendEconomyEvent({ type: 'paint', level: state.level, regionId: id, layer: paintedLayer, variant: v });
 
         view.reveal(id, v, pt, () => {
             const after = getProgress();
@@ -768,11 +1131,22 @@
             view.refresh();
             if (after.complete) {
                 haptic('success');
+                highlightUnpainted = false;
+                view.setHighlightUnpainted(false);
+                view.resetZoom();
                 view.celebrate();
                 view.setAlive(true);
-                giveOnce('finished_' + ART_KEYS[after.level - 1], 'за раскрашенную мандалу');
+                syncToolsUi(after);
+                const finishFlag = 'finished_' + ART_KEYS[after.level - 1];
+                const gotFinishGift = giveOnce(finishFlag, 'за раскрашенную мандалу');
+                const nextArt = artOf(after.level + 1);
+                if (nextArt) toast(`Открыта новая мандала: «${nextArt.title}» 🪷`);
                 saveState();
                 renderChip();
+                renderTexts(getProgress());
+                if (gotFinishGift) {
+                    sendEconomyEvent({ type: 'djamilia_gift', flag: finishFlag });
+                }
                 setTimeout(() => openFinish(after.art), 2700);
             }
         });
@@ -903,7 +1277,7 @@
             .then(r => r.json())
             .then(data => {
                 if (data && data.status === 'success' && data.msgId) {
-                    tg.shareMessage(data.msgId, sent => { if (sent) award('gift'); });
+                    tg.shareMessage(data.msgId, sent => { if (sent) award('gift', btn); });
                 } else {
                     toast('Не удалось подготовить подарок. Попробуйте ещё раз немного позже.');
                 }
@@ -916,14 +1290,15 @@
             });
     }
 
-    // Сторис с картиной мандалы (15.11.2026: кнопка вернулась на экран мандалы и видна всегда).
+    // Сторис с картиной мандалы (только для Telegram Premium).
     // Картинка — готовая images/mandala/<ключ>/story-<картина>.jpg 9:16 на GitHub Pages.
-    // Вернулся из редактора сторис слишком быстро — капель нет
+    // Вернулся из редактора сторис слишком быстро — награды нет
     function storyTooFast() {
-        toast('Золотые капли — за опубликованную сторис ✨');
+        toast('Талисманы начисляются только за опубликованную сторис ✨');
     }
 
     function shareStory(btn) {
+        if (!isPremium()) return;
         const tg = window.Telegram && window.Telegram.WebApp;
         if (!tg || typeof tg.shareToStory !== 'function' || typeof tg.isVersionAtLeast !== 'function' || !tg.isVersionAtLeast('7.8')) {
             toast('Поделиться в сторис можно в Telegram (нужна свежая версия) ✨');
@@ -937,7 +1312,7 @@
                 text: `Моя мандала «${art.title}» 🪷 @Djamilia_Kha`,
                 widget_link: { url: BOT_LINK, name: 'Раскрасить свою 🪷' }
             });
-            // Telegram не сообщает, опубликована ли история: капли — после возвращения из редактора (app.js, afterStoryReturn)
+            // Telegram не сообщает, опубликована ли история: награда — после возвращения из редактора (app.js, afterStoryReturn)
             if (typeof window.afterStoryReturn === 'function') window.afterStoryReturn(() => award('story', btn), storyTooFast);
             else award('story', btn);
         } catch (_) {
@@ -945,15 +1320,109 @@
         }
     }
 
-    // ---------- Сброс раскраски (15.11.2026, только VIP-тестеры): долгое нажатие на мандалу ----------
+    // ---------- Покупка набора красок для текущей мандалы (превью до подключения СБП) ----------
+    function openPackModal() {
+        haptic('select');
+        const pr = getProgress();
+        const art = pr.art || artOf(1);
+        if (!art) return;
+        const caps = capsOf(art);
+        const pricesMap = (typeof EVENT_CONFIG !== 'undefined' && EVENT_CONFIG.mandalaPrices) ? EVENT_CONFIG.mandalaPrices : {};
+        const price = pricesMap[art.key] || pricesMap.default || { fullRub: 490, goldRub: 240 };
+
+        overlay(card => {
+            const h = document.createElement('h3');
+            h.textContent = `Набор для «${art.title}»`;
+
+            const list = document.createElement('div');
+            list.className = 'mandala-pack-list';
+
+            const fullItem = document.createElement('div');
+            fullItem.className = 'mandala-pack-item';
+            fullItem.innerHTML =
+                '<div class="mandala-pack-top">' +
+                    '<span class="mandala-pack-name">Закрасить мандалу целиком</span>' +
+                    `<span class="mandala-pack-price">${price.fullRub} ₽</span>` +
+                '</div>' +
+                '<div class="mandala-pack-items">' +
+                    `<strong>${caps.practice}</strong>` + talismanSvg(false, 16) +
+                    '<span>+</span>' +
+                    `<strong>${caps.gold}</strong>` + talismanSvg(true, 16) +
+                '</div>';
+
+            const goldItem = document.createElement('div');
+            goldItem.className = 'mandala-pack-item';
+            goldItem.innerHTML =
+                '<div class="mandala-pack-top">' +
+                    '<span class="mandala-pack-name">Только золотые солнца</span>' +
+                    `<span class="mandala-pack-price">${price.goldRub} ₽</span>` +
+                '</div>' +
+                '<div class="mandala-pack-items">' +
+                    `<strong>${caps.gold}</strong>` + talismanSvg(true, 16) +
+                '</div>';
+
+            list.append(fullItem, goldItem);
+
+            const note = document.createElement('p');
+            note.className = 'mandala-pack-note';
+            note.textContent = 'Если часть мандалы уже раскрашена, неизрасходованные талисманы сохранятся для следующей мандалы.';
+
+            card.append(
+                h,
+                list,
+                note,
+                button('Оплата по СБП скоро откроется ✨', 'mrich-btn', () => {
+                    closeOverlay();
+                    toast('Оплата по СБП появится на следующем этапе ✨');
+                }),
+                button('Закрыть', 'mrich-btn mrich-btn--ghost', closeOverlay)
+            );
+        });
+    }
+
+    function showDevNotice() {
+        haptic('select');
+        overlay(card => {
+            const h = document.createElement('h3');
+            h.textContent = 'Моя мандала 🪷';
+            const p = document.createElement('p');
+            p.className = 'mrich-card-text';
+            p.textContent = 'Раскраска мандалы сейчас в разработке и совсем скоро откроется ✨\n\nВаши практики и подарки подругам уже бережно сохраняются — когда раздел откроется, все талисманы будут ждать Вас внутри.';
+            card.append(h, p, button('Хорошо', 'mrich-btn', closeOverlay));
+        });
+    }
+
+    // ---------- Меню тестера (только VIP): долгое нажатие на мандалу ----------
     function askReset() {
         haptic('success');
-        const q = 'Сбросить раскраску мандалы? Все области станут чистыми, капли вернутся.';
-        const tg = window.Telegram && window.Telegram.WebApp;
-        if (tg && typeof tg.showConfirm === 'function' && typeof tg.isVersionAtLeast === 'function' && tg.isVersionAtLeast('6.2')) {
-            try { tg.showConfirm(q, ok => { if (ok) resetPaint(); }); return; } catch (_) {}
-        }
-        if (window.confirm(q)) resetPaint();
+        overlay(card => {
+            const h = document.createElement('h3');
+            h.textContent = 'Меню тестера (VIP)';
+            const p = document.createElement('p');
+            p.className = 'mrich-card-text';
+            p.textContent = 'Выберите действие для проверки мандал и экономики:';
+            card.append(
+                h,
+                p,
+                button('Сбросить раскраску и задание', 'mrich-btn', resetPaint),
+                button(`+${TEST_PACK_SILVER} 🌙 и +${TEST_PACK_GOLD} ☀️ (для теста)`, 'mrich-btn mrich-btn--secondary', grantTestPack),
+                button('Полный сброс (как новый пользователь)', 'mrich-btn mrich-btn--secondary', fullReset),
+                button('Закрыть', 'mrich-btn mrich-btn--ghost', closeOverlay)
+            );
+        });
+    }
+
+    function grantTestPack() {
+        closeOverlay();
+        state.practiceAll += TEST_PACK_SILVER;
+        state.goldAll += TEST_PACK_GOLD;
+        state.active = true;
+        saveState();
+        renderChip();
+        syncHud();
+        renderPath();
+        toast(`Тест: начислено +${TEST_PACK_SILVER} 🌙 и +${TEST_PACK_GOLD} ☀️`);
+        sendEconomyEvent({ type: 'vip_test_pack', silver: TEST_PACK_SILVER, gold: TEST_PACK_GOLD });
     }
 
     function resetPaint() {
@@ -964,13 +1433,50 @@
         state.done = false;
         state.practiceSpent = 0;
         state.goldSpent = 0;
-        Object.keys(state.flags).forEach(f => { if (f.indexOf('finished_') === 0) delete state.flags[f]; });
+        state.quests = { '1': { shares: 0, done: false } };
+        Object.keys(state.flags).forEach(f => { if (f.indexOf('finished_') === 0 || f.indexOf('level_') === 0) delete state.flags[f]; });
         state.resetAt = Date.now();
         saveState();
-        if (view) view.setAlive(false);
+        highlightUnpainted = false;
+        if (view) {
+            view.setHighlightUnpainted(false);
+            view.resetZoom();
+            view.setAlive(false);
+        }
         renderChip();
+        syncHud();
         renderPath();
-        toast('Раскраска сброшена ✨');
+        toast('Раскраска и задание сброшены ✨');
+        sendEconomyEvent({ type: 'reset_paint' });
+    }
+
+    function fullReset() {
+        closeOverlay();
+        hidePalette();
+        const prevBoughtP = state.boughtP || 0;
+        const prevBoughtG = state.boughtG || 0;
+        state = emptyState();
+        state.boughtP = prevBoughtP;
+        state.boughtG = prevBoughtG;
+        state.active = true;
+        state.firstSeen = Date.now();
+        state.lastVisit = Date.now();
+        state.flags.migrated = Date.now();
+        giveOnce('welcome', 'на начало пути');
+        ensureQuest(1);
+        state.resetAt = Date.now();
+        saveState();
+        highlightUnpainted = false;
+        if (view) {
+            view.setHighlightUnpainted(false);
+            view.resetZoom();
+            view.setAlive(false);
+        }
+        renderChip();
+        syncHud();
+        renderPath();
+        toast('Сброшено к состоянию нового пользователя ✨');
+        sendEconomyEvent({ type: 'full_reset' });
     }
 
     // ---------- Кнопки экрана ----------
@@ -1000,6 +1506,11 @@
             if (hint) hint.hidden = true;
         });
 
+        const convertBtn = document.getElementById('mandalaConvertBtn');
+        if (convertBtn) convertBtn.addEventListener('click', () => {
+            convertSilverToGold(convertBtn);
+        });
+
         const giftBtn = document.getElementById('mandalaGiftBtn');
         if (giftBtn) giftBtn.addEventListener('click', () => {
             haptic('select');
@@ -1007,38 +1518,67 @@
         });
 
         const storyBtn = document.getElementById('mandalaStoryBtn');
-        if (storyBtn) storyBtn.addEventListener('click', () => {
-            haptic('select');
-            shareStory(storyBtn);
-        });
+        if (storyBtn) {
+            storyBtn.hidden = !isPremium();
+            storyBtn.addEventListener('click', () => {
+                haptic('select');
+                shareStory(storyBtn);
+            });
+        }
+
+        const buyBtn = document.getElementById('mandalaBuyBtn');
+        if (buyBtn) buyBtn.addEventListener('click', openPackModal);
 
         const colLink = document.getElementById('mandalaCollectionLink');
         if (colLink) colLink.addEventListener('click', () => {
             const legacy = document.getElementById('pathCollectionCard');
             if (legacy) legacy.click();
         });
+
+        const hlBtn = document.getElementById('mandalaHighlightBtn');
+        if (hlBtn) hlBtn.addEventListener('click', () => {
+            if (!view) return;
+            haptic('select');
+            highlightUnpainted = !highlightUnpainted;
+            view.setHighlightUnpainted(highlightUnpainted);
+            syncToolsUi(getProgress());
+        });
+
+        const zoomInBtn = document.getElementById('mandalaZoomInBtn');
+        if (zoomInBtn) zoomInBtn.addEventListener('click', () => {
+            if (!view) return;
+            haptic('select');
+            view.zoomIn();
+        });
+
+        const zoomOutBtn = document.getElementById('mandalaZoomOutBtn');
+        if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => {
+            if (!view) return;
+            haptic('select');
+            view.zoomOut();
+        });
+
+        const zoomResetBtn = document.getElementById('mandalaZoomResetBtn');
+        if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => {
+            if (!view) return;
+            haptic('select');
+            view.resetZoom();
+        });
     }
 
     // Запуск после app.js (его обработчик DOMContentLoaded зарегистрирован раньше): там объявлен window.isUserVIP.
-    // Пока VIP_ONLY, у остальных мандала не включается вовсе: app.js работает как без неё.
+    // Медальон виден всем (html.mandala-visible), а экран мандал и талисманы открыты только VIP (html.mandala-vip).
     function isVip() {
+        if (!VIP_ONLY) return true;
         return typeof window.isUserVIP === 'function' && !!window.isUserVIP();
     }
 
     function start() {
         const vip = isVip();
-        if (VIP_ONLY && !vip) return;
-        document.documentElement.classList.add('mandala-vip');
-        window.Mandala = { award, renderPath, renderChip, getProgress, storyTooFast };
+        document.documentElement.classList.add('mandala-visible');
+        if (vip) document.documentElement.classList.add('mandala-vip');
+        window.Mandala = { award, renderPath, renderChip, getProgress, storyTooFast, showDevNotice };
         init();
-        if (vip) {
-            // Тест: капли пополняются до VIP_DROPS, плашка на главной видна сразу
-            state.practiceAll = Math.max(state.practiceAll, state.practiceSpent + VIP_DROPS);
-            state.goldAll = Math.max(state.goldAll, state.goldSpent + VIP_DROPS);
-            state.active = true;
-            saveState(true);
-            renderChip();
-        }
     }
 
     if (document.readyState === 'complete') {

@@ -28,9 +28,34 @@
 
     let field = null;        // { level, round, total, cells: { a1: 0..2 } }
     let showMine = false;
+    let showUnpainted = false;
+    let zoomCtrl = null;
     let selectedId = '';
     let busy = false;
     let refreshTimer = null;
+
+    function updateZoomUi(scale, min, max) {
+        const s = typeof scale === 'number' ? scale : 1;
+        const lo = typeof min === 'number' ? min : 1;
+        const hi = typeof max === 'number' ? max : 3.5;
+        const isBase = s <= lo + 0.01;
+        const outBtn = el('sharedZoomOutBtn');
+        const resetBtn = el('sharedZoomResetBtn');
+        const inBtn = el('sharedZoomInBtn');
+        if (outBtn) outBtn.disabled = isBase;
+        if (resetBtn) {
+            resetBtn.disabled = isBase;
+            resetBtn.textContent = isBase ? '1×' : s.toFixed(1).replace(/\.0$/, '') + '×';
+        }
+        if (inBtn) inBtn.disabled = s >= hi - 0.01;
+    }
+
+    function syncHighlightBtn() {
+        const btn = el('sharedHighlightBtn');
+        if (!btn) return;
+        btn.classList.toggle('is-active', showUnpainted);
+        btn.setAttribute('aria-pressed', showUnpainted ? 'true' : 'false');
+    }
 
     // ---------- Хранилище ----------
     function readJson(key, fallback) {
@@ -157,17 +182,23 @@
         loadArt(field.level).then(svg => {
             const key = field.level + ':' + field.round;
             if (art.dataset.key !== key) {
+                if (zoomCtrl) { zoomCtrl.destroy(); zoomCtrl = null; }
                 art.innerHTML = svg;
                 art.dataset.key = key;
                 const s = art.querySelector('svg');
                 if (s) {
                     s.setAttribute('role', 'img');
                     s.setAttribute('aria-label', `Общая мандала ${field.level}`);
+                    if (window.MandalaCanvas && window.MandalaCanvas.attachZoom) {
+                        zoomCtrl = window.MandalaCanvas.attachZoom(art, s, { onChange: updateZoomUi });
+                    }
                 }
                 art.querySelectorAll('[id^="layer-"] path').forEach(p => p.classList.add('shared-region'));
             }
             paintArt(art);
         }).catch(() => {
+            if (zoomCtrl) { zoomCtrl.destroy(); zoomCtrl = null; }
+            updateZoomUi(1, 1, 3.5);
             art.innerHTML = '<p class="mandala-error">Не удалось загрузить рисунок. Проверьте интернет и откройте вкладку снова.</p>';
             art.dataset.key = '';
         });
@@ -188,6 +219,8 @@
             p.classList.toggle('is-selected', p.id === selectedId);
         });
         art.classList.toggle('show-mine', showMine);
+        art.classList.toggle('show-unpainted', showUnpainted);
+        syncHighlightBtn();
     }
 
     function renderTexts() {
@@ -203,14 +236,14 @@
             if (!initData()) {
                 text = 'Раскрашивать общую мандалу можно в приложении внутри Telegram.';
             } else if (left > 0) {
-                text = `У Вас ${left} ${left === 1 ? 'капля' : 'капли'} для общей мандалы. Нажмите на мерцающую область и выберите оттенок.`;
+                text = `У Вас ${left} ${left === 1 ? 'талисман' : 'талисмана'} для общей мандалы. Нажмите на мерцающую область и выберите оттенок.`;
             } else if (getDay().used >= DAILY_LIMIT) {
-                text = 'Сегодня Вы уже добавили свои цвета. Завтра будут новые капли 🌸';
+                text = 'Сегодня Вы уже добавили свои цвета. Завтра будут новые талисманы 🌸';
             } else if (getDay().used > 0) {
                 const more = DAILY_LIMIT - getDay().used;
-                text = `Ваш цвет уже в мандале 🌸 Ещё ${more} ${more === 1 ? 'каплю' : 'капли'} сегодня можно получить за подарок подруге или сторис.`;
+                text = `Ваш цвет уже в мандале 🌸 Ещё ${more} ${more === 1 ? 'талисман' : 'талисмана'} сегодня можно получить за подарок подруге или сторис.`;
             } else {
-                text = 'Капли для общей мандалы: 1 за карту дня и по 1 за подарок подруге или сторис, до 3 в день.';
+                text = 'Талисманы для общей мандалы: 1 за карту дня и по 1 за подарок подруге или сторис, до 3 в день.';
             }
             if (mineCount > 0) text += ` Ваших мазков здесь: ${mineCount}.`;
             sub.textContent = text;
@@ -238,6 +271,7 @@
     }
 
     function onArtClick(e) {
+        if (zoomCtrl && zoomCtrl.shouldIgnoreClick()) return;
         const p = e.target.closest && e.target.closest('.shared-region');
         if (!p || !field) { hidePalette(); return; }
         if (busy) return;
@@ -254,8 +288,8 @@
         if (dropsLeft() <= 0) {
             hidePalette();
             message(getDay().used >= DAILY_LIMIT
-                ? 'Сегодня Вы уже добавили свои цвета. Завтра будут новые капли 🌸'
-                : 'Капли для общей мандалы дают карта дня и подарок подруге или сторис.');
+                ? 'Сегодня Вы уже добавили свои цвета. Завтра будут новые талисманы 🌸'
+                : 'Талисманы для общей мандалы дают карта дня и подарок подруге или сторис.');
             return;
         }
 
@@ -328,7 +362,7 @@
                         writeJson(DAY_KEY, d);
                     }
                     message(err === 'taken' ? 'Кто-то успел раскрасить эту область раньше. Выберите соседнюю 🌸'
-                        : err === 'limit' ? 'Сегодня Вы уже добавили свои цвета. Завтра будут новые капли 🌸'
+                        : err === 'limit' ? 'Сегодня Вы уже добавили свои цвета. Завтра будут новые талисманы 🌸'
                         : err === 'level_changed' ? 'Пока Вы выбирали, мандалу раскрасили до конца! Открыта следующая ✨'
                         : err === 'auth' ? 'Не удалось подтвердить вход. Закройте и снова откройте приложение.'
                         : 'Не получилось сохранить цвет. Попробуйте ещё раз.');
@@ -378,8 +412,43 @@
         const btn = el('sharedMineBtn');
         if (btn) btn.addEventListener('click', () => {
             showMine = !showMine;
-            if (art) art.classList.toggle('show-mine', showMine);
+            if (showMine) showUnpainted = false;
+            if (art) {
+                art.classList.toggle('show-mine', showMine);
+                art.classList.toggle('show-unpainted', showUnpainted);
+            }
+            syncHighlightBtn();
             renderTexts();
+        });
+        const hlBtn = el('sharedHighlightBtn');
+        if (hlBtn) hlBtn.addEventListener('click', () => {
+            showUnpainted = !showUnpainted;
+            if (showUnpainted) showMine = false;
+            if (art) {
+                art.classList.toggle('show-mine', showMine);
+                art.classList.toggle('show-unpainted', showUnpainted);
+            }
+            syncHighlightBtn();
+            renderTexts();
+            try { window.Telegram.WebApp.HapticFeedback.selectionChanged(); } catch (_) {}
+        });
+        const zoomInBtn = el('sharedZoomInBtn');
+        if (zoomInBtn) zoomInBtn.addEventListener('click', () => {
+            if (!zoomCtrl) return;
+            zoomCtrl.zoomIn();
+            try { window.Telegram.WebApp.HapticFeedback.selectionChanged(); } catch (_) {}
+        });
+        const zoomOutBtn = el('sharedZoomOutBtn');
+        if (zoomOutBtn) zoomOutBtn.addEventListener('click', () => {
+            if (!zoomCtrl) return;
+            zoomCtrl.zoomOut();
+            try { window.Telegram.WebApp.HapticFeedback.selectionChanged(); } catch (_) {}
+        });
+        const zoomResetBtn = el('sharedZoomResetBtn');
+        if (zoomResetBtn) zoomResetBtn.addEventListener('click', () => {
+            if (!zoomCtrl) return;
+            zoomCtrl.reset();
+            try { window.Telegram.WebApp.HapticFeedback.selectionChanged(); } catch (_) {}
         });
         document.querySelectorAll('.mandala-tab[data-mtab="shared"]').forEach(tab => tab.addEventListener('click', open));
     }

@@ -179,6 +179,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Мандала (js/mandala.js) запускается после app.js и спрашивает VIP здесь: список VIP один на всё приложение
     window.isUserVIP = isUserVIP;
 
+    function isTelegramPremium() {
+        const user = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
+        if (user && user.is_premium === true) return true;
+        if (window.location.search.includes('premium=1')) return true;
+        return false;
+    }
+    window.isTelegramPremium = isTelegramPremium;
+
     // --- ДИНАМИЧЕСКИЙ ВЫВОД ВЕРСИИ ИЗ INDEX.HTML ---
     const appScriptTag = document.getElementById('appScript');
     const versionLabel = document.getElementById('appVersionLabel');
@@ -842,6 +850,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareToFriendBtn = document.getElementById('shareToFriendBtn');
     const shareToUniverseBtn = document.getElementById('shareToUniverseBtn');
 
+    if (shareToUniverseBtn && !isTelegramPremium()) {
+        shareToUniverseBtn.style.display = 'none';
+    }
+
     let activeSharePath = ""; 
 
     function openTelegramShare(shareText) {
@@ -859,10 +871,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function openCardShare(sourceBtn) {
+        if (isTelegramPremium()) {
+            if (shareOptionsModal) shareOptionsModal.classList.add('active');
+            return;
+        }
+        if (typeof ym !== 'undefined') {
+            ym(110909428, 'reachGoal', 'share_direct');
+        }
+        trackGoal('share_any', { method: 'direct' });
+        startGiftShare(sourceBtn);
+    }
+
     shareCardBtn.addEventListener('click', () => {
         triggerSoftHaptic();
         activeSharePath = currentCardPath;
-        shareOptionsModal.classList.add('active');
+        openCardShare(shareCardBtn);
     });
 
     closeShareModal.addEventListener('click', () => {
@@ -912,10 +936,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const originalLabel = busyBtn.textContent;
+        const labelTarget = busyBtn.querySelector('span:not(.cd-btn-inner)') || busyBtn;
+        const originalLabel = labelTarget.textContent;
         isGiftPreparing = true;
         busyBtn.disabled = true;
-        busyBtn.textContent = 'Готовим подарок… ✨';
+        labelTarget.textContent = 'Готовим подарок… ✨';
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -945,7 +970,7 @@ document.addEventListener('DOMContentLoaded', () => {
             clearTimeout(timeoutId);
             isGiftPreparing = false;
             busyBtn.disabled = false;
-            busyBtn.textContent = originalLabel;
+            labelTarget.textContent = originalLabel;
         }
     }
 
@@ -1023,7 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // а когда человек вернулся из редактора в приложение, и только если пробыл там не меньше STORY_MIN_AWAY_MS.
     // Возвращение — первый из сигналов: Telegram 'activated', снова видимая страница, фокус окна,
     // первое касание экрана (пока редактор открыт поверх, коснуться приложения нельзя).
-    const STORY_MIN_AWAY_MS = 5000;
+    const STORY_MIN_AWAY_MS = 10000;
     let storyWait = null;
     function afterStoryReturn(onPublished, onTooFast) {
         if (storyWait) storyWait.stop();
@@ -1073,13 +1098,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (_) {}
 
-        // С этапа 2 лепестки и сообщение даёт личная мандала
+        // С этапа 2 лепестки и сообщение даёт личная мандала (у не-VIP — тихий учёт)
         if (window.Mandala) {
             window.Mandala.award(kind === 'story' ? 'story' : 'gift');
-            return;
+            if (isUserVIP()) return;
         }
         renderGiftCounter();
-        // 14.11.2026: пока мандалы только у VIP, остальным — без счёта лучей
+        // 14.11.2026: пока мандалы только у VIP, остальным — обычный тост без счёта талисманов
         showGiftToast(kind === 'story' ? 'Спасибо, что поделились ✨' : 'Подарок отправлен 💌');
     }
 
@@ -1087,6 +1112,19 @@ document.addEventListener('DOMContentLoaded', () => {
         giftCounterChip.addEventListener('click', () => {
             triggerSoftHaptic();
             openPathScreen();
+        });
+    }
+    const mandalaCrownBtn = document.getElementById('mandalaCrownBtn');
+    if (mandalaCrownBtn) {
+        mandalaCrownBtn.addEventListener('click', () => {
+            triggerSoftHaptic();
+            if (isUserVIP()) {
+                openPathScreen();
+            } else if (window.Mandala && typeof window.Mandala.showDevNotice === 'function') {
+                window.Mandala.showDevNotice();
+            } else {
+                showGiftToast('Раскраска мандалы сейчас в разработке ✨');
+            }
         });
     }
     renderGiftCounter();
@@ -1242,6 +1280,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function shareToStories(imagePath) {
+        if (!isTelegramPremium()) {
+            return;
+        }
         if (!window.Telegram || !window.Telegram.WebApp) {
             alert("Поделиться в Stories можно только внутри Telegram ✨");
             return;
@@ -1400,7 +1441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', function() {
                 triggerSoftHaptic();
                 activeSharePath = this.getAttribute('data-path'); 
-                shareOptionsModal.classList.add('active'); 
+                openCardShare(this); 
             });
         });
 
@@ -2359,7 +2400,7 @@ document.addEventListener('DOMContentLoaded', () => {
             triggerSoftHaptic();
             updateTodayCardOnDashboard();
             activeSharePath = currentCardPath;
-            if (shareOptionsModal) shareOptionsModal.classList.add('active');
+            openCardShare(cdShareCardBtn);
         });
     }
 
@@ -3311,7 +3352,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Виджет прогресса в «Моей коллекции» теперь ведёт на экран «Твой путь» (шторка оставлена в разметке, но не открывается)
     // 14.11.2026: виджет открывает экран «Твой путь» с мандалами, только когда мандала включена
     // (пока — у VIP, см. VIP_ONLY в js/mandala.js). У остальных виджет только показывает прогресс и не открывается.
-    const openPathOrSheet = () => { if (window.Mandala) openPathScreen(); };
+    const openPathOrSheet = () => { if (isUserVIP() && window.Mandala) openPathScreen(); };
     if (sacredProgressWidget) {
         sacredProgressWidget.addEventListener('click', openPathOrSheet);
         sacredProgressWidget.addEventListener('keydown', (e) => {

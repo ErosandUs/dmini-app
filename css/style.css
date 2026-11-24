@@ -3838,6 +3838,116 @@ body {
     filter: drop-shadow(0 0 22px rgba(255, 241, 204, 0.78)) drop-shadow(0 4px 14px rgba(132, 98, 168, 0.28));
 }
 
+/* --- 1.1. Кнопка-медальон мандалы вместо Луны (при html.mandala-visible) --- */
+.cd-mandala-btn {
+    display: none;
+    position: relative;
+    z-index: 3;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: transform 0.16s ease;
+}
+
+.cd-mandala-btn:active {
+    transform: scale(0.95);
+}
+
+html.mandala-visible .cd-moon-disc-wrap,
+html.mandala-visible .cd-gift-row {
+    display: none;
+}
+
+html.mandala-visible .cd-mandala-btn {
+    display: flex;
+}
+
+.cd-mandala-disc {
+    position: relative;
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    overflow: hidden;
+    transform: translateY(-4px);
+    background: rgba(235, 224, 246, 0.32);
+    border: 1.4px solid rgba(210, 172, 92, 0.85);
+    box-shadow: 0 0 20px rgba(255, 241, 204, 0.72), 0 4px 14px rgba(132, 98, 168, 0.22);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.cd-mandala-btn.has-drops .cd-mandala-disc {
+    border-color: rgba(214, 164, 62, 0.96);
+    animation: mandalaCrownGlow 2.6s ease-in-out infinite;
+}
+
+@keyframes mandalaCrownGlow {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(255, 232, 174, 0.82), 0 4px 14px rgba(132, 98, 168, 0.24), 0 0 0 0 rgba(240, 184, 96, 0);
+    }
+    50% {
+        box-shadow: 0 0 26px rgba(255, 224, 146, 0.95), 0 4px 16px rgba(132, 98, 168, 0.28), 0 0 0 6px rgba(240, 184, 96, 0.28);
+    }
+}
+
+.cd-mandala-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 50%;
+}
+
+.cd-mandala-pill {
+    position: absolute;
+    bottom: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: #4b2c70;
+    background: rgba(255, 251, 246, 0.96);
+    border: 1.2px solid rgba(206, 170, 98, 0.78);
+    box-shadow: 0 2px 8px rgba(114, 82, 148, 0.18);
+    transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.cd-mandala-btn.has-drops .cd-mandala-pill {
+    color: #6b4308;
+    background: linear-gradient(135deg, #fff6d6 0%, #f9df97 58%, #f4ca6c 100%);
+    border-color: rgba(196, 146, 48, 0.95);
+    box-shadow: 0 3px 10px rgba(188, 138, 42, 0.34);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cd-mandala-btn,
+    .cd-mandala-disc,
+    .cd-mandala-pill {
+        transition: none;
+    }
+    .cd-mandala-btn.has-drops .cd-mandala-disc {
+        animation: none;
+    }
+}
+
 /* --- Колокольчик утренних напоминаний (справа, прямо над виджетом) ---
    Обычно это компактный круглый значок: включено = золотая заливка, выключено = светлая.
    При нажатии на 2–3 секунды выезжает надпись справа налево («Уведомления включены/выключены»), затем сворачивается.
@@ -3958,6 +4068,89 @@ body {
     .cd-bell-toast {
         transition: none;
     }
+}
+
+/* Одноразовое модальное окно предложения утренних напоминаний (на 5-й день входа) */
+.notify-prompt-modal {
+    padding: calc(var(--tg-safe-top, 0px) + 16px) 16px calc(var(--tg-safe-bottom, 0px) + 16px);
+    box-sizing: border-box;
+}
+
+.notify-prompt-card {
+    text-align: center;
+    padding: 28px 22px 22px !important;
+}
+
+.notify-prompt-close {
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.notify-prompt-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.2px solid rgba(206, 170, 98, 0.7);
+    background: linear-gradient(145deg, #fff9e8, #f6e3ab);
+}
+
+.notify-prompt-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: #8c6214;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.notify-prompt-eyebrow {
+    margin-bottom: 4px;
+}
+
+.notify-prompt-title {
+    margin: 4px 0 10px 0 !important;
+}
+
+.notify-prompt-text {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: #3f2c54;
+    margin: 0 0 8px;
+}
+
+.notify-prompt-hint {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: #78658c;
+    margin: 0 0 16px;
+}
+
+.notify-prompt-error {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    color: #a33b5a;
+    margin: 0 0 12px;
+}
+
+.notify-prompt-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.notify-prompt-actions .cd-btn.is-busy {
+    opacity: 0.65;
+    pointer-events: none;
 }
 
 /* --- 2. СДВОЕННЫЙ ВИДЖЕТ: ЭНЕРГИИ ВСЕЛЕННОЙ + ГОРОСКОП --- */
@@ -6534,30 +6727,198 @@ body {
 .mandala-legend {
     display: flex;
     justify-content: center;
-    gap: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
     font-size: 12.5px;
-    color: #7a6a8c;
+    color: #5d447b;
 }
 
-.mandala-legend span {
+.mandala-talisman-pill {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(255, 251, 246, 0.88);
+    border: 1px solid rgba(168, 152, 196, 0.48);
+    box-shadow: 0 3px 10px rgba(126, 94, 158, 0.12);
+    font-variant-numeric: tabular-nums;
 }
 
-.mandala-legend-dot {
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    display: inline-block;
+.mandala-talisman-pill strong {
+    font-weight: 700;
+    color: #4b2c70;
 }
 
-.mandala-legend-dot--practice {
-    background: linear-gradient(135deg, #eea2bd 0%, #bdb4ee 100%);
+.mandala-talisman-pill--gold {
+    background: linear-gradient(135deg, rgba(255, 248, 224, 0.94), rgba(252, 236, 206, 0.9));
+    border-color: rgba(214, 160, 60, 0.6);
 }
 
-.mandala-legend-dot--gold {
-    background: #f2c14e;
+.mandala-talisman-pill--gold strong {
+    color: #8a5a12;
+}
+
+.mandala-story-btn[hidden],
+.mandala-convert-btn[hidden],
+.mandala-quest-card[hidden],
+.mandala-buy-btn[hidden] {
+    display: none;
+}
+
+.mandala-convert-btn {
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(214, 160, 60, 0.72);
+    background: linear-gradient(135deg, rgba(255, 250, 232, 0.96), rgba(252, 238, 206, 0.92));
+    color: #6b4308;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(188, 138, 42, 0.16);
+    transition: transform 0.15s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mandala-convert-btn:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+.mandala-convert-btn:disabled {
+    opacity: 0.52;
+    cursor: default;
+    border-color: rgba(168, 152, 196, 0.45);
+    background: rgba(255, 251, 246, 0.72);
+    color: #7c6d8e;
+    box-shadow: none;
+}
+
+.mandala-quest-card {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255, 251, 246, 0.86);
+    border: 1px solid rgba(178, 160, 206, 0.46);
+    box-shadow: 0 4px 14px rgba(126, 94, 158, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.mandala-quest-card.is-done {
+    background: linear-gradient(135deg, rgba(255, 249, 232, 0.94), rgba(249, 238, 250, 0.9));
+    border-color: rgba(214, 164, 64, 0.65);
+}
+
+.mandala-quest-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #4b2c70;
+}
+
+.mandala-quest-progress {
+    font-variant-numeric: tabular-nums;
+    color: #8a5a12;
+}
+
+.mandala-quest-bar {
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(168, 152, 196, 0.25);
+    overflow: hidden;
+}
+
+.mandala-quest-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #9d7bc8 0%, #e1b257 100%);
+    transition: width 0.35s ease;
+}
+
+.mandala-quest-card.is-done .mandala-quest-fill {
+    background: linear-gradient(90deg, #d89f38 0%, #f1cc6c 100%);
+}
+
+.mandala-quest-desc {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #6f5f82;
+}
+
+.mandala-buy-btn {
+    border-color: rgba(214, 164, 64, 0.7);
+    background: linear-gradient(135deg, rgba(255, 251, 240, 0.94) 0%, rgba(250, 238, 214, 0.85) 100%);
+    color: #6b4308;
+}
+
+.mandala-pack-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+    margin: 4px 0;
+}
+
+.mandala-pack-item {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(206, 170, 98, 0.55);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mandala-pack-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.mandala-pack-name {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #4b2c70;
+}
+
+.mandala-pack-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: #8a5a12;
+    white-space: nowrap;
+}
+
+.mandala-pack-items {
+    font-size: 13px;
+    color: #5f4d75;
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.mandala-pack-note {
+    margin: 2px 0 4px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: #7a6a8c;
+}
+
+.mrich-btn--secondary {
+    background: rgba(255, 255, 255, 0.85);
+    color: #4b2c70;
+    border: 1px solid rgba(168, 152, 196, 0.65);
 }
 
 .mandala-meta {
@@ -6764,10 +7125,51 @@ body {
     stroke-width: 5px;
 }
 
+/* 22.11.2026: подсветка незакрашенных областей в общей мандале */
+#sharedArt {
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    touch-action: pan-y;
+}
+
+#sharedArt.is-zoomed {
+    touch-action: none;
+    cursor: grab;
+}
+
+#sharedArt svg {
+    transform-origin: 50% 50%;
+    will-change: transform;
+}
+
+#sharedArt svg.is-animating {
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#sharedArt.show-unpainted .shared-region.is-filled {
+    fill-opacity: 0.2;
+}
+
+#sharedArt.show-unpainted .shared-region:not(.is-filled) {
+    stroke: #c83e6e;
+    stroke-width: 4px;
+    animation: sharedUnpaintedPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes sharedUnpaintedPulse {
+    0%, 100% { fill: rgba(232, 93, 138, 0.28); }
+    50% { fill: rgba(232, 93, 138, 0.72); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .shared-region.is-paintable,
-    .shared-region.is-new {
+    .shared-region.is-new,
+    #sharedArt.show-unpainted .shared-region:not(.is-filled) {
         animation: none;
+    }
+    #sharedArt.show-unpainted .shared-region:not(.is-filled) {
+        fill: rgba(232, 93, 138, 0.55);
     }
 }
 
@@ -6788,6 +7190,25 @@ body {
 
 .mrich {
     position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    touch-action: pan-y;
+}
+
+.mrich.is-zoomed {
+    touch-action: none;
+    cursor: grab;
+}
+
+.mrich-stage {
+    width: 100%;
+    height: 100%;
+    transform-origin: 50% 50%;
+    will-change: transform;
+}
+
+.mrich-stage.is-animating {
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .mrich-canvas {
@@ -6846,6 +7267,93 @@ body {
 .mrich.is-alive .mrich-canvas {
     animation: mrichSpin 140s linear infinite;
     will-change: transform; /* отдельный слой: вращение без перерисовки страницы */
+}
+
+/* 22.11.2026: мандалы с вертикальным сюжетом (например, Хранительница p2) не вращаются, сияние остаётся */
+.mrich--nospin.is-alive .mrich-canvas {
+    animation: none;
+}
+
+/* 22.11.2026: панель подсветки незакрашенных областей и масштаба под мандалой */
+.mandala-tools {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: -2px;
+}
+
+.mandala-tools[hidden] {
+    display: none;
+}
+
+.mandala-zoom-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.mandala-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 34px;
+    padding: 0 11px;
+    border-radius: 12px;
+    border: 1px solid rgba(201, 160, 92, 0.45);
+    background: rgba(255, 251, 246, 0.86);
+    color: #5d447b;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease, transform 0.12s ease;
+}
+
+.mandala-tool-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.mandala-tool-btn:disabled {
+    opacity: 0.42;
+    cursor: default;
+}
+
+.mandala-tool-btn[hidden] {
+    display: none;
+}
+
+.mandala-tool-ico {
+    font-size: 13px;
+    color: #c9963b;
+}
+
+.mandala-tool-btn--highlight.is-active {
+    background: linear-gradient(135deg, #fce0eb, #fdf0d8);
+    border-color: rgba(232, 93, 138, 0.7);
+    color: #8f234c;
+    box-shadow: 0 0 12px rgba(232, 93, 138, 0.25);
+}
+
+.mandala-tool-btn--highlight.is-active .mandala-tool-ico {
+    color: #d94378;
+}
+
+.mandala-zoom-btn {
+    width: 34px;
+    padding: 0;
+    font-size: 17px;
+    font-weight: 500;
+}
+
+.mandala-zoom-reset {
+    min-width: 44px;
+    padding: 0 8px;
+    font-variant-numeric: tabular-nums;
 }
 
 .mrich.is-alive::before {
@@ -7034,7 +7542,34 @@ html:not(.mandala-vip) #sheetGiftBar {
     display: none !important;
 }
 
-/* 14.11.2026: счётчик капель на экранах практики и перелёт «+1 🪷» (js/mandala.js) */
+/* 23.11.2026: ювелирные SVG-иконки талисманов (Луна 1 и Солнце 1) с живым золотым бликом */
+.talisman-ico {
+    display: inline-block;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.talisman-ico--silver {
+    filter: drop-shadow(0 1px 3px rgba(72, 62, 108, 0.32));
+}
+
+.talisman-ico--gold {
+    filter: drop-shadow(0 1px 4px rgba(176, 122, 28, 0.45));
+    animation: talismanShimmer 3.6s ease-in-out infinite;
+}
+
+@keyframes talismanShimmer {
+    0%, 72%, 100% { filter: brightness(1) drop-shadow(0 1px 4px rgba(176, 122, 28, 0.45)); }
+    84% { filter: brightness(1.22) drop-shadow(0 0 6px rgba(255, 224, 130, 0.92)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .talisman-ico--gold {
+        animation: none;
+    }
+}
+
+/* 14.11.2026: счётчик талисманов на экранах практики и перелёт «+1» (js/mandala.js) */
 .drop-hud {
     position: fixed;
     top: calc(env(safe-area-inset-top, 0px) + 10px);
@@ -7042,19 +7577,31 @@ html:not(.mandala-vip) #sheetGiftBar {
     z-index: 2500;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: 6px 14px;
     border-radius: 999px;
     background: rgba(255, 250, 246, 0.92);
-    border: 1px solid rgba(214, 120, 160, 0.55);
+    border: 1px solid rgba(214, 170, 90, 0.55);
     box-shadow: 0 6px 18px rgba(126, 94, 158, 0.22);
     font-size: 15px;
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
     color: #5b4478;
     opacity: 0;
     transform: translate(-50%, -12px);
     transition: opacity 0.3s ease, transform 0.3s ease;
     pointer-events: none;
+}
+
+.drop-hud-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.drop-hud-sep {
+    opacity: 0.42;
+    font-weight: 500;
 }
 
 .drop-hud.is-on {
@@ -7065,6 +7612,9 @@ html:not(.mandala-vip) #sheetGiftBar {
 .drop-fly {
     position: fixed;
     z-index: 2600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 6px 14px;
     border-radius: 999px;
     background: linear-gradient(135deg, #fff4dc, #fbe3f0);
@@ -7078,8 +7628,9 @@ html:not(.mandala-vip) #sheetGiftBar {
     will-change: transform, opacity;
 }
 
-/* 15.11: «+3 ✨» за сторис — крупнее и золотой, чтобы его точно заметили после возвращения из редактора */
+/* 15.11: «+3» с золотым талисманом за сторис — крупнее и золотой, чтобы его точно заметили после возвращения из редактора */
 .drop-fly--gold {
+    gap: 8px;
     padding: 10px 22px;
     font-size: 26px;
     color: #8a5a12;
@@ -7090,8 +7641,23 @@ html:not(.mandala-vip) #sheetGiftBar {
 
 .drop-hud.is-bump,
 .cd-gift-chip.is-bump,
-.mandala-subcaption.is-bump {
+.mandala-subcaption.is-bump,
+.mandala-talisman-pill.is-bump {
     animation: dropBump 0.7s ease;
+}
+
+.cd-mandala-btn.is-bump {
+    animation: dropBumpCrown 0.7s ease;
+}
+
+.cd-mandala-btn.is-bump .cd-mandala-disc {
+    box-shadow: 0 0 28px rgba(255, 224, 146, 0.98), 0 0 0 7px rgba(240, 184, 96, 0.36);
+}
+
+@keyframes dropBumpCrown {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.12); }
+    100% { transform: scale(1); }
 }
 
 .mandala-subcaption.is-bump {
