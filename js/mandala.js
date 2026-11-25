@@ -14,12 +14,50 @@
     const LEVEL_COUNT = ART_KEYS.length;
     const BOT_LINK = 'https://t.me/Djamiliakha_bot?start=go';
     const CONVERT_RATE = 3;                             // 3 серебряных -> 1 золотой
+    const EFFECT_COST = 3;                              // 3 золотых за один процедурный эффект на мандалу
+    const REPAINT_COST = 9;                             // 9 золотых за полную перерисовку мандалы (без возврата талисманов)
+    const EFFECT_PREVIEW_MS = 5000;                     // бесплатная примерка на 5 секунд (1 раз на эффект на мандалу)
     const QUEST_TARGET = 5;                             // шагов задания на каждую мандалу
     const QUEST_STEP_SILVER = 3;                        // +3 серебряных за шаг задания
     const QUEST_BONUS_SILVER = 6;                       // +6 серебряных бонус при закрытии 5/5
     const TEST_PACK_SILVER = 30;
     const TEST_PACK_GOLD = 10;
     const LAYER_NAMES = { center: 'Сердце', petals: 'Лепестки', leaves: 'Листья', outer: 'Внешние лепестки', gold: 'Золотые лепестки' };
+    const EFFECTS = [
+        {
+            id: 'goldWave',
+            name: 'Живое золото',
+            desc: 'Периодическая мягкая световая волна по золотым контурам',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13c2.5-4 5.5-4 8 0s5.5 4 8 0 2.5-2 2-3"/><path d="M5 7l1.2 2.2L8.5 10 6.2 10.8 5 13l-1.2-2.2L1.5 10l2.3-.8z" fill="currentColor" stroke="none"/></svg>'
+        },
+        {
+            id: 'lightBreath',
+            name: 'Дыхание света',
+            desc: 'Тёплая сияющая аура в центре в спокойном дыхательном ритме',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor" fill-opacity="0.28"/><circle cx="12" cy="12" r="8.2" stroke-dasharray="2.5 2.5"/></svg>'
+        },
+        {
+            id: 'stardust',
+            name: 'Звёздная пыль',
+            desc: 'Парящие золотые искры и звёздочки-светлячки вокруг мандалы',
+            icon: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l1.3 4.2L17.5 8l-4.2 1.3L12 13.5l-1.3-4.2L6.5 8l4.2-1.3z"/><circle cx="6.2" cy="16.8" r="1.6"/><circle cx="17.5" cy="16.5" r="1.3"/><circle cx="12" cy="19.8" r="1.1"/></svg>'
+        },
+        {
+            id: 'touchTrail',
+            name: 'Отклик на касание',
+            desc: 'Шлейф золотых искр и мягкая подсветка при ведении пальцем',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M12 12.5v6.5"/><circle cx="12" cy="9.5" r="3" fill="currentColor" fill-opacity="0.22"/><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0"/><path d="M4 9.5a8 8 0 0 1 16 0" opacity="0.55"/></svg>'
+        },
+        {
+            id: 'royalCrown',
+            name: 'Королевский венец',
+            desc: 'Тонкие медленно вращающиеся золотые кольца и лучи вокруг мандалы',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5.3" stroke-dasharray="2.2 2.2"/><path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2" stroke-linecap="round"/></svg>'
+        }
+    ];
+    const EFFECT_IDS = EFFECTS.map(e => e.id);
+    const effectById = id => EFFECTS.find(e => e.id === id) || null;
+    const artKeyOf = level => ART_KEYS[Math.max(1, Math.min(LEVEL_COUNT, level || 1)) - 1] || 'p1';
     // Послание Джамили при завершении мандалы (черновики — на утверждении у Валентина)
     const FINISH_TEXT = {
         p1: '✨✨✨\nВаш лотос раскрылся.\n\n' +
@@ -63,7 +101,12 @@
             goldSpent: 0,       // потрачено золотых на раскраску
             level: 1,           // текущая мандала 1..5 (дальше — когда готова её картина)
             done: false,        // все пять раскрашены
-            paint: {},          // раскраска текущей мандалы: { номер области: { l: 'gold' | 'p', c: картина 0..2 } }
+            paint: {},          // раскраска текущей мандалы (синхронна с paints[artKeyOf(level)])
+            paints: {},         // раскраски всех мандал: { p1: {...}, p2: {...} }
+            paintRev: {},       // счётчики платных перерисовок по мандалам: { p1: 0, ... }
+            effects: {},        // купленные эффекты по мандалам: { p1: ['goldWave', ...], ... }
+            disabledEffects: {},// выключенные тумблером купленные эффекты: { p1: [...], ... }
+            effectTrials: {},   // использованные 5-секундные примерки по мандалам: { p1: [...], ... }
             flags: {},          // одноразовые поводы: welcome, migrated, finished_p1, day30, moon_YYYY-MM-DD …
             quests: {},         // задания по уровням: { '1': { shares: 0..5, done: false } }
             cycle: { key: '', card: false, audio: false, video: false, fullBonus: false },
@@ -88,6 +131,128 @@
         return out;
     }
 
+    function normalizePaintObj(rawPaint) {
+        const out = {};
+        if (!rawPaint || typeof rawPaint !== 'object') return out;
+        Object.keys(rawPaint).forEach(k => {
+            const e = rawPaint[k];
+            if (!e || typeof e !== 'object') return;
+            const c = parseInt(e.c, 10);
+            if (c !== 0 && c !== 1 && c !== 2) return;
+            out[String(k)] = { l: e.l === 'gold' ? 'gold' : 'p', c };
+        });
+        return out;
+    }
+
+    function normalizePaintsMap(raw) {
+        const out = {};
+        if (!raw || typeof raw !== 'object') return out;
+        ART_KEYS.forEach(k => {
+            if (raw[k] && typeof raw[k] === 'object') out[k] = normalizePaintObj(raw[k]);
+        });
+        return out;
+    }
+
+    function normalizePaintRev(raw) {
+        const out = {};
+        if (!raw || typeof raw !== 'object') return out;
+        ART_KEYS.forEach(k => {
+            const n = Math.max(0, parseInt(raw[k], 10) || 0);
+            if (n > 0) out[k] = n;
+        });
+        return out;
+    }
+
+    function normalizeEffectsMap(raw) {
+        const out = {};
+        if (!raw || typeof raw !== 'object') return out;
+        ART_KEYS.forEach(k => {
+            const arr = Array.isArray(raw[k]) ? raw[k] : [];
+            const clean = [];
+            arr.forEach(id => {
+                const s = String(id || '');
+                if (EFFECT_IDS.indexOf(s) !== -1 && clean.indexOf(s) === -1) clean.push(s);
+            });
+            if (clean.length) out[k] = clean;
+        });
+        return out;
+    }
+
+    function mergeEffectsMap(left, right) {
+        const l = normalizeEffectsMap(left);
+        const r = normalizeEffectsMap(right);
+        const out = {};
+        ART_KEYS.forEach(k => {
+            const merged = (l[k] || []).slice();
+            (r[k] || []).forEach(id => { if (merged.indexOf(id) === -1) merged.push(id); });
+            if (merged.length) out[k] = merged;
+        });
+        return out;
+    }
+
+    function filterDisabledByOwned(disabledMap, ownedMap) {
+        const d = normalizeEffectsMap(disabledMap);
+        const o = normalizeEffectsMap(ownedMap);
+        const out = {};
+        ART_KEYS.forEach(k => {
+            const owned = o[k] || [];
+            const kept = (d[k] || []).filter(id => owned.indexOf(id) !== -1);
+            if (kept.length) out[k] = kept;
+        });
+        return out;
+    }
+
+    function ensureCompletedMandalaPaint(targetState, level) {
+        const art = artOf(level);
+        if (!art) return;
+        const k = art.key;
+        if ((targetState.paintRev && targetState.paintRev[k]) > 0) return;
+        const cur = targetState.paints[k];
+        if (cur && Object.keys(cur).length > 0) return;
+        const filled = {};
+        art.regions.forEach(r => {
+            if (r.layer === 'decor') return;
+            filled[String(r.id)] = { l: r.layer === 'gold' ? 'gold' : 'p', c: 0 };
+        });
+        targetState.paints[k] = filled;
+    }
+
+    function syncCurrentPaintAlias() {
+        const k = artKeyOf(state.level);
+        if (!state.paints || typeof state.paints !== 'object') state.paints = {};
+        state.paint = state.paints[k] ? state.paints[k] : (state.paints[k] = {});
+    }
+
+    function paintMapOf(level) {
+        const k = artKeyOf(level);
+        if (!state.paints || typeof state.paints !== 'object') state.paints = {};
+        return state.paints[k] || {};
+    }
+
+    function ownedEffectsOf(level) {
+        const k = artKeyOf(level);
+        return (state.effects && state.effects[k]) || [];
+    }
+
+    function disabledEffectsOf(level) {
+        const k = artKeyOf(level);
+        return (state.disabledEffects && state.disabledEffects[k]) || [];
+    }
+
+    function activeEffectsOf(level) {
+        const disabled = disabledEffectsOf(level);
+        return ownedEffectsOf(level).filter(id => disabled.indexOf(id) === -1);
+    }
+
+    function hasOwnedEffect(level, id) {
+        return ownedEffectsOf(level).indexOf(id) !== -1;
+    }
+
+    function hasUsedTrial(level, id) {
+        const k = artKeyOf(level);
+        return ((state.effectTrials && state.effectTrials[k]) || []).indexOf(id) !== -1;
+    }
+
     function loadState() {
         try {
             const raw = JSON.parse(localStorage.getItem(STATE_KEY) || 'null');
@@ -97,15 +262,31 @@
                 s.quests = normalizeQuests(raw.quests);
                 s.boughtP = Math.max(0, parseInt(s.boughtP, 10) || 0);
                 s.boughtG = Math.max(0, parseInt(s.boughtG, 10) || 0);
+                s.paints = normalizePaintsMap(raw.paints);
+                s.paintRev = normalizePaintRev(raw.paintRev);
+                s.effects = normalizeEffectsMap(raw.effects);
+                s.disabledEffects = filterDisabledByOwned(raw.disabledEffects, s.effects);
+                s.effectTrials = normalizeEffectsMap(raw.effectTrials);
                 if (raw.v !== STATE_V) {
                     // Прежние версии (плоские мандалы): раскраска заново, все заработанные капли возвращаются
                     s.v = STATE_V;
                     s.level = 1;
                     s.done = false;
                     s.paint = {};
+                    s.paints = {};
+                    s.paintRev = {};
                     s.practiceSpent = 0;
                     s.goldSpent = 0;
                     delete s.seen;
+                } else {
+                    const curKey = artKeyOf(s.level);
+                    const legacyPaint = normalizePaintObj(raw.paint);
+                    if ((!s.paints[curKey] || !Object.keys(s.paints[curKey]).length) && Object.keys(legacyPaint).length) {
+                        s.paints[curKey] = legacyPaint;
+                    }
+                    for (let l = 1; l < s.level; l++) ensureCompletedMandalaPaint(s, l);
+                    if (s.done) ensureCompletedMandalaPaint(s, s.level);
+                    s.paint = s.paints[curKey] || {};
                 }
                 return s;
             }
@@ -114,6 +295,8 @@
     }
 
     let state = loadState();
+    let disabledTouched = false;
+    let activeViewLevel = Math.max(1, Math.min(LEVEL_COUNT, state.level || 1));
 
     function saveState(skipCloud) {
         try { localStorage.setItem(STATE_KEY, JSON.stringify(state)); } catch (_) {}
@@ -162,10 +345,20 @@
                         state.resetAt = rReset;
                         state.level = remote.level || 1;
                         state.done = !!remote.done;
-                        state.paint = remote.paint || {};
+                        state.paints = normalizePaintsMap(remote.paints);
+                        state.paintRev = normalizePaintRev(remote.paintRev);
+                        const rk = artKeyOf(state.level);
+                        if ((!state.paints[rk] || !Object.keys(state.paints[rk]).length) && remote.paint && !(state.paintRev[rk] > 0)) {
+                            state.paints[rk] = normalizePaintObj(remote.paint);
+                        }
+                        syncCurrentPaintAlias();
                         state.practiceSpent = remote.practiceSpent || 0;
                         state.goldSpent = remote.goldSpent || 0;
                         state.quests = normalizeQuests(remote.quests);
+                        state.effects = normalizeEffectsMap(remote.effects);
+                        state.disabledEffects = filterDisabledByOwned(remote.disabledEffects, state.effects);
+                        state.effectTrials = normalizeEffectsMap(remote.effectTrials);
+                        activeViewLevel = Math.max(1, Math.min(LEVEL_COUNT, state.level));
                     }
                 } else {
                     ['practiceSpent', 'goldSpent'].forEach(k => {
@@ -177,15 +370,40 @@
                         const shares = Math.max(lq.shares || 0, rq[k].shares || 0);
                         state.quests[k] = { shares, done: !!(lq.done || rq[k].done || shares >= QUEST_TARGET) };
                     });
-                }
-                if (rReset !== lReset) {
-                    // уже решено выше
-                } else if ((remote.level || 1) > state.level || (remote.done && !state.done)) {
-                    state.level = remote.level || 1;
-                    state.done = !!remote.done;
-                    state.paint = remote.paint || {};
-                } else if ((remote.level || 1) === state.level) {
-                    state.paint = Object.assign({}, remote.paint || {}, state.paint);
+                    state.effects = mergeEffectsMap(state.effects, remote.effects);
+                    state.effectTrials = mergeEffectsMap(state.effectTrials, remote.effectTrials);
+                    if (!disabledTouched && remote.disabledEffects) {
+                        state.disabledEffects = filterDisabledByOwned(remote.disabledEffects, state.effects);
+                    } else {
+                        state.disabledEffects = filterDisabledByOwned(state.disabledEffects, state.effects);
+                    }
+                    const rPaints = normalizePaintsMap(remote.paints);
+                    const rRev = normalizePaintRev(remote.paintRev);
+                    const rKey = artKeyOf(remote.level || 1);
+                    if ((!rPaints[rKey] || !Object.keys(rPaints[rKey]).length) && remote.paint && !(rRev[rKey] > 0)) {
+                        rPaints[rKey] = normalizePaintObj(remote.paint);
+                    }
+                    const prevLevel = state.level;
+                    if ((remote.level || 1) > state.level || (remote.done && !state.done)) {
+                        state.level = remote.level || 1;
+                        state.done = !!remote.done;
+                    }
+                    ART_KEYS.forEach(k => {
+                        const sr = rRev[k] || 0, lr = state.paintRev[k] || 0;
+                        if (sr > lr) {
+                            state.paintRev[k] = sr;
+                            if (rPaints[k] && Object.keys(rPaints[k]).length) state.paints[k] = rPaints[k];
+                            else delete state.paints[k];
+                        } else if (sr === lr) {
+                            const lp = state.paints[k] || {}, rp = rPaints[k] || {};
+                            const comb = Object.assign({}, rp, lp);
+                            if (Object.keys(comb).length) state.paints[k] = comb;
+                        }
+                    });
+                    if (state.level !== prevLevel) activeViewLevel = Math.max(1, Math.min(LEVEL_COUNT, state.level));
+                    for (let l = 1; l < state.level; l++) ensureCompletedMandalaPaint(state, l);
+                    if (state.done) ensureCompletedMandalaPaint(state, state.level);
+                    syncCurrentPaintAlias();
                 }
                 state.flags = Object.assign({}, remote.flags || {}, state.flags);
                 if (remote.firstSeen && (!state.firstSeen || remote.firstSeen < state.firstSeen)) state.firstSeen = remote.firstSeen;
@@ -202,6 +420,7 @@
 
     // ---------- Серверная синхронизация (Google Apps Script / Economy.js) ----------
     function buildEconomySnapshot() {
+        syncCurrentPaintAlias();
         return {
             v: state.v,
             practiceAll: state.practiceAll || 0,
@@ -213,6 +432,11 @@
             level: state.level || 1,
             done: !!state.done,
             paint: state.paint || {},
+            paints: state.paints || {},
+            paintRev: state.paintRev || {},
+            effects: state.effects || {},
+            disabledEffects: state.disabledEffects || {},
+            effectTrials: state.effectTrials || {},
             flags: state.flags || {},
             quests: state.quests || {},
             storyDay: state.storyDay || '',
@@ -233,24 +457,61 @@
             state.resetAt = sReset;
             state.level = srv.level || 1;
             state.done = !!srv.done;
-            state.paint = srv.paint || {};
+            state.paints = normalizePaintsMap(srv.paints);
+            state.paintRev = normalizePaintRev(srv.paintRev);
+            const sk = artKeyOf(state.level);
+            if ((!state.paints[sk] || !Object.keys(state.paints[sk]).length) && srv.paint && !(state.paintRev[sk] > 0)) {
+                state.paints[sk] = normalizePaintObj(srv.paint);
+            }
+            syncCurrentPaintAlias();
             state.practiceSpent = srv.practiceSpent || 0;
             state.goldSpent = srv.goldSpent || 0;
             state.quests = normalizeQuests(srv.quests);
             state.practiceAll = Math.max(0, Number(srv.practiceAll) || 0);
             state.goldAll = Math.max(0, Number(srv.goldAll) || 0);
+            state.effects = normalizeEffectsMap(srv.effects);
+            state.disabledEffects = filterDisabledByOwned(srv.disabledEffects, state.effects);
+            state.effectTrials = normalizeEffectsMap(srv.effectTrials);
+            activeViewLevel = Math.max(1, Math.min(LEVEL_COUNT, state.level));
         } else if (sReset === lReset) {
             if (typeof srv.practiceAll === 'number') state.practiceAll = Math.max(state.practiceAll, srv.practiceAll);
             if (typeof srv.goldAll === 'number') state.goldAll = Math.max(state.goldAll, srv.goldAll);
             if (typeof srv.practiceSpent === 'number') state.practiceSpent = Math.max(state.practiceSpent, srv.practiceSpent);
             if (typeof srv.goldSpent === 'number') state.goldSpent = Math.max(state.goldSpent, srv.goldSpent);
+            state.effects = mergeEffectsMap(state.effects, srv.effects);
+            state.effectTrials = mergeEffectsMap(state.effectTrials, srv.effectTrials);
+            if (!disabledTouched && srv.disabledEffects) {
+                state.disabledEffects = filterDisabledByOwned(srv.disabledEffects, state.effects);
+            } else {
+                state.disabledEffects = filterDisabledByOwned(state.disabledEffects, state.effects);
+            }
+            const sPaints = normalizePaintsMap(srv.paints);
+            const sRev = normalizePaintRev(srv.paintRev);
+            const sKey = artKeyOf(srv.level || 1);
+            if ((!sPaints[sKey] || !Object.keys(sPaints[sKey]).length) && srv.paint && !(sRev[sKey] > 0)) {
+                sPaints[sKey] = normalizePaintObj(srv.paint);
+            }
+            const prevLevel = state.level;
             if ((srv.level || 1) > state.level || (srv.done && !state.done)) {
                 state.level = srv.level || 1;
                 state.done = !!srv.done;
-                state.paint = srv.paint || {};
-            } else if ((srv.level || 1) === state.level && srv.paint && typeof srv.paint === 'object') {
-                state.paint = Object.assign({}, srv.paint, state.paint);
             }
+            ART_KEYS.forEach(k => {
+                const sr = sRev[k] || 0, lr = state.paintRev[k] || 0;
+                if (sr > lr) {
+                    state.paintRev[k] = sr;
+                    if (sPaints[k] && Object.keys(sPaints[k]).length) state.paints[k] = sPaints[k];
+                    else delete state.paints[k];
+                } else if (sr === lr) {
+                    const lp = state.paints[k] || {}, sp = sPaints[k] || {};
+                    const comb = Object.assign({}, sp, lp);
+                    if (Object.keys(comb).length) state.paints[k] = comb;
+                }
+            });
+            if (state.level !== prevLevel) activeViewLevel = Math.max(1, Math.min(LEVEL_COUNT, state.level));
+            for (let l = 1; l < state.level; l++) ensureCompletedMandalaPaint(state, l);
+            if (state.done) ensureCompletedMandalaPaint(state, state.level);
+            syncCurrentPaintAlias();
             const sq = normalizeQuests(srv.quests);
             Object.keys(sq).forEach(k => {
                 const lq = state.quests[k] || { shares: 0, done: false };
@@ -320,16 +581,18 @@
         return { shares, target: QUEST_TARGET, done: !!q.done || shares >= QUEST_TARGET };
     }
 
-    function getProgress() {
-        const level = Math.min(state.level, LEVEL_COUNT);
+    function getLevelProgress(targetLevel) {
+        const level = Math.max(1, Math.min(LEVEL_COUNT, targetLevel || state.level || 1));
         const art = artOf(level);
         const caps = capsOf(art);
+        const pMap = paintMapOf(level);
         let paintedP = 0, paintedG = 0;
-        Object.keys(state.paint).forEach(id => {
-            if (state.paint[id].l === 'gold') paintedG++; else paintedP++;
+        Object.keys(pMap).forEach(id => {
+            if (pMap[id].l === 'gold') paintedG++; else paintedP++;
         });
         return {
             level,
+            isCurrent: level === state.level,
             art,
             soon: !art,                        // картина этой мандалы ещё готовится
             practiceCap: caps.practice,
@@ -342,6 +605,10 @@
             quest: questOf(level),
             done: !!state.done
         };
+    }
+
+    function getProgress() {
+        return getLevelProgress(state.level);
     }
 
     // Раскрашенная мандала остаётся «живой», пока не готова картина следующей; потом открывается следующая
@@ -358,8 +625,13 @@
         }
         if (!byUser || !artOf(state.level + 1)) return false;
         const finished = state.level;
+        const finKey = artKeyOf(finished);
+        state.paints[finKey] = Object.assign({}, paintMapOf(finished));
         state.level = finished + 1;
-        state.paint = {};
+        const nextKey = artKeyOf(state.level);
+        state.paints[nextKey] = state.paints[nextKey] || {};
+        syncCurrentPaintAlias();
+        activeViewLevel = state.level;
         ensureQuest(state.level);
         saveState();
         sendEconomyEvent({ type: 'advance', level: state.level });
@@ -563,19 +835,20 @@
         if (isPathOpen()) renderPath();
     }
 
-    function convertSilverToGold(btn) {
+    function convertSilverToGold(btn, silent) {
         const pr = getProgress();
-        if (pr.dropsP < CONVERT_RATE) return;
+        if (pr.dropsP < CONVERT_RATE) return false;
         haptic('select');
         state.practiceSpent += CONVERT_RATE;
         state.goldAll += 1;
         state.active = true;
         saveState();
-        const flying = flyDrop(btn, 0, { count: '+1', gold: true });
+        const flying = silent ? false : flyDrop(btn, 0, { count: '+1', gold: true });
         toast('✨ 3 серебряных талисмана превратились в 1 золотой');
         if (!flying) { renderChip(); syncHud(); }
         if (isPathOpen()) renderPath();
         sendEconomyEvent({ type: 'convert', costSilver: CONVERT_RATE, gainGold: 1 });
+        return true;
     }
 
     // ---------- Счётчик талисманов и перелёт «+1» ----------
@@ -591,6 +864,10 @@
     }
 
     function syncHud() {
+        const crownCanvas = document.getElementById('mandalaCrownCanvas');
+        if (crownCanvas && crownCanvas._thumbCtrl && crownCanvas.offsetParent !== null) {
+            crownCanvas._thumbCtrl.kick();
+        }
         if (!hud || !isVip()) return;
         const daily = document.getElementById('daily');
         const show = state.active && daily && daily.classList.contains('active') && !chipVisible();
@@ -731,12 +1008,11 @@
     }
 
     // ---------- Кнопка-медальон на главной (вместо Луны и старой боковой плашки) ----------
-    function thumbFallbackArt(level) {
+    function thumbFallbackLevel(level) {
         for (let l = level; l >= 1; l--) {
-            const a = artOf(l);
-            if (a) return a;
+            if (artOf(l)) return l;
         }
-        return artOf(1);
+        return 1;
     }
 
     function renderChip() {
@@ -771,15 +1047,19 @@
             }
         }
         if (canvas && window.MandalaCanvas && window.MandalaCanvas.renderThumb) {
-            const art = vip ? (pr.art || thumbFallbackArt(pr.level)) : artOf(1);
+            const targetLevel = vip ? (pr.art ? pr.level : thumbFallbackLevel(pr.level)) : 1;
+            const art = artOf(targetLevel);
             if (art) {
-                const paint = vip && pr.art ? state.paint : {};
-                const key = art.key + ':' + (vip && pr.art ? JSON.stringify(paint) : 'empty');
+                const paint = vip ? paintMapOf(targetLevel) : {};
+                const effects = vip ? activeEffectsOf(targetLevel) : [];
+                const key = art.key + ':' + (vip ? JSON.stringify(paint) + ':' + effects.join(',') : 'empty');
                 if (canvas._thumbKey !== key) {
                     canvas._thumbKey = key;
-                    window.MandalaCanvas.renderThumb(canvas, art, paint).catch(() => {
+                    window.MandalaCanvas.renderThumb(canvas, art, paint, { effects, bindTouchEl: btn }).catch(() => {
                         if (canvas._thumbKey === key) canvas._thumbKey = '';
                     });
+                } else if (canvas._thumbCtrl) {
+                    canvas._thumbCtrl.kick();
                 }
             }
         }
@@ -818,7 +1098,7 @@
         const hlBtn = document.getElementById('mandalaHighlightBtn');
         const hasArt = !!(pr && !pr.soon && window.MandalaCanvas);
         if (tools) tools.hidden = !hasArt;
-        const showHl = hasArt && !pr.complete && !pr.done;
+        const showHl = hasArt && !pr.complete;
         if (!showHl && highlightUnpainted) {
             highlightUnpainted = false;
             if (view && view.setHighlightUnpainted) view.setHighlightUnpainted(false);
@@ -833,22 +1113,35 @@
     }
 
     function paintOf(id) {
-        const p = state.paint[id];
+        const p = paintMapOf(activeViewLevel)[id];
         return p ? p.c : undefined;
     }
 
     function canPaintRegion(r) {
-        const pr = getProgress();
-        if (pr.complete || pr.done || state.paint[r.id]) return false;
+        const pr = getLevelProgress(activeViewLevel);
+        const pMap = paintMapOf(activeViewLevel);
+        if (pr.complete || pMap[r.id]) return false;
         return r.layer === 'gold' ? pr.dropsG > 0 : pr.dropsP > 0;
+    }
+
+    function switchViewLevel(targetLevel) {
+        const clamped = Math.max(1, Math.min(state.level, targetLevel || 1));
+        if (clamped === activeViewLevel) return;
+        stopPreview();
+        hidePalette();
+        highlightUnpainted = false;
+        activeViewLevel = clamped;
+        renderPath();
     }
 
     function renderPath() {
         const box = document.getElementById('mandalaArt');
         if (!box) return;
         maybeAdvance();
-        const pr = getProgress();
+        activeViewLevel = Math.max(1, Math.min(state.level, activeViewLevel || state.level));
+        const pr = getLevelProgress(activeViewLevel);
         if (!view || viewLevel !== pr.level) {
+            stopPreview();
             hidePalette();
             highlightUnpainted = false;
         }
@@ -861,12 +1154,14 @@
             syncToolsUi(pr);
             return;
         }
+        const effs = activeEffectsOf(pr.level);
         if (!view || viewLevel !== pr.level) {
             if (view) view.destroy();
             viewLevel = pr.level;
             view = window.MandalaCanvas.create(box, {
                 art: pr.art,
                 label: `Моя мандала «${pr.art.title}»`,
+                effects: effs,
                 paintOf,
                 canPaint: canPaintRegion,
                 onTap,
@@ -880,6 +1175,7 @@
                 syncToolsUi({ soon: true });
             });
         } else {
+            if (view.setEffects) view.setEffects(effs);
             view.refresh();
         }
         if (view) view.setAlive(pr.complete);
@@ -887,6 +1183,7 @@
     }
 
     function renderTexts(pr) {
+        const curPr = getProgress();
         const cap = document.getElementById('mandalaCaption');
         const sub = document.getElementById('mandalaSubcaption');
         const levels = document.getElementById('mandalaLevels');
@@ -899,7 +1196,7 @@
         const allDrops = pr.dropsP + pr.dropsG;
 
         if (cap) {
-            if (pr.done) cap.textContent = 'Все пять мандал раскрашены ✨';
+            if (pr.isCurrent && curPr.done) cap.textContent = 'Все пять мандал раскрашены ✨';
             else if (pr.soon) cap.textContent = `Мандала ${pr.level} из ${LEVEL_COUNT} готовится`;
             else if (pr.complete) cap.textContent = `«${pr.art.title}» раскрашена ✨`;
             else cap.textContent = `«${pr.art.title}» · раскрашено ${filled} из ${total}`;
@@ -912,27 +1209,46 @@
 
         const convertBtn = document.getElementById('mandalaConvertBtn');
         if (convertBtn) {
-            convertBtn.hidden = !!(pr.done || pr.soon);
+            convertBtn.hidden = !!pr.soon;
             convertBtn.disabled = pr.dropsP < CONVERT_RATE;
+        }
+
+        const effectsBtn = document.getElementById('mandalaEffectsBtn');
+        const effectsBadge = document.getElementById('mandalaEffectsBadge');
+        if (effectsBtn) {
+            effectsBtn.hidden = !!(pr.soon || !window.MandalaCanvas);
+            if (effectsBadge) {
+                const ownedCount = ownedEffectsOf(pr.level).length;
+                effectsBadge.textContent = `${ownedCount} / ${EFFECTS.length}`;
+            }
+        }
+
+        const viewBanner = document.getElementById('mandalaViewBanner');
+        const viewBannerText = document.getElementById('mandalaViewBannerText');
+        if (viewBanner) {
+            viewBanner.hidden = pr.isCurrent;
+            if (!pr.isCurrent && viewBannerText && pr.art) {
+                viewBannerText.textContent = `Просмотр: «${pr.art.title}» (${pr.level} из ${LEVEL_COUNT})`;
+            }
         }
 
         const questCard = document.getElementById('mandalaQuestCard');
         const questProgress = document.getElementById('mandalaQuestProgress');
         const questFill = document.getElementById('mandalaQuestFill');
         const questDesc = document.getElementById('mandalaQuestDesc');
-        if (questCard && pr.quest) {
-            questCard.hidden = !!(pr.done || pr.soon);
-            questCard.classList.toggle('is-done', pr.quest.done);
+        if (questCard && curPr.quest) {
+            questCard.hidden = !!(curPr.done || curPr.soon || !pr.isCurrent);
+            questCard.classList.toggle('is-done', curPr.quest.done);
             if (questProgress) {
-                questProgress.textContent = pr.quest.done
-                    ? `${pr.quest.target} / ${pr.quest.target} ✨`
-                    : `${pr.quest.shares} / ${pr.quest.target}`;
+                questProgress.textContent = curPr.quest.done
+                    ? `${curPr.quest.target} / ${curPr.quest.target} ✨`
+                    : `${curPr.quest.shares} / ${curPr.quest.target}`;
             }
             if (questFill) {
-                questFill.style.width = Math.round((pr.quest.shares / pr.quest.target) * 100) + '%';
+                questFill.style.width = Math.round((curPr.quest.shares / curPr.quest.target) * 100) + '%';
             }
             if (questDesc) {
-                if (pr.quest.done) {
+                if (curPr.quest.done) {
                     questDesc.textContent = 'Задание этой мандалы выполнено! Новое откроется на следующей мандале.';
                 } else if (isPremium()) {
                     questDesc.textContent = 'Подарите карту/мандалу подруге или выложите сторис: +3 🌙 за шаг и +6 🌙 за 5/5.';
@@ -946,11 +1262,15 @@
         if (storyBtn) storyBtn.hidden = !isPremium();
 
         const buyBtn = document.getElementById('mandalaBuyBtn');
-        if (buyBtn) buyBtn.hidden = !!(pr.done || pr.soon);
+        if (buyBtn) buyBtn.hidden = !!(curPr.done || curPr.soon || !pr.isCurrent);
 
         if (sub) {
             const parts = [];
-            if (pr.done) {
+            if (!pr.isCurrent && pr.art) {
+                parts.push(pr.complete
+                    ? 'Можно любоваться, добавлять эффекты за 3 ☀️ или перерисовать мандалу заново за 9 ☀️.'
+                    : `Вы перерисовываете «${pr.art.title}». Осталось ${leftP + leftG} ${plural(leftP + leftG, 'область', 'области', 'областей')}.`);
+            } else if (curPr.done) {
                 parts.push('Спасибо, что несёте свет. Продолжайте практику и дарите карты подругам.');
             } else if (pr.complete && artOf(pr.level + 1)) {
                 parts.push(`Ваша следующая мандала «${artOf(pr.level + 1).title}» уже ждёт.`);
@@ -986,11 +1306,29 @@
         if (levels) {
             levels.innerHTML = '';
             for (let n = 1; n <= LEVEL_COUNT; n++) {
-                const dot = document.createElement('span');
-                const isDone = n < pr.level || pr.done || (n === pr.level && pr.complete);
-                dot.className = 'mandala-level-dot' + (isDone ? ' is-done' : '') + (n === pr.level && !pr.done && !pr.complete ? ' is-current' : '');
-                dot.setAttribute('aria-hidden', 'true');
-                levels.appendChild(dot);
+                const nPr = n <= state.level ? getLevelProgress(n) : null;
+                const isDone = n < state.level || (nPr && nPr.complete);
+                const isCurrent = n === state.level;
+                const isViewing = n === pr.level;
+                if (n <= state.level && artOf(n)) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'mandala-level-btn' + (isDone ? ' is-done' : '') + (isCurrent ? ' is-current' : '') + (isViewing ? ' is-viewing' : '');
+                    btn.textContent = String(n);
+                    const artN = artOf(n);
+                    btn.setAttribute('aria-label', `Мандала ${n}: «${artN.title}»`);
+                    if (isViewing) btn.setAttribute('aria-current', 'page');
+                    btn.addEventListener('click', () => {
+                        haptic('select');
+                        switchViewLevel(n);
+                    });
+                    levels.appendChild(btn);
+                } else {
+                    const dot = document.createElement('span');
+                    dot.className = 'mandala-level-dot' + (isDone ? ' is-done' : '') + (isCurrent ? ' is-current' : '');
+                    dot.setAttribute('aria-hidden', 'true');
+                    levels.appendChild(dot);
+                }
             }
             levels.setAttribute('aria-label', `Мандала ${pr.level} из ${LEVEL_COUNT}`);
         }
@@ -1000,10 +1338,10 @@
             streakEl.textContent = `🕯 Ритм: ${s} ${plural(s, 'день', 'дня', 'дней')} подряд`;
         }
 
-        if (hint) hint.hidden = !!state.hintSeen;
+        if (hint) hint.hidden = !pr.isCurrent || !!state.hintSeen;
 
-        // У раскрашенной мандалы — кнопка к посланию, обоям и сторис
-        if (pr.complete && !pr.done) {
+        // У раскрашенной мандалы — кнопка к посланию, следующей мандале и платной перерисовке
+        if (pr.complete) {
             const pal = paletteEl();
             if (pal && !selectedId) {
                 pal.hidden = false;
@@ -1014,7 +1352,7 @@
                 b.textContent = '✨ Послание мандалы';
                 b.addEventListener('click', () => openFinish(pr.art));
                 pal.appendChild(b);
-                if (artOf(pr.level + 1)) {
+                if (pr.isCurrent && !curPr.done && artOf(state.level + 1)) {
                     const n = document.createElement('button');
                     n.type = 'button';
                     n.className = 'mrich-finish-open mrich-next-open';
@@ -1022,12 +1360,19 @@
                     n.addEventListener('click', openNext);
                     pal.appendChild(n);
                 }
+                const rep = document.createElement('button');
+                rep.type = 'button';
+                rep.className = 'mrich-finish-open mrich-repaint-open';
+                rep.textContent = `Перерисовать заново · ${REPAINT_COST} ☀️`;
+                rep.addEventListener('click', () => openRepaintModal(pr.level));
+                pal.appendChild(rep);
             }
         }
     }
 
     function openNext() {
         haptic('success');
+        stopPreview();
         closeOverlay();
         if (maybeAdvance(true)) {
             renderChip();
@@ -1060,11 +1405,12 @@
     }
 
     function onTap(region, pt) {
-        const pr = getProgress();
+        const pr = getLevelProgress(activeViewLevel);
+        const pMap = paintMapOf(activeViewLevel);
         if (!region) { hidePalette(); renderTexts(pr); return; }
-        if (pr.complete || pr.done) return;
+        if (pr.complete) return;
         if (region.layer === 'decor') { showMessage('Это узор. Он засияет сам, когда Вы раскрасите соседние лепестки ✨'); return; }
-        if (state.paint[region.id]) { showMessage('Эта область уже проявлена Вами 🌸'); return; }
+        if (pMap[region.id]) { showMessage('Эта область уже проявлена Вами 🌸'); return; }
         const isGold = region.layer === 'gold';
         if ((isGold ? pr.dropsG : pr.dropsP) <= 0) {
             showMessage(isGold
@@ -1104,8 +1450,12 @@
     }
 
     function paintRegion(id, layer, v) {
-        const pr = getProgress();
-        if (!view || view.isBusy() || state.paint[id] || pr.complete || pr.done || id !== selectedId) return;
+        const targetLevel = activeViewLevel;
+        const pr = getLevelProgress(targetLevel);
+        const key = artKeyOf(targetLevel);
+        if (!state.paints[key]) state.paints[key] = {};
+        const pMap = state.paints[key];
+        if (!view || view.isBusy() || pMap[id] || pr.complete || id !== selectedId) return;
         if (layer === 'gold') {
             if (pr.dropsG <= 0) return;
             state.goldSpent += 1;
@@ -1115,35 +1465,42 @@
         }
         const pt = selectedPt;
         const paintedLayer = layer === 'gold' ? 'gold' : 'p';
-        state.paint[id] = { l: paintedLayer, c: v };
+        pMap[id] = { l: paintedLayer, c: v };
+        syncCurrentPaintAlias();
         saveState();
         haptic('light');
         const pal = paletteEl();
         if (pal) { pal.hidden = true; pal.innerHTML = ''; }
         selectedId = 0;
         selectedPt = null;
-        sendEconomyEvent({ type: 'paint', level: state.level, regionId: id, layer: paintedLayer, variant: v });
+        sendEconomyEvent({ type: 'paint', mandalaKey: key, level: targetLevel, regionId: id, layer: paintedLayer, variant: v });
 
         view.reveal(id, v, pt, () => {
-            const after = getProgress();
+            const after = getLevelProgress(targetLevel);
             renderChip();
-            renderTexts(after);
-            view.refresh();
+            if (activeViewLevel === targetLevel) {
+                renderTexts(after);
+                view.refresh();
+            }
             if (after.complete) {
                 haptic('success');
                 highlightUnpainted = false;
-                view.setHighlightUnpainted(false);
-                view.resetZoom();
-                view.celebrate();
-                view.setAlive(true);
-                syncToolsUi(after);
-                const finishFlag = 'finished_' + ART_KEYS[after.level - 1];
+                if (activeViewLevel === targetLevel) {
+                    view.setHighlightUnpainted(false);
+                    view.resetZoom();
+                    view.celebrate();
+                    view.setAlive(true);
+                    syncToolsUi(after);
+                }
+                const finishFlag = 'finished_' + key;
                 const gotFinishGift = giveOnce(finishFlag, 'за раскрашенную мандалу');
-                const nextArt = artOf(after.level + 1);
-                if (nextArt) toast(`Открыта новая мандала: «${nextArt.title}» 🪷`);
+                if (after.isCurrent) {
+                    const nextArt = artOf(after.level + 1);
+                    if (nextArt) toast(`Открыта новая мандала: «${nextArt.title}» 🪷`);
+                }
                 saveState();
                 renderChip();
-                renderTexts(getProgress());
+                if (activeViewLevel === targetLevel) renderTexts(getLevelProgress(targetLevel));
                 if (gotFinishGift) {
                     sendEconomyEvent({ type: 'djamilia_gift', flag: finishFlag });
                 }
@@ -1155,7 +1512,8 @@
     // ---------- Завершение: послание, обои, сторис ----------
     function majorityVariant() {
         const n = [0, 0, 0];
-        Object.keys(state.paint).forEach(id => { const c = state.paint[id].c; n[c] = (n[c] || 0) + 1; });
+        const pMap = paintMapOf(activeViewLevel);
+        Object.keys(pMap).forEach(id => { const c = pMap[id].c; n[c] = (n[c] || 0) + 1; });
         return n.indexOf(Math.max(...n));
     }
 
@@ -1320,6 +1678,306 @@
         }
     }
 
+    // ---------- Эффекты мандалы (3 ☀️, 5 с примерка 1 раз на мандалу, тумблер Вкл/Выкл) и перерисовка (9 ☀️) ----------
+    let previewState = null;
+
+    function stopPreview() {
+        if (!previewState) return;
+        clearTimeout(previewState.timerId);
+        clearInterval(previewState.tickId);
+        previewState = null;
+        if (view && view.setPreviewEffect) view.setPreviewEffect(null);
+        const bar = document.getElementById('mandalaPreviewBar');
+        if (bar) bar.hidden = true;
+    }
+
+    function updatePreviewBar() {
+        if (!previewState) return;
+        const leftMs = Math.max(0, previewState.endAt - Date.now());
+        const sec = Math.max(1, Math.ceil(leftMs / 1000));
+        const pct = Math.max(0, Math.min(100, (leftMs / EFFECT_PREVIEW_MS) * 100));
+        const timerEl = document.getElementById('mandalaPreviewTimer');
+        const fillEl = document.getElementById('mandalaPreviewFill');
+        if (timerEl) timerEl.textContent = `${sec} с`;
+        if (fillEl) fillEl.style.width = pct.toFixed(1) + '%';
+    }
+
+    function startEffectPreview(level, effectId) {
+        const eff = effectById(effectId);
+        const art = artOf(level);
+        if (!eff || !art || !view || hasOwnedEffect(level, effectId) || hasUsedTrial(level, effectId)) return;
+        stopPreview();
+        const key = art.key;
+        if (!state.effectTrials || typeof state.effectTrials !== 'object') state.effectTrials = {};
+        if (!Array.isArray(state.effectTrials[key])) state.effectTrials[key] = [];
+        state.effectTrials[key].push(effectId);
+        state.active = true;
+        saveState();
+        sendEconomyEvent({ type: 'effect_trial', mandalaKey: key, level, effectId });
+
+        closeOverlay();
+        const paper = document.querySelector('#mandalaPaneMine .mandala-paper');
+        if (paper && typeof paper.scrollIntoView === 'function') {
+            try { paper.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+        }
+
+        const labelEl = document.getElementById('mandalaPreviewLabel');
+        const buyBtnEl = document.getElementById('mandalaPreviewBuyBtn');
+        const bar = document.getElementById('mandalaPreviewBar');
+        if (labelEl) labelEl.textContent = `Примерка: ${eff.name}`;
+        if (buyBtnEl) buyBtnEl.textContent = `Закрепить · ${EFFECT_COST} ☀️`;
+        if (bar) bar.hidden = false;
+
+        if (view && view.setPreviewEffect) view.setPreviewEffect(effectId);
+        haptic('select');
+
+        const endAt = Date.now() + EFFECT_PREVIEW_MS;
+        previewState = {
+            level,
+            artKey: key,
+            effectId,
+            endAt,
+            tickId: setInterval(updatePreviewBar, 120),
+            timerId: setTimeout(() => {
+                const finLevel = level;
+                const finEff = effectId;
+                stopPreview();
+                openEffectOffer(finLevel, finEff);
+            }, EFFECT_PREVIEW_MS)
+        };
+        updatePreviewBar();
+    }
+
+    function buyEffect(level, effectId, fromModal) {
+        const eff = effectById(effectId);
+        const art = artOf(level);
+        if (!eff || !art || hasOwnedEffect(level, effectId)) return false;
+        const pr = getProgress();
+        if (pr.dropsG < EFFECT_COST) {
+            openEffectOffer(level, effectId);
+            return false;
+        }
+        stopPreview();
+        haptic('success');
+        const key = art.key;
+        state.goldSpent += EFFECT_COST;
+        if (!state.effects || typeof state.effects !== 'object') state.effects = {};
+        if (!Array.isArray(state.effects[key])) state.effects[key] = [];
+        state.effects[key].push(effectId);
+        if (state.disabledEffects && Array.isArray(state.disabledEffects[key])) {
+            state.disabledEffects[key] = state.disabledEffects[key].filter(id => id !== effectId);
+        }
+        state.active = true;
+        saveState();
+        renderChip();
+        syncHud();
+        if (isPathOpen()) renderPath();
+        toast(`✨ Эффект «${eff.name}» закреплён на мандале «${art.title}»`);
+        sendEconomyEvent({ type: 'effect_buy', mandalaKey: key, level, effectId, costGold: EFFECT_COST });
+        if (fromModal) openEffectsModal();
+        else closeOverlay();
+        return true;
+    }
+
+    function toggleEffect(level, effectId) {
+        const art = artOf(level);
+        if (!art || !hasOwnedEffect(level, effectId)) return;
+        const key = art.key;
+        disabledTouched = true;
+        if (!state.disabledEffects || typeof state.disabledEffects !== 'object') state.disabledEffects = {};
+        const arr = Array.isArray(state.disabledEffects[key]) ? state.disabledEffects[key].slice() : [];
+        const idx = arr.indexOf(effectId);
+        if (idx === -1) arr.push(effectId);
+        else arr.splice(idx, 1);
+        if (arr.length) state.disabledEffects[key] = arr;
+        else delete state.disabledEffects[key];
+        saveState();
+        haptic('select');
+        if (view && viewLevel === level && view.setEffects) view.setEffects(activeEffectsOf(level));
+        renderChip();
+        syncEconomy();
+        openEffectsModal();
+    }
+
+    function openEffectOffer(level, effectId) {
+        const eff = effectById(effectId);
+        const art = artOf(level);
+        if (!eff || !art) return;
+        const pr = getProgress();
+        const enough = pr.dropsG >= EFFECT_COST;
+        overlay(card => {
+            const h = document.createElement('h3');
+            h.textContent = `Эффект «${eff.name}»`;
+            const p = document.createElement('p');
+            p.className = 'mrich-card-text';
+            if (enough) {
+                p.textContent = `Закрепить это сияние на мандале «${art.title}» за ${EFFECT_COST} ☀️?\n\nЭффект останется на этой мандале навсегда и его можно включать или выключать в любой момент.`;
+            } else {
+                const need = EFFECT_COST - pr.dropsG;
+                p.textContent = `Чтобы закрепить эффект «${eff.name}», нужно ${EFFECT_COST} ☀️ (сейчас у Вас ${pr.dropsG} ☀️, не хватает ${need} ☀️).\n\nЗолотые талисманы получаются при обмене 3 🌙 → 1 ☀️ и в редких подарках Джамили.`;
+            }
+            card.append(h, p);
+            if (enough) {
+                card.appendChild(button(`Закрепить за ${EFFECT_COST} ☀️`, 'mrich-btn', () => buyEffect(level, effectId, false)));
+            } else if (pr.dropsP >= CONVERT_RATE) {
+                card.appendChild(button(`Превратить 3 🌙 → 1 ☀️ (доступно ${pr.dropsP} 🌙)`, 'mrich-btn', () => {
+                    if (convertSilverToGold(null, true)) openEffectOffer(level, effectId);
+                }));
+            }
+            card.appendChild(button('К эффектам', 'mrich-btn mrich-btn--secondary', openEffectsModal));
+            card.appendChild(button('Закрыть', 'mrich-btn mrich-btn--ghost', closeOverlay));
+        });
+    }
+
+    function openEffectsModal() {
+        haptic('select');
+        const level = activeViewLevel;
+        const art = artOf(level);
+        if (!art) return;
+        const pr = getProgress();
+        overlay(card => {
+            const h = document.createElement('h3');
+            h.textContent = `Эффекты для «${art.title}»`;
+
+            const bal = document.createElement('div');
+            bal.className = 'mandala-effects-balance';
+            bal.innerHTML = `${talismanSvg(true, 16)}<span>У Вас: <strong>${pr.dropsG}</strong> ☀️</span>`;
+
+            const note = document.createElement('p');
+            note.className = 'mandala-pack-note';
+            note.textContent = `Любой эффект стоит ${EFFECT_COST} ☀️, действует только на выбранную мандалу и комбинируется с другими. Каждый эффект можно примерить бесплатно на 5 секунд 1 раз для этой мандалы.`;
+
+            const list = document.createElement('div');
+            list.className = 'mandala-effects-list';
+
+            EFFECTS.forEach(eff => {
+                const owned = hasOwnedEffect(level, eff.id);
+                const enabled = owned && disabledEffectsOf(level).indexOf(eff.id) === -1;
+                const tried = hasUsedTrial(level, eff.id);
+
+                const item = document.createElement('div');
+                item.className = 'mandala-effect-item' + (owned ? ' is-owned' : '');
+
+                const top = document.createElement('div');
+                top.className = 'mandala-effect-top';
+                top.innerHTML =
+                    `<span class="mandala-effect-ico">${eff.icon}</span>` +
+                    '<div class="mandala-effect-info">' +
+                        `<div class="mandala-effect-name">${eff.name}</div>` +
+                        `<div class="mandala-effect-desc">${eff.desc}</div>` +
+                    '</div>';
+
+                if (owned) {
+                    const sw = document.createElement('button');
+                    sw.type = 'button';
+                    sw.className = 'mandala-switch' + (enabled ? ' is-on' : '');
+                    sw.setAttribute('role', 'switch');
+                    sw.setAttribute('aria-checked', enabled ? 'true' : 'false');
+                    sw.setAttribute('aria-label', `${eff.name}: ${enabled ? 'включён' : 'выключен'}`);
+                    sw.innerHTML = '<span class="mandala-switch-knob"></span>';
+                    sw.addEventListener('click', () => toggleEffect(level, eff.id));
+                    top.appendChild(sw);
+                }
+                item.appendChild(top);
+
+                const actions = document.createElement('div');
+                actions.className = 'mandala-effect-actions';
+                if (owned) {
+                    const st = document.createElement('span');
+                    st.className = 'mandala-effect-status';
+                    st.textContent = enabled ? 'Куплено · Включено ✨' : 'Куплено · Выключено';
+                    actions.appendChild(st);
+                } else {
+                    const tryBtn = document.createElement('button');
+                    tryBtn.type = 'button';
+                    tryBtn.className = 'mandala-effect-try';
+                    tryBtn.textContent = tried ? 'Примерка использована' : 'Примерить · 5 с';
+                    tryBtn.disabled = tried;
+                    tryBtn.addEventListener('click', () => startEffectPreview(level, eff.id));
+
+                    const buyBtn = document.createElement('button');
+                    buyBtn.type = 'button';
+                    buyBtn.className = 'mandala-effect-buy' + (pr.dropsG < EFFECT_COST ? ' is-short' : '');
+                    buyBtn.textContent = `Закрепить · ${EFFECT_COST} ☀️`;
+                    buyBtn.addEventListener('click', () => buyEffect(level, eff.id, true));
+
+                    actions.append(tryBtn, buyBtn);
+                }
+                item.appendChild(actions);
+                list.appendChild(item);
+            });
+
+            card.append(h, bal, note, list, button('Закрыть', 'mrich-btn mrich-btn--ghost', closeOverlay));
+        });
+    }
+
+    function openRepaintModal(level) {
+        haptic('select');
+        const art = artOf(level);
+        if (!art) return;
+        const pr = getProgress();
+        const enough = pr.dropsG >= REPAINT_COST;
+        overlay(card => {
+            const h = document.createElement('h3');
+            h.textContent = `Перерисовать «${art.title}»?`;
+
+            const warn = document.createElement('div');
+            warn.className = 'mandala-repaint-warn';
+            warn.textContent = `Полное обнуление раскраски этой мандалы стоит ${REPAINT_COST} ☀️.\n\nВсе её лепестки очистятся, и мандалу нужно будет раскрашивать заново. Ранее потраченные серебряные и золотые талисманы НЕ возвращаются. Купленные эффекты этой мандалы сохранятся.`;
+
+            const bal = document.createElement('p');
+            bal.className = 'mrich-card-text';
+            bal.textContent = enough
+                ? `У Вас сейчас ${pr.dropsG} ☀️ — после перерисовки останется ${pr.dropsG - REPAINT_COST} ☀️.`
+                : `У Вас сейчас ${pr.dropsG} ☀️ — не хватает ${REPAINT_COST - pr.dropsG} ☀️.`;
+
+            card.append(h, warn, bal);
+            if (enough) {
+                card.appendChild(button(`Перерисовать за ${REPAINT_COST} ☀️`, 'mrich-btn', () => confirmRepaint(level)));
+            } else if (pr.dropsP >= CONVERT_RATE) {
+                card.appendChild(button(`Превратить 3 🌙 → 1 ☀️ (сейчас ${pr.dropsP} 🌙)`, 'mrich-btn', () => {
+                    if (convertSilverToGold(null, true)) openRepaintModal(level);
+                }));
+            }
+            card.appendChild(button('Отмена', 'mrich-btn mrich-btn--ghost', closeOverlay));
+        });
+    }
+
+    function confirmRepaint(level) {
+        const art = artOf(level);
+        const pr = getProgress();
+        if (!art || pr.dropsG < REPAINT_COST) return;
+        stopPreview();
+        closeOverlay();
+        hidePalette();
+        haptic('success');
+
+        const key = art.key;
+        state.goldSpent += REPAINT_COST;
+        if (!state.paints || typeof state.paints !== 'object') state.paints = {};
+        if (!state.paintRev || typeof state.paintRev !== 'object') state.paintRev = {};
+        state.paintRev[key] = (state.paintRev[key] || 0) + 1;
+        state.paints[key] = {};
+        if (level === state.level) {
+            state.done = false;
+            syncCurrentPaintAlias();
+        }
+        state.active = true;
+        saveState();
+        highlightUnpainted = false;
+        if (view && viewLevel === level) {
+            view.setHighlightUnpainted(false);
+            view.resetZoom();
+            view.setAlive(false);
+            view.refresh();
+        }
+        renderChip();
+        syncHud();
+        renderPath();
+        toast(`✨ «${art.title}» очищена — можно раскрашивать заново!`);
+        sendEconomyEvent({ type: 'mandala_repaint', mandalaKey: key, level, costGold: REPAINT_COST, rev: state.paintRev[key] });
+    }
+
     // ---------- Покупка набора красок для текущей мандалы (превью до подключения СБП) ----------
     function openPackModal() {
         haptic('select');
@@ -1426,10 +2084,17 @@
     }
 
     function resetPaint() {
+        stopPreview();
         closeOverlay();
         hidePalette();
         state.paint = {};
+        state.paints = {};
+        state.paintRev = {};
+        state.effects = {};
+        state.disabledEffects = {};
+        state.effectTrials = {};
         state.level = 1;
+        activeViewLevel = 1;
         state.done = false;
         state.practiceSpent = 0;
         state.goldSpent = 0;
@@ -1451,6 +2116,7 @@
     }
 
     function fullReset() {
+        stopPreview();
         closeOverlay();
         hidePalette();
         const prevBoughtP = state.boughtP || 0;
@@ -1458,6 +2124,7 @@
         state = emptyState();
         state.boughtP = prevBoughtP;
         state.boughtG = prevBoughtG;
+        activeViewLevel = 1;
         state.active = true;
         state.firstSeen = Date.now();
         state.lastVisit = Date.now();
@@ -1485,6 +2152,7 @@
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const which = tab.getAttribute('data-mtab');
+                if (which !== 'mine') stopPreview();
                 tabs.forEach(t => {
                     const on = t === tab;
                     t.classList.toggle('is-active', on);
@@ -1495,6 +2163,36 @@
                 if (mine) mine.hidden = which !== 'mine';
                 if (shared) shared.hidden = which !== 'shared';
             });
+        });
+
+        const pathSec = document.getElementById('path');
+        if (pathSec && 'MutationObserver' in window) {
+            new MutationObserver(() => {
+                if (!pathSec.classList.contains('active')) stopPreview();
+            }).observe(pathSec, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        const effectsBtn = document.getElementById('mandalaEffectsBtn');
+        if (effectsBtn) effectsBtn.addEventListener('click', openEffectsModal);
+
+        const viewBackBtn = document.getElementById('mandalaViewBackBtn');
+        if (viewBackBtn) viewBackBtn.addEventListener('click', () => {
+            haptic('select');
+            switchViewLevel(state.level);
+        });
+
+        const previewBuyBtn = document.getElementById('mandalaPreviewBuyBtn');
+        if (previewBuyBtn) previewBuyBtn.addEventListener('click', () => {
+            if (!previewState) return;
+            const lvl = previewState.level, eid = previewState.effectId;
+            stopPreview();
+            buyEffect(lvl, eid, false);
+        });
+
+        const previewStopBtn = document.getElementById('mandalaPreviewStopBtn');
+        if (previewStopBtn) previewStopBtn.addEventListener('click', () => {
+            haptic('select');
+            stopPreview();
         });
 
 
@@ -1541,7 +2239,7 @@
             haptic('select');
             highlightUnpainted = !highlightUnpainted;
             view.setHighlightUnpainted(highlightUnpainted);
-            syncToolsUi(getProgress());
+            syncToolsUi(getLevelProgress(activeViewLevel));
         });
 
         const zoomInBtn = document.getElementById('mandalaZoomInBtn');

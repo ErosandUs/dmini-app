@@ -6697,6 +6697,8 @@ html.mandala-visible .cd-mandala-btn {
 .mandala-levels {
     display: flex;
     justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
 }
 
@@ -6705,6 +6707,74 @@ html.mandala-visible .cd-mandala-btn {
     height: 9px;
     border-radius: 50%;
     background: rgba(160, 140, 190, 0.3);
+}
+
+.mandala-level-btn {
+    min-width: 28px;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 999px;
+    border: 1px solid rgba(168, 152, 196, 0.45);
+    background: rgba(255, 251, 246, 0.85);
+    color: #6b4c96;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.14s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.mandala-level-btn:active {
+    transform: scale(0.94);
+}
+
+.mandala-level-btn.is-done {
+    border-color: rgba(214, 164, 64, 0.72);
+    background: linear-gradient(135deg, rgba(255, 249, 232, 0.96), rgba(250, 234, 196, 0.9));
+    color: #8a5a12;
+}
+
+.mandala-level-btn.is-current {
+    border-color: rgba(138, 99, 184, 0.75);
+    background: linear-gradient(135deg, #f3ecfb, #e8dbf8);
+    color: #4b2c70;
+}
+
+.mandala-level-btn.is-viewing {
+    box-shadow: 0 0 0 2.5px rgba(138, 99, 184, 0.32);
+    border-color: #6b4c96;
+}
+
+.mandala-view-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: rgba(255, 248, 234, 0.92);
+    border: 1px solid rgba(214, 164, 64, 0.52);
+    font-size: 12.5px;
+    color: #5f4d75;
+}
+
+.mandala-view-banner[hidden] {
+    display: none;
+}
+
+.mandala-view-back-btn {
+    border: 1px solid rgba(214, 164, 64, 0.7);
+    background: linear-gradient(135deg, #fff6db, #f7df9d);
+    color: #6b4308;
+    border-radius: 999px;
+    padding: 5px 11px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
 }
 
 .mandala-level-dot.is-done {
@@ -6761,6 +6831,7 @@ html.mandala-visible .cd-mandala-btn {
 
 .mandala-story-btn[hidden],
 .mandala-convert-btn[hidden],
+.mandala-effects-btn[hidden],
 .mandala-quest-card[hidden],
 .mandala-buy-btn[hidden] {
     display: none;
@@ -7454,6 +7525,304 @@ html.mandala-visible .cd-mandala-btn {
     color: #fff;
     border-color: rgba(214, 170, 90, 0.8);
     box-shadow: 0 0 18px rgba(240, 184, 96, 0.45);
+}
+
+/* 25.11.2026: Экономика 2.0 — панель примерки, каталог эффектов, тумблеры, перерисовка */
+.mandala-effects-btn {
+    border-color: rgba(214, 164, 64, 0.65);
+    background: linear-gradient(135deg, rgba(255, 250, 242, 0.96), rgba(247, 236, 252, 0.92));
+    color: #4b2c70;
+}
+
+.mandala-effects-btn-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.mandala-effects-btn-ico {
+    width: 17px;
+    height: 17px;
+    color: #c99234;
+    flex-shrink: 0;
+}
+
+.mandala-effects-badge {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(214, 164, 64, 0.18);
+    border: 1px solid rgba(214, 164, 64, 0.45);
+    color: #7c510d;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.mandala-preview-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255, 249, 234, 0.96), rgba(251, 238, 248, 0.94));
+    border: 1px solid rgba(214, 164, 64, 0.68);
+    box-shadow: 0 6px 18px rgba(132, 98, 168, 0.16);
+}
+
+.mandala-preview-bar[hidden] {
+    display: none;
+}
+
+.mandala-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4b2c70;
+}
+
+.mandala-preview-timer {
+    font-variant-numeric: tabular-nums;
+    color: #8a5a12;
+}
+
+.mandala-preview-track {
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(168, 152, 196, 0.26);
+    overflow: hidden;
+}
+
+.mandala-preview-fill {
+    height: 100%;
+    width: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #e0ad4f, #f6d98c);
+    transition: width 0.2s linear;
+}
+
+.mandala-preview-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.mandala-preview-buy {
+    flex: 1;
+    border: 0;
+    border-radius: 11px;
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #f3d48e, #e5b866);
+    color: #2c1f50;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mandala-preview-stop {
+    border: 1px solid rgba(168, 152, 196, 0.55);
+    border-radius: 11px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.86);
+    color: #6f5f82;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.mandala-effects-balance {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    align-self: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 248, 224, 0.96), rgba(252, 236, 206, 0.92));
+    border: 1px solid rgba(214, 160, 60, 0.55);
+    color: #7a4e0f;
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.mandala-effects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    text-align: left;
+    margin: 2px 0 4px;
+}
+
+.mandala-effect-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 11px 12px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(206, 170, 98, 0.45);
+}
+
+.mandala-effect-item.is-owned {
+    background: linear-gradient(135deg, rgba(255, 250, 236, 0.96), rgba(250, 242, 254, 0.92));
+    border-color: rgba(214, 164, 64, 0.72);
+}
+
+.mandala-effect-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.mandala-effect-ico {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(255, 244, 212, 0.95), rgba(244, 226, 252, 0.9));
+    border: 1px solid rgba(214, 164, 64, 0.45);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #b47d24;
+    flex-shrink: 0;
+}
+
+.mandala-effect-ico svg {
+    width: 19px;
+    height: 19px;
+}
+
+.mandala-effect-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mandala-effect-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4b2c70;
+    line-height: 1.25;
+}
+
+.mandala-effect-desc {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #6f5f82;
+}
+
+.mandala-effect-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.mandala-effect-try {
+    flex: 1;
+    border: 1px solid rgba(168, 152, 196, 0.6);
+    border-radius: 10px;
+    padding: 7px 10px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #5b4478;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.mandala-effect-try:disabled {
+    opacity: 0.48;
+    cursor: default;
+}
+
+.mandala-effect-buy {
+    border: 0;
+    border-radius: 10px;
+    padding: 7px 12px;
+    background: linear-gradient(135deg, #f3d48e, #e5b866);
+    color: #2c1f50;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.mandala-effect-buy.is-short {
+    background: rgba(242, 232, 248, 0.92);
+    color: #6f5f82;
+    border: 1px solid rgba(168, 152, 196, 0.5);
+}
+
+.mandala-effect-status {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8a5a12;
+}
+
+.mandala-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid rgba(168, 152, 196, 0.55);
+    border-radius: 999px;
+    background: rgba(218, 206, 234, 0.65);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.mandala-switch.is-on {
+    background: linear-gradient(135deg, #f3d48e, #d99f38);
+    border-color: rgba(188, 136, 40, 0.85);
+}
+
+.mandala-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(60, 40, 90, 0.28);
+    transition: transform 0.2s ease;
+}
+
+.mandala-switch.is-on .mandala-switch-knob {
+    transform: translateX(20px);
+}
+
+.mrich-repaint-open {
+    background: rgba(255, 251, 246, 0.92);
+    color: #8a5a12;
+    border-color: rgba(214, 164, 64, 0.65);
+}
+
+.mandala-repaint-warn {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 244, 224, 0.9);
+    border: 1px solid rgba(214, 160, 60, 0.55);
+    font-size: 13px;
+    line-height: 1.45;
+    color: #6b4308;
+    text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mandala-preview-fill,
+    .mandala-switch,
+    .mandala-switch-knob,
+    .mandala-level-btn {
+        transition: none;
+    }
 }
 
 .mrich-overlay {

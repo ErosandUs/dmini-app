@@ -23,7 +23,7 @@
     <!-- Официальный скрипт Telegram WebApp -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    <link rel="stylesheet" href="css/style.css?v=78">
+    <link rel="stylesheet" href="css/style.css?v=79">
     <link rel="stylesheet" href="css/cardFlip.css?v=2">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
@@ -1082,10 +1082,28 @@
                     </div>
                 </div>
 
+                <div class="mandala-preview-bar" id="mandalaPreviewBar" hidden>
+                    <div class="mandala-preview-head">
+                        <span class="mandala-preview-label" id="mandalaPreviewLabel">Примерка</span>
+                        <span class="mandala-preview-timer" id="mandalaPreviewTimer">5 с</span>
+                    </div>
+                    <div class="mandala-preview-track" aria-hidden="true">
+                        <div class="mandala-preview-fill" id="mandalaPreviewFill"></div>
+                    </div>
+                    <div class="mandala-preview-actions">
+                        <button type="button" class="mandala-preview-buy" id="mandalaPreviewBuyBtn">Закрепить · 3 ☀️</button>
+                        <button type="button" class="mandala-preview-stop" id="mandalaPreviewStopBtn" aria-label="Завершить примерку">Закрыть</button>
+                    </div>
+                </div>
+
                 <div class="mandala-palette mandala-palette--night" id="mandalaPalette" role="group" aria-label="Выбор картины" hidden></div>
 
                 <p class="mandala-caption" id="mandalaCaption"></p>
-                <div class="mandala-levels" id="mandalaLevels" role="img"></div>
+                <div class="mandala-levels" id="mandalaLevels" role="group" aria-label="Выбор мандалы"></div>
+                <div class="mandala-view-banner" id="mandalaViewBanner" hidden>
+                    <span class="mandala-view-banner-text" id="mandalaViewBannerText">Просмотр пройденной мандалы</span>
+                    <button type="button" class="mandala-view-back-btn" id="mandalaViewBackBtn">К текущей →</button>
+                </div>
                 <p class="mandala-subcaption" id="mandalaSubcaption"></p>
 
                 <div class="mandala-legend" aria-label="Баланс талисманов">
@@ -1107,6 +1125,14 @@
                     <span aria-hidden="true">→</span>
                     <span>1</span>
                     <svg class="talisman-ico talisman-ico--gold" width="16" height="16" viewBox="0 0 80 80" aria-hidden="true"><use href="#talisman-gold"></use></svg>
+                </button>
+
+                <button type="button" class="cd-btn cd-btn--secondary cd-btn--block mandala-effects-btn" id="mandalaEffectsBtn">
+                    <span class="mandala-effects-btn-inner">
+                        <svg class="mandala-effects-btn-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 Q12.8 11.2 22 12 Q12.8 12.8 12 22 Q11.2 12.8 2 12 Q11.2 11.2 12 2 Z" fill="currentColor"/></svg>
+                        <span>Эффекты мандалы</span>
+                        <span class="mandala-effects-badge" id="mandalaEffectsBadge">0 / 5</span>
+                    </span>
                 </button>
 
                 <div class="mandala-quest-card" id="mandalaQuestCard">
@@ -1354,10 +1380,10 @@
     <script src="js/cardFlip.js?v=2" defer></script>
     <script id="appScript" src="js/app.js?v=79" defer></script>
     <!-- 14.11.2026: живописные мандалы. js/mandalaArt.js (плоские SVG) больше не подключается, файл оставлен -->
-    <script src="js/mandalaCanvas.js?v=12" defer></script>
+    <script src="js/mandalaCanvas.js?v=13" defer></script>
     <script src="js/mandala-p1.js?v=1" defer></script>
     <script src="js/mandala-p2.js?v=3" defer></script>
-    <script src="js/mandala.js?v=16" defer></script>
+    <script src="js/mandala.js?v=17" defer></script>
     <script src="js/mandalaShared.js?v=3" defer></script>
     <script src="js/eventPopup.js?v=20" defer></script>
     <script src="js/notifications.js?v=4" defer></script>

@@ -20,6 +20,289 @@
     });
     const easeOut = t => 1 - Math.pow(1 - t, 3);
 
+    // ---------- Процедурные эффекты (Экономика 2.0) ----------
+    const EFFECT_IDS = ['goldWave', 'lightBreath', 'stardust', 'touchTrail', 'royalCrown'];
+    function normalizeEffectList(list) {
+        if (!Array.isArray(list)) return [];
+        const out = [];
+        for (let i = 0; i < list.length; i++) {
+            const id = String(list[i] || '');
+            if (EFFECT_IDS.indexOf(id) !== -1 && out.indexOf(id) === -1) out.push(id);
+        }
+        return out;
+    }
+
+    let sharedSpark = null, sharedStar = null, sharedAura = null;
+    function getSparkSprite() {
+        if (sharedSpark) return sharedSpark;
+        const c = mk(32, 32), g = c.getContext('2d');
+        const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+        gr.addColorStop(0, 'rgba(255,246,214,1)');
+        gr.addColorStop(0.35, 'rgba(240,190,90,0.9)');
+        gr.addColorStop(1, 'rgba(220,160,60,0)');
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 32, 32);
+        return (sharedSpark = c);
+    }
+
+    function getStarSprite() {
+        if (sharedStar) return sharedStar;
+        const c = mk(32, 32), g = c.getContext('2d');
+        const gr = g.createRadialGradient(16, 16, 0, 16, 16, 15);
+        gr.addColorStop(0, 'rgba(255,250,224,0.95)');
+        gr.addColorStop(0.45, 'rgba(248,210,120,0.45)');
+        gr.addColorStop(1, 'rgba(240,184,96,0)');
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 32, 32);
+        g.fillStyle = 'rgba(255,252,235,0.98)';
+        g.beginPath();
+        g.moveTo(16, 3);
+        g.quadraticCurveTo(17.4, 14.6, 29, 16);
+        g.quadraticCurveTo(17.4, 17.4, 16, 29);
+        g.quadraticCurveTo(14.6, 17.4, 3, 16);
+        g.quadraticCurveTo(14.6, 14.6, 16, 3);
+        g.fill();
+        return (sharedStar = c);
+    }
+
+    function getAuraSprite() {
+        if (sharedAura) return sharedAura;
+        const c = mk(256, 256), g = c.getContext('2d');
+        const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+        gr.addColorStop(0, 'rgba(255,248,220,0.68)');
+        gr.addColorStop(0.36, 'rgba(246,204,116,0.40)');
+        gr.addColorStop(0.72, 'rgba(240,188,224,0.16)');
+        gr.addColorStop(1, 'rgba(240,188,224,0)');
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 256, 256);
+        return (sharedAura = c);
+    }
+
+    function drawMiniStar(ctx, x, y, r, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(x, y - r);
+        ctx.quadraticCurveTo(x + r * 0.16, y - r * 0.16, x + r, y);
+        ctx.quadraticCurveTo(x + r * 0.16, y + r * 0.16, x, y + r);
+        ctx.quadraticCurveTo(x - r * 0.16, y + r * 0.16, x - r, y);
+        ctx.quadraticCurveTo(x - r * 0.16, y - r * 0.16, x, y - r);
+        ctx.fill();
+    }
+
+    function computeCrownRadii(art, size) {
+        if (art && art.edgeFade === false) {
+            return { innerR: size * 0.455, outerR: size * 0.486 };
+        }
+        return { innerR: size * 0.435, outerR: size * 0.478 };
+    }
+
+    function buildCrownLayers(size, innerR, outerR, isThumb) {
+        const half = size / 2;
+        const outerCv = mk(size, size), oc = outerCv.getContext('2d');
+        const rays = isThumb ? 12 : 16;
+        const rStart = innerR * 0.78, rEnd = outerR * 1.03;
+        oc.save();
+        oc.translate(half, half);
+        for (let i = 0; i < rays; i++) {
+            const a = (i / rays) * Math.PI * 2;
+            const cos = Math.cos(a), sin = Math.sin(a);
+            const g = oc.createLinearGradient(cos * rStart, sin * rStart, cos * rEnd, sin * rEnd);
+            g.addColorStop(0, 'rgba(255,244,204,0)');
+            g.addColorStop(0.55, i % 2 === 0 ? 'rgba(255,232,164,0.34)' : 'rgba(246,204,116,0.22)');
+            g.addColorStop(1, 'rgba(255,244,204,0)');
+            oc.strokeStyle = g;
+            oc.lineWidth = isThumb ? 1.4 : (i % 2 === 0 ? 2.2 : 1.3);
+            oc.beginPath();
+            oc.moveTo(cos * rStart, sin * rStart);
+            oc.lineTo(cos * rEnd, sin * rEnd);
+            oc.stroke();
+        }
+        oc.strokeStyle = 'rgba(255,234,172,0.72)';
+        oc.lineWidth = isThumb ? 1.3 : 1.7;
+        oc.beginPath();
+        oc.arc(0, 0, outerR, 0, Math.PI * 2);
+        oc.stroke();
+
+        oc.save();
+        oc.setLineDash(isThumb ? [3, 4] : [6, 7]);
+        oc.strokeStyle = 'rgba(255,246,214,0.58)';
+        oc.lineWidth = isThumb ? 0.9 : 1.1;
+        oc.beginPath();
+        oc.arc(0, 0, outerR * 0.962, 0, Math.PI * 2);
+        oc.stroke();
+        oc.restore();
+
+        const starCount = 8;
+        const starR = isThumb ? 3.4 : 6.2;
+        for (let i = 0; i < starCount; i++) {
+            const a = (i / starCount) * Math.PI * 2;
+            drawMiniStar(oc, Math.cos(a) * outerR, Math.sin(a) * outerR, starR, 'rgba(255,246,214,0.92)');
+        }
+        oc.restore();
+
+        const innerCv = mk(size, size), ic = innerCv.getContext('2d');
+        ic.save();
+        ic.translate(half, half);
+        ic.strokeStyle = 'rgba(246,212,130,0.62)';
+        ic.lineWidth = isThumb ? 1.1 : 1.3;
+        ic.beginPath();
+        ic.arc(0, 0, innerR, 0, Math.PI * 2);
+        ic.stroke();
+
+        ic.save();
+        ic.setLineDash(isThumb ? [1.5, 4.5] : [2, 8]);
+        ic.strokeStyle = 'rgba(255,242,198,0.55)';
+        ic.lineWidth = isThumb ? 1.1 : 1.5;
+        ic.beginPath();
+        ic.arc(0, 0, innerR * 1.028, 0, Math.PI * 2);
+        ic.stroke();
+        ic.restore();
+
+        for (let i = 0; i < 4; i++) {
+            const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+            ic.fillStyle = 'rgba(255,248,220,0.88)';
+            ic.beginPath();
+            ic.arc(Math.cos(a) * innerR, Math.sin(a) * innerR, isThumb ? 1.6 : 2.8, 0, Math.PI * 2);
+            ic.fill();
+        }
+        ic.restore();
+        return { outerCv, innerCv };
+    }
+
+    function makeDustPool(count, size, minRFrac, maxRFrac) {
+        const pool = [];
+        for (let i = 0; i < count; i++) {
+            const frac = i / count;
+            pool.push({
+                angle: frac * Math.PI * 2 + (i % 3) * 0.41,
+                speed: (i % 2 === 0 ? 1 : -1) * (0.045 + (i % 5) * 0.014),
+                radFrac: minRFrac + ((i * 37) % 100) / 100 * (maxRFrac - minRFrac),
+                wobble: 0.025 + (i % 4) * 0.008,
+                freq: 0.65 + (i % 6) * 0.18,
+                phase: i * 1.37,
+                size: (size / 1024) * (16 + (i % 5) * 4.5),
+                star: i % 3 === 0
+            });
+        }
+        return pool;
+    }
+
+    function drawLightBreathEffect(ctx, S, now, reduce) {
+        const aura = getAuraSprite();
+        const breath = reduce ? 0.55 : 0.5 - 0.5 * Math.cos(now / 955);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const outerSize = S * (0.88 + 0.14 * breath);
+        ctx.globalAlpha = 0.24 + 0.24 * breath;
+        ctx.drawImage(aura, (S - outerSize) / 2, (S - outerSize) / 2, outerSize, outerSize);
+        const coreSize = S * (0.48 + 0.1 * breath);
+        ctx.globalAlpha = 0.18 + 0.22 * breath;
+        ctx.drawImage(aura, (S - coreSize) / 2, (S - coreSize) / 2, coreSize, coreSize);
+        ctx.restore();
+    }
+
+    function drawGoldWaveEffect(ctx, S, bufCv, maskCv, now, phaseOffsetMs, reduce) {
+        if (!bufCv || !maskCv) return;
+        if (reduce) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.globalAlpha = 0.24;
+            ctx.drawImage(maskCv, 0, 0, S, S);
+            ctx.restore();
+            return;
+        }
+        const cycle = 4800, sweep = 2600;
+        const elapsed = ((now - (phaseOffsetMs || 0)) % cycle + cycle) % cycle;
+        if (elapsed >= sweep) return;
+        const k = elapsed / sweep;
+        const bs = bufCv.width, bc = bufCv.getContext('2d');
+        const r = k * bs * 0.78;
+        const band = bs * 0.14;
+        bc.globalCompositeOperation = 'source-over';
+        bc.clearRect(0, 0, bs, bs);
+        const g = bc.createRadialGradient(bs / 2, bs / 2, Math.max(0, r - band), bs / 2, bs / 2, r + bs * 0.03);
+        g.addColorStop(0, 'rgba(255,244,204,0)');
+        g.addColorStop(0.58, 'rgba(255,244,204,0.92)');
+        g.addColorStop(1, 'rgba(255,244,204,0)');
+        bc.fillStyle = g;
+        bc.fillRect(0, 0, bs, bs);
+        bc.globalCompositeOperation = 'destination-in';
+        bc.drawImage(maskCv, 0, 0);
+        const fade = Math.sin(k * Math.PI);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.45 + 0.4 * fade;
+        ctx.drawImage(bufCv, 0, 0, S, S);
+        ctx.restore();
+    }
+
+    function drawCrownEffect(ctx, S, layers, now, reduce) {
+        if (!layers) return;
+        const aOuter = reduce ? 0 : now / 22000;
+        const aInner = reduce ? 0 : -now / 32000;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.85;
+        ctx.translate(S / 2, S / 2);
+        ctx.rotate(aOuter);
+        ctx.drawImage(layers.outerCv, -S / 2, -S / 2, S, S);
+        ctx.rotate(aInner - aOuter);
+        ctx.drawImage(layers.innerCv, -S / 2, -S / 2, S, S);
+        ctx.restore();
+    }
+
+    function drawDustEffect(ctx, S, pool, now, reduce) {
+        if (!pool || !pool.length) return;
+        const spark = getSparkSprite(), star = getStarSprite();
+        const t = reduce ? 0 : now / 1000;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < pool.length; i++) {
+            const p = pool[i];
+            const a = p.angle + t * p.speed;
+            const r = S * (p.radFrac + p.wobble * Math.sin(t * p.freq + p.phase));
+            const x = S / 2 + Math.cos(a) * r;
+            const y = S / 2 + Math.sin(a) * r;
+            const tw = reduce ? 0.65 : 0.25 + 0.7 * (0.5 + 0.5 * Math.sin(t * (1.8 + p.freq) + p.phase * 2));
+            const sz = Math.max(8, p.size * (0.75 + 0.35 * tw));
+            ctx.globalAlpha = tw;
+            ctx.drawImage(p.star ? star : spark, x - sz / 2, y - sz / 2, sz, sz);
+        }
+        ctx.restore();
+    }
+
+    function drawTouchEffects(ctx, touchSparks, touchRipples, scaleFactor) {
+        if (!touchSparks.length && !touchRipples.length) return;
+        const spark = getSparkSprite();
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = touchRipples.length - 1; i >= 0; i--) {
+            const rp = touchRipples[i];
+            rp.life -= 0.032;
+            if (rp.life <= 0) { touchRipples.splice(i, 1); continue; }
+            const r = rp.maxR * (1 - rp.life * 0.72);
+            ctx.globalAlpha = rp.life * 0.65;
+            ctx.strokeStyle = 'rgba(255,238,184,0.92)';
+            ctx.lineWidth = Math.max(1.2, 3.2 * scaleFactor * rp.life);
+            ctx.beginPath();
+            ctx.arc(rp.x, rp.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        for (let i = touchSparks.length - 1; i >= 0; i--) {
+            const p = touchSparks[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.96;
+            p.vy *= 0.96;
+            p.life -= p.decay || 0.028;
+            if (p.life <= 0) { touchSparks.splice(i, 1); continue; }
+            const d = p.r * 5.5;
+            ctx.globalAlpha = p.life;
+            ctx.drawImage(spark, p.x - d / 2, p.y - d / 2, d, d);
+        }
+        ctx.restore();
+    }
+
     // Картинки одной мандалы грузятся один раз на всё приложение
     const assetCache = {};
     function loadAssets(art) {
@@ -295,6 +578,10 @@
         const paintCache = {};    // кусок картины в форме области: «id_v» → холст
         let selected = null, reveal = null, flash = null, wave = null, dimMode = false, highlightUnpainted = false;
         const sparks = [];
+        let activeEffects = normalizeEffectList(opts.effects);
+        let previewEffect = null, previewT0 = 0;
+        let goldWaveMask = null, goldWaveBuf = null, crownLayers = null, dustPool = null;
+        const touchSparks = [], touchRipples = [];
         // Перелив и волна считаются в уменьшенном размере и растягиваются: они мягкие, а кадр в разы дешевле
         const LOW = 256, WAVE = 512;
         let shimmer, sh, paintedLow, sprite;
@@ -415,13 +702,7 @@
 
         // Искра — готовая картинка-светлячок вместо градиента на каждую искру в каждом кадре
         function buildSprite() {
-            sprite = mk(32, 32);
-            const c = sprite.getContext('2d'), g = c.createRadialGradient(16, 16, 0, 16, 16, 16);
-            g.addColorStop(0, 'rgba(255,246,214,1)');
-            g.addColorStop(0.35, 'rgba(240,190,90,0.9)');
-            g.addColorStop(1, 'rgba(220,160,60,0)');
-            c.fillStyle = g;
-            c.fillRect(0, 0, 32, 32);
+            sprite = getSparkSprite();
         }
 
         function tinted(id, color) {
@@ -536,8 +817,10 @@
             });
             io.observe(host);
         }
+        const hasEffect = id => activeEffects.indexOf(id) !== -1 || previewEffect === id;
+        const hasAnyEffect = () => activeEffects.length > 0 || !!previewEffect;
         const visible = () => !document.hidden && onScreen && (io !== null || host.offsetParent !== null);
-        const busyNow = () => !!(reveal || flash || wave || sparks.length || selected);
+        const busyNow = () => !!(reveal || flash || wave || sparks.length || touchSparks.length || touchRipples.length || selected);
         function kick() {
             if (destroyed || rafId || !A) return;
             clearTimeout(pollId);
@@ -549,12 +832,12 @@
             rafId = 0;
             if (destroyed) return;
             if (!visible()) { pollId = setTimeout(kick, 600); return; }
-            // Без движения хватает ~30 кадров: мерцание и перелив медленные
+            // Без движения хватает ~30 кадров: мерцание, перелив и эффекты плавные
             if (!busyNow() && now - lastFrame < 30) { rafId = requestAnimationFrame(frame); return; }
             lastFrame = now;
             draw(now);
-            // Раскрашенная мандала вращается средствами CSS: в покое холст не перерисовываем, и вращение остаётся плавным
-            const idleAnim = !reduceMotion && !alive && (hasGlow || (highlightUnpainted && hasUnpainted) || (hasPainted && !dimMode && !highlightUnpainted));
+            // Раскрашенная мандала вращается средствами CSS; при активных эффектах цикл работает и в покое
+            const idleAnim = !reduceMotion && ((!alive && (hasGlow || (highlightUnpainted && hasUnpainted) || (hasPainted && !dimMode && !highlightUnpainted))) || hasAnyEffect());
             if (busyNow() || idleAnim) rafId = requestAnimationFrame(frame);
         }
 
@@ -617,7 +900,22 @@
                 ctx.globalAlpha = 1;
             }
 
+            if (hasEffect('lightBreath')) drawLightBreathEffect(ctx, S, now, reduceMotion);
+
             ctx.drawImage(goldCv, 0, 0);
+
+            if (hasEffect('goldWave')) {
+                drawGoldWaveEffect(ctx, S, goldWaveBuf, goldWaveMask, now, previewEffect === 'goldWave' ? previewT0 : 0, reduceMotion);
+            }
+            if (hasEffect('royalCrown')) {
+                drawCrownEffect(ctx, S, crownLayers, now, reduceMotion);
+            }
+            if (hasEffect('stardust')) {
+                drawDustEffect(ctx, S, dustPool, now, reduceMotion);
+            }
+            if (hasEffect('touchTrail') || touchSparks.length || touchRipples.length) {
+                drawTouchEffects(ctx, touchSparks, touchRipples, 1);
+            }
 
             // мягкие маячки для мелких незакрашенных кусочков при включённой подсветке
             if (highlightUnpainted && unpaintedSmall.length) {
@@ -802,16 +1100,77 @@
             onGestureStart: lpCancel
         });
 
+        // Пассивное отслеживание касаний для эффекта «Отклик на касание» и защиты от случайного тапа после свайпа на 1×
+        let effDrag = null, lastTrailAt = 0, suppressTapUntil = 0;
+        function pointerCanvasPos(ev) {
+            if (ev.target === cv && typeof ev.offsetX === 'number' && cv.clientWidth > 0 && cv.clientHeight > 0) {
+                return { x: ev.offsetX * (S / cv.clientWidth), y: ev.offsetY * (S / cv.clientHeight) };
+            }
+            const rect = cv.getBoundingClientRect();
+            if (!rect.width) return null;
+            return { x: (ev.clientX - rect.left) * (S / rect.width), y: (ev.clientY - rect.top) * (S / rect.height) };
+        }
+        function spawnTouchBurst(pt, count, withRipple) {
+            if (!A || !pt) return;
+            if (withRipple && !reduceMotion && touchRipples.length < 6) {
+                touchRipples.push({ x: pt.x, y: pt.y, maxR: 54, life: 1 });
+            }
+            if (reduceMotion) return;
+            for (let i = 0; i < count; i++) {
+                if (touchSparks.length >= 45) touchSparks.shift();
+                const a = Math.random() * Math.PI * 2;
+                const spd = 0.5 + Math.random() * 1.9;
+                touchSparks.push({
+                    x: pt.x + (Math.random() - 0.5) * 10,
+                    y: pt.y + (Math.random() - 0.5) * 10,
+                    vx: Math.cos(a) * spd,
+                    vy: Math.sin(a) * spd - 0.35,
+                    life: 1,
+                    r: 2.2 + Math.random() * 3.4,
+                    decay: 0.026 + Math.random() * 0.014
+                });
+            }
+            kick();
+        }
+        function onEffDown(ev) {
+            if (ev.button !== undefined && ev.button > 0) return;
+            effDrag = { x: ev.clientX, y: ev.clientY, moved: false };
+            if (hasEffect('touchTrail')) {
+                spawnTouchBurst(pointerCanvasPos(ev), 5, true);
+                lastTrailAt = performance.now();
+            }
+        }
+        function onEffMove(ev) {
+            if (effDrag && !effDrag.moved && Math.hypot(ev.clientX - effDrag.x, ev.clientY - effDrag.y) > 10) {
+                effDrag.moved = true;
+            }
+            if (!hasEffect('touchTrail') || !A) return;
+            if (ev.pointerType === 'mouse' && !(ev.buttons & 1)) return;
+            const now = performance.now();
+            if (now - lastTrailAt < 28) return;
+            lastTrailAt = now;
+            spawnTouchBurst(pointerCanvasPos(ev), 2, false);
+        }
+        function onEffEnd() {
+            if (effDrag && effDrag.moved && hasEffect('touchTrail')) {
+                suppressTapUntil = Date.now() + 260;
+            }
+            effDrag = null;
+        }
+        cv.addEventListener('pointerdown', onEffDown, { passive: true });
+        cv.addEventListener('pointermove', onEffMove, { passive: true });
+        cv.addEventListener('pointerup', onEffEnd, { passive: true });
+        cv.addEventListener('pointercancel', onEffEnd, { passive: true });
+
         function onClick(ev) {
             if (zoom.shouldIgnoreClick()) return;
+            if (Date.now() < suppressTapUntil) return;
             if (longFired) { longFired = false; return; }   // после долгого нажатия выбор картины не открываем
             if (!A || reveal) return;
-            const rect = cv.getBoundingClientRect();
-            if (!rect.width) return;
-            const x = (ev.clientX - rect.left) / rect.width * S;
-            const y = (ev.clientY - rect.top) / rect.height * S;
-            const id = pick(x, y);
-            if (opts.onTap) opts.onTap(id === 255 ? null : byId[id] || null, { x, y });
+            const pt = pointerCanvasPos(ev);
+            if (!pt) return;
+            const id = pick(pt.x, pt.y);
+            if (opts.onTap) opts.onTap(id === 255 ? null : byId[id] || null, pt);
         }
         cv.addEventListener('click', onClick);
 
@@ -853,6 +1212,18 @@
             refresh();
         }
 
+        function setEffects(list) {
+            activeEffects = normalizeEffectList(list);
+            kick();
+        }
+
+        function setPreviewEffect(id) {
+            const valid = id && EFFECT_IDS.indexOf(id) !== -1 ? id : null;
+            previewEffect = valid;
+            previewT0 = valid ? performance.now() : 0;
+            kick();
+        }
+
         // Картинка мандалы как есть (для обоев)
         function snapshot() {
             const c = mk(S, S), cc = c.getContext('2d');
@@ -870,6 +1241,10 @@
             if (io) io.disconnect();
             cancelAnimationFrame(rafId);
             clearTimeout(pollId);
+            cv.removeEventListener('pointerdown', onEffDown);
+            cv.removeEventListener('pointermove', onEffMove);
+            cv.removeEventListener('pointerup', onEffEnd);
+            cv.removeEventListener('pointercancel', onEffEnd);
             cv.removeEventListener('click', onClick);
         }
 
@@ -884,13 +1259,24 @@
             glowCv = mk(S, S);
             unpaintedCv = mk(S, S);
             unpaintedGoldCv = mk(S, S);
+            goldWaveMask = mk(WAVE, WAVE);
+            const gwm = goldWaveMask.getContext('2d');
+            gwm.drawImage(A.gold, 0, 0, WAVE, WAVE);
+            gwm.globalCompositeOperation = 'source-in';
+            gwm.fillStyle = '#fff2c2';
+            gwm.fillRect(0, 0, WAVE, WAVE);
+            goldWaveBuf = mk(WAVE, WAVE);
+            const cr = computeCrownRadii(art, 512);
+            crownLayers = buildCrownLayers(512, cr.innerR, cr.outerR, false);
+            dustPool = makeDustPool(22, S, 0.14, 0.46);
             buildBase();
             buildSprite();
             refresh();
         });
 
         return {
-            ready, refresh, select, preview, celebrate, setAlive, setDim, setHighlightUnpainted, snapshot, destroy,
+            ready, refresh, select, preview, celebrate, setAlive, setDim, setHighlightUnpainted,
+            setEffects, setPreviewEffect, snapshot, destroy,
             reveal: startReveal,
             region: id => byId[id],
             paintable,
@@ -902,14 +1288,22 @@
         };
     }
 
-    // Миниатюра текущей мандалы для кнопки-медальона на главном экране
-    function renderThumb(canvas, art, paint) {
+    // Миниатюра текущей мандалы для кнопки-медальона на главном экране (с поддержкой купленных эффектов)
+    function renderThumb(canvas, art, paint, opts) {
         if (!canvas || !art) return Promise.resolve();
         const ctx = canvas.getContext && canvas.getContext('2d');
         if (!ctx) return Promise.resolve();
+        opts = opts || {};
+        const effects = normalizeEffectList(opts.effects);
+        const bindTouchEl = opts.bindTouchEl || null;
         const seq = (canvas._thumbSeq = (canvas._thumbSeq || 0) + 1);
         const w = canvas.width || 180;
         const h = canvas.height || 180;
+
+        if (canvas._thumbCtrl) {
+            canvas._thumbCtrl.stop();
+            canvas._thumbCtrl = null;
+        }
 
         return loadAssets(art).then(A => {
             if (canvas._thumbSeq !== seq) return;
@@ -1026,9 +1420,114 @@
             gctx.fillStyle = '#be8e3e';
             gctx.fillRect(0, 0, w, h);
 
-            ctx.clearRect(0, 0, w, h);
-            ctx.drawImage(out, 0, 0);
-            ctx.drawImage(goldCv, 0, 0);
+            if (!effects.length) {
+                ctx.clearRect(0, 0, w, h);
+                ctx.drawImage(out, 0, 0);
+                ctx.drawImage(goldCv, 0, 0);
+                return;
+            }
+
+            const has = id => effects.indexOf(id) !== -1;
+            const thumbGoldMask = has('goldWave') ? (() => {
+                const gm = mk(w, h), mc = gm.getContext('2d');
+                drawCropped(mc, A.gold);
+                mc.globalCompositeOperation = 'source-in';
+                mc.fillStyle = '#fff2c2';
+                mc.fillRect(0, 0, w, h);
+                return gm;
+            })() : null;
+            const thumbWaveBuf = has('goldWave') ? mk(w, h) : null;
+            const thumbCrown = has('royalCrown') ? buildCrownLayers(w, w * 0.415, w * 0.472, true) : null;
+            const thumbDust = has('stardust') ? makeDustPool(9, w, 0.16, 0.44) : null;
+            const tSparks = [], tRipples = [];
+
+            let stopped = false, rafId = 0, pollId = 0, onScreen = true, lastFrame = 0, lastTouchGlint = 0;
+            let io = null;
+            if ('IntersectionObserver' in window) {
+                io = new IntersectionObserver(entries => {
+                    onScreen = entries[entries.length - 1].isIntersecting;
+                    if (onScreen) kickThumb();
+                });
+                io.observe(canvas);
+            }
+            const isThumbVisible = () => !document.hidden && onScreen && canvas.offsetParent !== null;
+
+            function spawnThumbBurst(rx, ry, count) {
+                if (reduceMotion) return;
+                if (tRipples.length < 4) tRipples.push({ x: rx, y: ry, maxR: w * 0.28, life: 1 });
+                for (let i = 0; i < count; i++) {
+                    if (tSparks.length >= 16) tSparks.shift();
+                    const a = Math.random() * Math.PI * 2;
+                    const spd = 0.35 + Math.random() * 0.9;
+                    tSparks.push({ x: rx, y: ry, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd - 0.15, life: 1, r: 1.5 + Math.random() * 2, decay: 0.036 });
+                }
+                kickThumb();
+            }
+
+            function onThumbDown(ev) {
+                if (!has('touchTrail') || stopped) return;
+                const r = canvas.getBoundingClientRect();
+                const rx = r.width ? ((ev.clientX - r.left) / r.width) * w : w / 2;
+                const ry = r.height ? ((ev.clientY - r.top) / r.height) * h : h / 2;
+                spawnThumbBurst(rx, ry, 6);
+            }
+            if (bindTouchEl && has('touchTrail')) {
+                bindTouchEl.addEventListener('pointerdown', onThumbDown, { passive: true });
+            }
+
+            function drawThumbFrame(now) {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.globalAlpha = 1;
+                ctx.clearRect(0, 0, w, h);
+                ctx.drawImage(out, 0, 0);
+                if (has('lightBreath')) drawLightBreathEffect(ctx, w, now, reduceMotion);
+                ctx.drawImage(goldCv, 0, 0);
+                if (has('goldWave')) drawGoldWaveEffect(ctx, w, thumbWaveBuf, thumbGoldMask, now, 0, reduceMotion);
+                if (has('royalCrown')) drawCrownEffect(ctx, w, thumbCrown, now, reduceMotion);
+                if (has('stardust')) drawDustEffect(ctx, w, thumbDust, now, reduceMotion);
+                if (has('touchTrail') && !reduceMotion && now - lastTouchGlint > 3200) {
+                    lastTouchGlint = now;
+                    const a = (now / 1000) % (Math.PI * 2);
+                    const rx = w / 2 + Math.cos(a) * w * 0.24, ry = h / 2 + Math.sin(a) * h * 0.24;
+                    if (tRipples.length < 3) tRipples.push({ x: rx, y: ry, maxR: w * 0.2, life: 0.85 });
+                    if (tSparks.length < 14) tSparks.push({ x: rx, y: ry, vx: Math.cos(a + 1.2) * 0.5, vy: Math.sin(a + 1.2) * 0.5, life: 0.9, r: 1.8, decay: 0.032 });
+                }
+                if (tSparks.length || tRipples.length) {
+                    drawTouchEffects(ctx, tSparks, tRipples, w / 1024);
+                }
+            }
+
+            function thumbFrame(now) {
+                rafId = 0;
+                if (stopped) return;
+                if (!isThumbVisible()) { pollId = setTimeout(kickThumb, 700); return; }
+                if (now - lastFrame < 34) { rafId = requestAnimationFrame(thumbFrame); return; }
+                lastFrame = now;
+                drawThumbFrame(now);
+                if (!reduceMotion || tSparks.length || tRipples.length) {
+                    rafId = requestAnimationFrame(thumbFrame);
+                }
+            }
+
+            function kickThumb() {
+                if (stopped || rafId) return;
+                clearTimeout(pollId);
+                pollId = 0;
+                rafId = requestAnimationFrame(thumbFrame);
+            }
+
+            function stopThumb() {
+                if (stopped) return;
+                stopped = true;
+                cancelAnimationFrame(rafId);
+                clearTimeout(pollId);
+                if (io) io.disconnect();
+                if (bindTouchEl) bindTouchEl.removeEventListener('pointerdown', onThumbDown);
+            }
+
+            canvas._thumbCtrl = { kick: kickThumb, stop: stopThumb };
+            drawThumbFrame(performance.now());
+            if (!reduceMotion) kickThumb();
         });
     }
 
