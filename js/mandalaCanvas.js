@@ -339,26 +339,78 @@
         // Неизменная основа: внутри мандалы белый перламутр и еле видный призрак картины. Считается один раз.
         // 15.11.2026: снаружи мандалы холст прозрачный. Фон «Жемчужный рассвет» и «цветок жизни» — неподвижный
         // фон карточки в CSS (.mandala-paper--pearl), чтобы узор был по всей карточке и не вращался с мандалой.
+        // 25.11.2026: узкие зазоры на стыке контуров (lab === 0, где gold-lines.png прозрачен, а расширение областей 3 px
+        // не достаёт) раньше заливались белым #f7f0fa и просвечивали при приближении. Теперь весь силуэт внутри
+        // контура подкрашен цветом контура #be8e3e, а жемчужная основа рисуется только под реальными областями (с тем же +3 px).
         function buildBase() {
-            const inside = maskWhere(v => v !== 255);
-            baseCv = mk(S, S);
-            const s = baseCv.getContext('2d');
-            const ic = inside.getContext('2d');
-            ic.globalCompositeOperation = 'source-in';
-            ic.fillStyle = '#f7f0fa';
-            ic.fillRect(0, 0, S, S);
-            s.drawImage(inside, 0, 0);
-            ic.drawImage(A.V[1], 0, 0);
-            s.globalAlpha = 0.22;
-            s.drawImage(inside, 0, 0);
-            s.globalAlpha = 1;
             // золотые линии темнее, чтобы читались на светлом
             goldCv = mk(S, S);
             const gc = goldCv.getContext('2d');
             gc.drawImage(A.gold, 0, 0);
+            let gd = null;
+            try { gd = gc.getImageData(0, 0, S, S).data; } catch (_) {}
             gc.globalCompositeOperation = 'source-in';
             gc.fillStyle = '#be8e3e';
             gc.fillRect(0, 0, S, S);
+
+            const lab = A.lab, N = S * S;
+            const outer = new Uint8Array(N);
+            const q = new Int32Array(N);
+            let head = 0, tail = 0;
+            for (let x = 0; x < S; x++) {
+                if (lab[x] === 255) { outer[x] = 1; q[tail++] = x; }
+                const b = (S - 1) * S + x;
+                if (lab[b] === 255 && !outer[b]) { outer[b] = 1; q[tail++] = b; }
+            }
+            for (let y = 1; y < S - 1; y++) {
+                const l = y * S, r = l + S - 1;
+                if (lab[l] === 255 && !outer[l]) { outer[l] = 1; q[tail++] = l; }
+                if (lab[r] === 255 && !outer[r]) { outer[r] = 1; q[tail++] = r; }
+            }
+            while (head < tail) {
+                const cur = q[head++], x = cur % S, y = (cur / S) | 0;
+                if (x > 0 && !outer[cur - 1] && lab[cur - 1] === 255) { outer[cur - 1] = 1; q[tail++] = cur - 1; }
+                if (x < S - 1 && !outer[cur + 1] && lab[cur + 1] === 255) { outer[cur + 1] = 1; q[tail++] = cur + 1; }
+                if (y > 0 && !outer[cur - S] && lab[cur - S] === 255) { outer[cur - S] = 1; q[tail++] = cur - S; }
+                if (y < S - 1 && !outer[cur + S] && lab[cur + S] === 255) { outer[cur + S] = 1; q[tail++] = cur + S; }
+            }
+            // Срезаем внешний 2–4 px ореол (lab === 0 снаружи от непрозрачного контура), чтобы край остался гладким
+            const maxDepth = gd ? 4 : 3;
+            const depth = new Uint8Array(N);
+            head = 0;
+            while (head < tail) {
+                const cur = q[head++], d = depth[cur];
+                if (d >= maxDepth) continue;
+                const x = cur % S, y = (cur / S) | 0, nd = d + 1;
+                if (x > 0 && !outer[cur - 1] && lab[cur - 1] === 0 && (!gd || gd[(cur - 1) * 4 + 3] < 96)) { outer[cur - 1] = 1; depth[cur - 1] = nd; q[tail++] = cur - 1; }
+                if (x < S - 1 && !outer[cur + 1] && lab[cur + 1] === 0 && (!gd || gd[(cur + 1) * 4 + 3] < 96)) { outer[cur + 1] = 1; depth[cur + 1] = nd; q[tail++] = cur + 1; }
+                if (y > 0 && !outer[cur - S] && lab[cur - S] === 0 && (!gd || gd[(cur - S) * 4 + 3] < 96)) { outer[cur - S] = 1; depth[cur - S] = nd; q[tail++] = cur - S; }
+                if (y < S - 1 && !outer[cur + S] && lab[cur + S] === 0 && (!gd || gd[(cur + S) * 4 + 3] < 96)) { outer[cur + S] = 1; depth[cur + S] = nd; q[tail++] = cur + S; }
+            }
+
+            baseCv = mk(S, S);
+            const s = baseCv.getContext('2d');
+            // 1. Внутренний силуэт (включая узкие стыки между линиями) — цвет контура #be8e3e
+            const body = mk(S, S), bc = body.getContext('2d'), bimg = bc.createImageData(S, S);
+            for (let i = 0; i < N; i++) if (!outer[i]) bimg.data[i * 4 + 3] = 255;
+            bc.putImageData(bimg, 0, 0);
+            bc.globalCompositeOperation = 'source-in';
+            bc.fillStyle = '#be8e3e';
+            bc.fillRect(0, 0, S, S);
+            s.drawImage(body, 0, 0);
+
+            // 2. Жемчужная основа и призрак картины строго по объединённой маске областей (+3 px, как в maskOf)
+            const rawRegs = maskWhere(v => v !== 0 && v !== 255);
+            const regs = mk(S, S), rc = regs.getContext('2d');
+            for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) if (dx * dx + dy * dy <= 9) rc.drawImage(rawRegs, dx, dy);
+            rc.globalCompositeOperation = 'source-in';
+            rc.fillStyle = '#f7f0fa';
+            rc.fillRect(0, 0, S, S);
+            s.drawImage(regs, 0, 0);
+            rc.drawImage(A.V[1], 0, 0);
+            s.globalAlpha = 0.22;
+            s.drawImage(regs, 0, 0);
+            s.globalAlpha = 1;
         }
 
         // Искра — готовая картинка-светлячок вместо градиента на каждую искру в каждом кадре
